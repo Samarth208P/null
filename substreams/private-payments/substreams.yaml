@@ -1,0 +1,23 @@
+specVersion: v0.1.0
+package:
+  name: null_private_payments
+  version: v0.1.0
+  doc: Standard public transport events for NULL and ERC-5564. No secret filters.
+protobuf:
+  files:
+    - private_payments.proto
+  importPaths:
+    - ./proto
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/null_private_payments.wasm
+modules:
+  - name: map_private_payments
+    kind: map
+    inputs:
+      - params: string
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:null.payments.v1.PaymentEvents
+network: sepolia
