@@ -1,0 +1,1 @@
+{ "name": "@null-protocol/organization", "version": "0.1.0", "private": true, "type": "module", "scripts": { "dev": "tsx src/server.ts", "typecheck": "tsc --noEmit" }, "dependencies": { "@null-protocol/auth": "workspace:*", "@privy-io/node": "0.34.0", "viem": "2.37.3" } }
