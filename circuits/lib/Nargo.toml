@@ -1,0 +1,8 @@
+[package]
+name = "null_lib"
+type = "lib"
+authors = ["NULL contributors"]
+compiler_version = "=1.0.0-beta.22"
+
+[dependencies]
+poseidon = { path = "../vendor/poseidon-0.1.1" }
