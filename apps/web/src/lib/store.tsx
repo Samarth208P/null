@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { createPrivacyProfile, parseAmount, type CompiledDistribution } from '@null-protocol/sdk';
 import { LiveBalanceRecoveryLoader } from '../components/LiveBalanceRecoveryLoader';
+import { config } from './config';
 
 export type Route = 'overview' | 'distributions' | 'new' | 'treasury' | 'inbox' | 'balance' | 'inspector' | 'protocol' | 'settings' | 'about';
 export type RecipientRow = { id: string; name: string; amount: string; profile: string };
@@ -41,7 +42,7 @@ type Store = {
 const StoreContext = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [initial] = useState(newWorkspace);
-  const [mode, updateMode] = useState<'sandbox' | 'testnet'>('sandbox');
+  const [mode, updateMode] = useState<'sandbox' | 'testnet'>(config.defaultEnvironment);
   const [organization, setOrganization] = useState('Acme Studio');
   const [identity, setIdentity] = useState(initial.identity);
   const [recipients, setRecipients] = useState(initial.recipients);

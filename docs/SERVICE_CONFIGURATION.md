@@ -1,11 +1,14 @@
 # Service and indexing configuration
 
-All onchain adapters use the generated ABI and a single deployed manifest. Copy `deployments/sepolia.template.json` only after deploying actual immutable contracts and recording their addresses, deployment block and runtime code hashes. Leave absent resources null/unavailable. A circuit source file without its matching generated verifier/proving artifacts does not make a live proof path available.
+All onchain adapters use the generated ABI and `deployments/11155111.json` written by the deployment command. Keep `deployments/sepolia.template.json` as an unconfigured example. A circuit source file without its matching generated verifier/proving artifacts does not make a live proof path available.
+
+One access-restricted root `.env` holds all local configuration; [the root example](../.env.example) is the canonical template. Deployment and local service commands load it automatically. Vite reads the same file and exposes only `VITE_` values. Relative `NULL_MANIFEST_PATH` values resolve from the repository root. `pnpm dev:all` starts the local web app and relayer; the browser stays on `127.0.0.1:5173` and the relay on `127.0.0.1:8787`. No website hosting is needed.
 
 | Component | Required configuration | Failure behavior |
 | --- | --- | --- |
 | Browser discovery | chain ID, pool address, deployment block, at least one RPC URL; optional public Graph endpoint | Graph missing/stale/error causes RPC scan; RPC wrong-chain/error stops discovery |
 | Relayer | `NULL_MANIFEST_PATH`, `RELAYER_RPC_URL`, `RELAYER_PRIVATE_KEY`, explicit CORS origins | health 503 and no send if deployment/credentials missing; checks live code/hash before each send |
+| Local treasury approval | separate `NULL_TREASURY_SIGNER_PRIVATE_KEY`, private policy recovery values, registered policy commitment | exact intent/digest, policy, deadline, chain, and unspent-input checks; no automatic signature server |
 | Privy organization adapter | server app ID/secret, wallet ID/address, owner quorum ID, organization entity ID, required policy IDs, minimum threshold, chain/pool | rejects control drift, missing quorum signatures and any context/signature mismatch |
 | Organization API host | the adapter values plus exact allowed member Privy DIDs and CORS origins; public browser `VITE_ORGANIZATION_URL` | verifies Privy session tokens and server membership before preparing/signing; session-bound tickets prevent intent substitution |
 | CRE TEE compiler | actual workflow config, signed trigger key, HTTPS payroll endpoint, CRE-bound credential secret | no ordinary server/plaintext fallback; local fallback is an explicit separate command |
@@ -16,4 +19,6 @@ All onchain adapters use the generated ABI and a single deployed manifest. Copy 
 
 Replay the `NoteInserted` event only once per note. `Shielded` and `AllocationConsumed` describe actions that also insert notes; counting both would corrupt the local Merkle tree. Feed distribution insertions in leaf-index order into the distribution accumulator; a claim uses its global root, never a chosen distribution root. Fetch the current accepted root before proving and refresh/reprove on `NULL_ROOT_STALE`.
 
-Private employer imports, recovery bundles, TEE batch entropy and secret environment values must remain out of committed source and public hosting. Vite environment values are bundled into the browser: only publish public configuration there. None of these services requires a recipient private key.
+Initialize the free local signer with `pnpm treasury:init`, register with `pnpm treasury:register --broadcast`, and approve reviewed intents with `pnpm treasury:sign`; see [the treasury guide](../tools/TREASURY.md). `pnpm setup:relayer --fund` creates or reuses a separate relay wallet and funds its 0.05 Sepolia ETH allowance once. Both setup paths preserve their transaction journals. Privy/Graph/CRE stay optional; [their access and cost limits](FREE_SEPOLIA.md) are separate from local operation.
+
+Private employer imports, recovery bundles, TEE batch entropy and root `.env` values must remain outside committed source and browser assets. Only `VITE_` values are bundled into the browser; the development server denies `.env` files and private `.artifacts` outputs. None of these services requires a recipient private key. Service health and successful setup transactions do not establish a proof/payment result.

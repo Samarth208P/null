@@ -2,7 +2,9 @@
 
 This small Node service hosts the real Privy organization adapter. It accepts only public distribution intent fields and request authorization signatures. Payroll, recipient profiles, spending/viewing keys and private proving witnesses have no HTTP input route here. Confidential compilation remains inside the separately configured CRE TEE workflow.
 
-Copy `.env.example` into your secret-managed process configuration and run `pnpm --filter @null-protocol/organization dev`. The process does not automatically load `.env`; export the variables or use your process runner's environment support. It binds `127.0.0.1:8788` behind an HTTPS reverse proxy. For the browser set public `VITE_ORGANIZATION_URL` to that API base URL. No app secret belongs in Vite configuration.
+This Privy integration is optional. The free local approval path uses [the treasury CLI](../../tools/TREASURY.md) and needs no Privy account. To enable this service, fill its required values in the single private root `.env` using [the root template](../../.env.example), then run `pnpm organization` from the workspace root. The script uses Node's built-in environment-file support (Node 22.16 or later) to load root `.env`, with existing shell variables taking precedence.
+
+The service binds `127.0.0.1:8788` on your computer. Both local frontend origins are included in the root example. Set public `VITE_ORGANIZATION_URL=http://127.0.0.1:8788` only when this integration is configured. Vite exposes only `VITE_` values; no app secret belongs under that prefix. Local startup does not configure a Privy account or its wallet controls: the service remains unavailable until the required integration values below are supplied. [Provider access and usage limits](../../docs/FREE_SEPOLIA.md) remain separate from local operation.
 
 Configure exactly one business organization per service instance:
 

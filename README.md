@@ -16,7 +16,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open **http://127.0.0.1:5173**. The app starts in a clearly labeled local sandbox. It does not require credentials to try the development interface.
+Open **http://127.0.0.1:5173**. A fresh checkout starts in the local sandbox without credentials. After Sepolia setup, `VITE_DEFAULT_ENVIRONMENT=testnet` in the single root `.env` opens the Sepolia workspace; the sandbox remains selectable.
 
 The sandbox includes sample profiles, three editable distribution drafts, and 100,000 sample USDC. Open a draft, prepare the encrypted payload, publish locally, then scan the private inbox. The current profile is the first sample recipient. Local claims produce real note commitments, but **do not generate a ZK proof, move assets, submit transactions, or perform sponsor approvals**.
 
@@ -68,11 +68,22 @@ The Noir/Barretenberg versions are pinned together. Verifier generation can requ
 
 ## Connect Sepolia
 
-1. Generate the pinned circuit/verifier artifacts and deploy the immutable contracts with the deployment script. Only testnet is supported.
-2. Fill the deployment manifest with the actual asset, contract addresses, runtime bytecode hashes, artifact hashes, and deployment block. Keep the template's unconfigured status unchanged until a deployment exists.
-3. Copy `apps/web/.env.example` to `apps/web/.env.local` and configure public endpoints and deployment values. Restart Vite after changes.
-4. Configure the organization service, Privy policies/quorum, CRE confidential execution, Graph deployment and optional relayer using [service configuration](docs/SERVICE_CONFIGURATION.md).
-5. Open the Sepolia workspace. The live client verifies the manifest against runtime bytecode before preparing funds or proofs. Recovery checkpoints are encrypted locally before submission.
+The sandbox needs no `.env` or contract deployment. Real Sepolia operations need both. From the workspace root:
+
+```sh
+pnpm setup:sepolia         # Create or reuse the private key in the single root .env
+pnpm deploy:plan           # Check RPC/artifacts and show the Sepolia ETH funding allowance
+# Fund the displayed public address with Sepolia ETH, then:
+pnpm deploy:sepolia        # Deploy or resume the contracts and configure public artifacts
+pnpm treasury:init         # Create the separate local authorization policy
+pnpm treasury:register --broadcast
+pnpm setup:relayer --fund  # Fund a separate local relay wallet with up to 0.05 Sepolia ETH
+pnpm dev:all               # Run the web app and relayer locally
+```
+
+All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111.json`, the browser manifest/circuits, and public deployment values in that same file. Restart the local processes after configuration changes. Confirmed deployment and setup evidence is recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md).
+
+The web app and relayer run on your computer; no website hosting is configured or required. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
 
 **Never place wallet private keys, Privy app secrets, view/spend keys, payroll rows, or private witnesses in `VITE_` variables.** These are public bundle values.
 
@@ -105,4 +116,4 @@ Inside the **intended, fully verified private flow**, public fields are commitme
 
 This does not hide the employer's own payroll knowledge, public entry/exit events, IP addresses, timing correlations, compromised endpoints, or browser supply-chain attacks. It is an **unaudited hackathon prototype**. See [SECURITY.md](SECURITY.md), [privacy guarantees](docs/PRIVACY_GUARANTEES.md), and [architecture decisions](docs/ADR/).
 
-[PRD.md](PRD.md) is the original specification. Implementation changes and omitted testing are explicitly recorded. No test suite, privacy audit, live sponsor qualification, public deployment, or production readiness is claimed.
+[PRD.md](PRD.md) is the original specification. Implementation changes and omitted testing are explicitly recorded. Contract deployment and local service setup do not establish a completed proof/payment flow, privacy audit, live sponsor qualification, or production readiness.

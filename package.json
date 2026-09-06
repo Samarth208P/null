@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @null-protocol/web dev",
+    "dev:all": "node tools/dev.mjs",
     "build": "pnpm --filter @null-protocol/web build",
     "check": "pnpm -r --if-present typecheck",
     "preview": "pnpm --filter @null-protocol/web preview",
@@ -16,7 +17,14 @@
     "circuits:build": "node tools/build-circuits.mjs --verifiers",
     "build:contracts": "node contracts/scripts/build.mjs",
     "build:graph": "pnpm --filter @null-protocol/subgraph build:source",
-    "organization": "pnpm --filter @null-protocol/organization dev"
+    "organization": "pnpm --filter @null-protocol/organization dev",
+    "setup:sepolia": "node contracts/scripts/setup-sepolia.mjs",
+    "deploy:plan": "node --env-file=.env contracts/scripts/deploy.mjs",
+    "deploy:sepolia": "node --env-file=.env contracts/scripts/deploy.mjs --broadcast --sepolia",
+    "setup:relayer": "node contracts/scripts/setup-relayer.mjs",
+    "treasury:init": "node --import tsx tools/treasury.mts init",
+    "treasury:register": "node --import tsx tools/treasury.mts register",
+    "treasury:sign": "node --import tsx tools/treasury.mts sign"
   },
   "devDependencies": {
     "typescript": "5.9.3",

@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Hex } from 'viem';
 import { createRelayer, RelayError, type RelayManifest } from './relay.js';
 
@@ -9,7 +11,8 @@ const origins = new Set((process.env.RELAYER_ALLOWED_ORIGINS ?? '').split(',').f
 let relayer: ReturnType<typeof createRelayer> | undefined;
 try {
   if (process.env.NULL_MANIFEST_PATH && process.env.RELAYER_RPC_URL && process.env.RELAYER_PRIVATE_KEY) {
-    const manifest = JSON.parse(await readFile(process.env.NULL_MANIFEST_PATH, 'utf8')) as RelayManifest;
+    const manifestPath = resolve(fileURLToPath(new URL('../../../', import.meta.url)), process.env.NULL_MANIFEST_PATH);
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as RelayManifest;
     relayer = createRelayer({ manifest, rpcUrl: process.env.RELAYER_RPC_URL, privateKey: process.env.RELAYER_PRIVATE_KEY as Hex });
     await relayer.verifyDeployment();
   }

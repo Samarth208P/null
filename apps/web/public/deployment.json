@@ -1,0 +1,176 @@
+{
+  "status": "deployed",
+  "protocolVersion": "0.1.0",
+  "chainId": 11155111,
+  "deploymentBlock": 11645265,
+  "asset": {
+    "symbol": "USDC",
+    "decimals": 6,
+    "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+  },
+  "contracts": {
+    "nullPool": "0x5d67Ff96D115127645437C0E3a71c61d37465E71",
+    "nullAuthRegistry": "0x2269d0E521149a4da0222a9CEAD7557912D15f87",
+    "poseidon3": "0x5745bcD101582E6627FB60FCd8C649851AE4DD0e",
+    "shieldVerifier": "0x59479cd8c345fdADDd20A24e83cF59Ccbf3f059a",
+    "createDistributionVerifier": "0xd747B45E079aad548b71f3326E0E207E0f1F399d",
+    "claimVerifier": "0xE49Bd8F6a987dfaadf0D2f9e2B9BCb1A990ed629"
+  },
+  "codeHashes": {
+    "asset": "0xcd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb",
+    "nullPool": "0x14332c53bad1f2913761a91832a76074de272a3e45e2aedaf4785102585227b2",
+    "nullAuthRegistry": "0xb4288758d2950cba427991995608a54fa6980fef904bfad23a7852291c940fd1",
+    "poseidon3": "0xe247ac4f3d40602f0ac0604b0f1fe631237cbc64d3e29a5d5e45721f2d94fa81",
+    "shieldVerifier": "0x9ebd981fe2f351371b2d7413f26ab1dfceba5d7b7de239a9f2ddbe85bdfc640b",
+    "createDistributionVerifier": "0x13ae94b33edcb33225a27c1affd99f318675b0952f2a90721b8b683a61ee63d6",
+    "claimVerifier": "0xbb069b515901026a0647582c27760147846acd18b7bcb7c7953e517fd830db81"
+  },
+  "graph": {
+    "subgraph": null,
+    "substreamsPackage": null
+  },
+  "build": {
+    "gitCommit": "2f059cad0f4b138589555d59aebab3a3e87e73ed",
+    "noir": "1.0.0-beta.22",
+    "barretenberg": "5.0.0-nightly.20260522",
+    "solidity": "0.8.28",
+    "poseidon": "circomlibjs@0.1.7/noir-lang-poseidon@v0.1.1",
+    "circuitArtifacts": {
+      "shield": {
+        "url": "/circuits/shield.json",
+        "sha256": "0x8c96ab11442794364f464463ef5e77b827c06607bf4e5382f383938cc9ea4d9d",
+        "verificationKeySha256": "0x9a162f74783ddd90d4843c0dc60cec3ef11a34b8378a38afa7fd01831c3510d2",
+        "verifierSourceSha256": "0xc9285a23a724161b2dab6678d9b1bb98f46150a86e774f2943b4ba0de55c0f0e",
+        "noirVersion": "1.0.0-beta.22",
+        "backendVersion": "5.0.0-nightly.20260522",
+        "verifierTarget": "evm"
+      },
+      "create_distribution": {
+        "url": "/circuits/create_distribution.json",
+        "sha256": "0xe9b5140c2e50cc3771dbd1af6bafdb9b8638ea28cad685ecbc6e59955f4ecc16",
+        "verificationKeySha256": "0x78d6f7496963fe4a08d53f99f893ec1028e585c3468e786c4358d832039a4852",
+        "verifierSourceSha256": "0xbad1fb420e40e42fc9d5df6f3c259faeb4c0ec49d3b2f24a0e81f11519f3db87",
+        "noirVersion": "1.0.0-beta.22",
+        "backendVersion": "5.0.0-nightly.20260522",
+        "verifierTarget": "evm"
+      },
+      "claim": {
+        "url": "/circuits/claim.json",
+        "sha256": "0x2c1fa766cb9e64f2fd48e591bc5aad346f50f93f3e87e5e01e529a79447991a9",
+        "verificationKeySha256": "0xa15e3694b4dace0f0b172cebbec6d232ca132dfe534ad5111ebfc22585942a30",
+        "verifierSourceSha256": "0x94c61fc5eda9d0fa634885f5c7e2336bd1bd5b2a11150e7cddbedda3c1e854dc",
+        "noirVersion": "1.0.0-beta.22",
+        "backendVersion": "5.0.0-nightly.20260522",
+        "verifierTarget": "evm"
+      }
+    },
+    "solidityIntegritySha256": "0x9fd0b0a22c7b06233deeae52da8806e5543c8ecad1d8fb634236c6003c67bc86",
+    "workingTreeDirty": true
+  },
+  "security": {
+    "audited": false,
+    "networkScope": "testnet-only",
+    "testsExecuted": false,
+    "withdrawalsImplemented": false
+  },
+  "libraries": {
+    "src/generated/ShieldVerifier.sol:RelationsLib": {
+      "address": "0x863934214372A4786D0ad6A2453947c8619E5DF0",
+      "codeHash": "0xdef0ffd398cc988d867ddacb2c791a911dcbab61674993ff7e47c63e164ecf19"
+    },
+    "src/generated/ShieldVerifier.sol:ZKTranscriptLib": {
+      "address": "0x76dd38D72F73f2a193e1E6C9B8f9ac5C4bc0273C",
+      "codeHash": "0xb6084ec70d2897b664d0f0722c2f78e01e77335aaa4d57f738e2b9c03044cd7b"
+    },
+    "src/generated/CreateDistributionVerifier.sol:RelationsLib": {
+      "address": "0x863934214372A4786D0ad6A2453947c8619E5DF0",
+      "codeHash": "0xdef0ffd398cc988d867ddacb2c791a911dcbab61674993ff7e47c63e164ecf19"
+    },
+    "src/generated/CreateDistributionVerifier.sol:ZKTranscriptLib": {
+      "address": "0x76dd38D72F73f2a193e1E6C9B8f9ac5C4bc0273C",
+      "codeHash": "0xb6084ec70d2897b664d0f0722c2f78e01e77335aaa4d57f738e2b9c03044cd7b"
+    },
+    "src/generated/ClaimVerifier.sol:RelationsLib": {
+      "address": "0x863934214372A4786D0ad6A2453947c8619E5DF0",
+      "codeHash": "0xdef0ffd398cc988d867ddacb2c791a911dcbab61674993ff7e47c63e164ecf19"
+    },
+    "src/generated/ClaimVerifier.sol:ZKTranscriptLib": {
+      "address": "0x76dd38D72F73f2a193e1E6C9B8f9ac5C4bc0273C",
+      "codeHash": "0xb6084ec70d2897b664d0f0722c2f78e01e77335aaa4d57f738e2b9c03044cd7b"
+    }
+  },
+  "transactions": [
+    {
+      "name": "poseidon3",
+      "address": "0x5745bcD101582E6627FB60FCd8C649851AE4DD0e",
+      "hash": "0x19381a24f55b850322cb0cfb1eb9362c9b48d5133bdba3c29c4124ace95c6797",
+      "blockNumber": 11645265,
+      "blockHash": "0x4ec764fc7a1ec0ad7580f34f1dd114e735f1755e20ea9523c6c19495c8d34113",
+      "gasUsed": "2745274",
+      "effectiveGasPrice": "1083778938"
+    },
+    {
+      "name": "src/generated/ShieldVerifier.sol:RelationsLib",
+      "address": "0x863934214372A4786D0ad6A2453947c8619E5DF0",
+      "hash": "0x20b8c9b7b59bf697c1e69934b3a862acb1c45c901e4de7a1bc216d5c349ded19",
+      "blockNumber": 11645269,
+      "blockHash": "0xd876e5847f886e84b92e869a844fbf685fcdb8e5b4ed2d4d41a80ed4644d49f3",
+      "gasUsed": "1775759",
+      "effectiveGasPrice": "1065975857"
+    },
+    {
+      "name": "src/generated/ShieldVerifier.sol:ZKTranscriptLib",
+      "address": "0x76dd38D72F73f2a193e1E6C9B8f9ac5C4bc0273C",
+      "hash": "0xebd7086c06cfad14f9ba1543b9727946154e48509530ad68a8006ea83383587c",
+      "blockNumber": 11645272,
+      "blockHash": "0xd47b4b99409f4e8561d7ea93f0144c7f1878b314d5b39e02dda7baed285afa9d",
+      "gasUsed": "1383444",
+      "effectiveGasPrice": "1074603740"
+    },
+    {
+      "name": "nullAuthRegistry",
+      "address": "0x2269d0E521149a4da0222a9CEAD7557912D15f87",
+      "hash": "0x88c51f9a84cdc9b9d8d1b5d997ee7b4ada789e4f982d80fd1940595c75845847",
+      "blockNumber": 11645275,
+      "blockHash": "0xdcfc0a947ff1ecf25cf8322ff288ffcf3b6ccb83e6d6c9f7eca7ef7ff8c514ad",
+      "gasUsed": "1813727",
+      "effectiveGasPrice": "1098580419"
+    },
+    {
+      "name": "shieldVerifier",
+      "address": "0x59479cd8c345fdADDd20A24e83cF59Ccbf3f059a",
+      "hash": "0xecdf8634fd51a2527e58e104d511ea921f7334ca16f80377ef1555bf527ae8d3",
+      "blockNumber": 11645279,
+      "blockHash": "0x0aa4f2429012809ba800068e7e1e0e63efe327c85ef4c6c6d1732b39a86a4825",
+      "gasUsed": "3879605",
+      "effectiveGasPrice": "1110312246"
+    },
+    {
+      "name": "createDistributionVerifier",
+      "address": "0xd747B45E079aad548b71f3326E0E207E0f1F399d",
+      "hash": "0x65302aa75d8e3988f2a0e0be531150733daa2dcc198be2b4c08bc749776f4bf2",
+      "blockNumber": 11645283,
+      "blockHash": "0x490935c7d65b89e2cd40d7856ab0eade22479212d9c1f44185ec979f0b24b7b7",
+      "gasUsed": "3975336",
+      "effectiveGasPrice": "1077265419"
+    },
+    {
+      "name": "claimVerifier",
+      "address": "0xE49Bd8F6a987dfaadf0D2f9e2B9BCb1A990ed629",
+      "hash": "0xb06125da39212540a17c4a864377eb65d2ff95cd178b580e0f8e7ad0befe4cf4",
+      "blockNumber": 11645287,
+      "blockHash": "0x03e301625b3b9a7325dedbff3aaa6e0b181d77272fa218d40c9e248600cf8123",
+      "gasUsed": "3974979",
+      "effectiveGasPrice": "1096130583"
+    },
+    {
+      "name": "nullPool",
+      "address": "0x5d67Ff96D115127645437C0E3a71c61d37465E71",
+      "hash": "0x85139cdc63dc0cce93266b440b473f8f1186a5b07468fff33390da053a45f32a",
+      "blockNumber": 11645291,
+      "blockHash": "0xe679346a3496098876ea544c57f4530524010384f1fb49e1e3b02f3f82218aa2",
+      "gasUsed": "4582058",
+      "effectiveGasPrice": "1101621382"
+    }
+  ]
+}

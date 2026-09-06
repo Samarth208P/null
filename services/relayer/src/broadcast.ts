@@ -1,4 +1,6 @@
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Hex } from 'viem';
 import { createRelayer, exportSelfBroadcast, type RelayManifest } from './relay.js';
 
@@ -15,7 +17,8 @@ try {
     const rpcUrl = argument('--rpc') ?? process.env.RELAYER_RPC_URL;
     const privateKey = process.env.BROADCAST_PRIVATE_KEY;
     if (!manifestPath || !rpcUrl || !privateKey) throw new Error('NULL_BROADCAST_CONFIG_REQUIRED');
-    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as RelayManifest;
+    const rootManifestPath = resolve(fileURLToPath(new URL('../../../', import.meta.url)), manifestPath);
+    const manifest = JSON.parse(await readFile(rootManifestPath, 'utf8')) as RelayManifest;
     const relayer = createRelayer({ manifest, rpcUrl, privateKey: privateKey as Hex });
     process.stdout.write(JSON.stringify(await relayer.relay(payload)) + '\n');
   }

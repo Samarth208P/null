@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronRight, Circle, FileText, Inbox, LockKeyhole, Plus, Search, Send, Shield, ShieldCheck, SlidersHorizontal, Wallet } from 'lucide-react';
 import { useStore, type Distribution } from '../lib/store';
+import { config } from '../lib/config';
 import { amount, date, money, short, stringify, download } from '../lib/format';
 import { Badge, Button, EmptyState, KeyValue, Modal, Notice, PageHeader, SectionTitle } from '../components/ui';
 
@@ -17,7 +18,7 @@ export function Overview() {
   const pending = drafts.reduce((total, item) => total + item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), 0n);
   return <>
     <PageHeader title="Private by default." description="Your treasury, distributions, and the details that stay yours." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New distribution</Button>} />
-    {store.mode === 'testnet' && <Notice tone="warning">This workspace uses Sepolia. Configure a verified deployment and proof artifacts to enable live funds. Local sample activity is hidden.</Notice>}
+    {store.mode === 'testnet' && <Notice tone="warning">{config.poolAddress ? 'Sepolia contract configuration is loaded. Connect your wallet and import your treasury policy to prepare live operations. Each operation verifies the deployment before proving.' : 'This workspace uses Sepolia. Configure a verified deployment and proof artifacts to enable live funds. Local sample activity is hidden.'}</Notice>}
     <div className="overview-financials">
       <div className="treasury-overview"><div className="balance-label"><span><ShieldCheck size={17} />Shielded treasury</span><Badge tone="purple"><LockKeyhole size={11} />{store.mode === 'sandbox' ? 'Sandbox balance' : store.treasuryReady ? 'Recovered snapshot' : 'Not recovered'}</Badge></div><div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div><div className="balance-bottom"><p><span className="status-dot" />{store.mode === 'sandbox' ? 'Available for local distributions' : 'Connect a verified treasury'}</p><button className="text-link" onClick={() => store.navigate('treasury')}>Manage treasury<ArrowUpRight size={14} /></button></div></div>
       <div className="financial-side"><div><span className="metric-label">In draft distributions</span><strong className="metric-value">{store.hideBalances ? '••••••' : money(pending)}<small>USDC</small></strong><p>{drafts.length} drafts in your workspace</p></div><div><span className="metric-label">Published distributions</span><strong className="metric-value">{published.length.toString().padStart(2, '0')}<span className="mini-lock"><LockKeyhole size={15} /></span></strong><p>{store.mode === 'sandbox' ? 'In this local session' : published.length ? 'Confirmed in this session' : 'No confirmed chain data yet'}</p></div></div>

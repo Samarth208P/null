@@ -1,0 +1,17 @@
+{
+  "chainId": 11155111,
+  "deployer": "0x523FF8d1Ce8A64690Bf592d73DF62AAB9FFdF434",
+  "relayer": "0x3F356049Bf36f22395707FE81C5CDF90487Ce582",
+  "deployerBalanceSepEth": "0.922012709731794065",
+  "relayerBalanceSepEth": "0.05",
+  "deployerBalanceTestUsdc": "120",
+  "deploymentGasCostSepEth": "0.026342219484077175",
+  "policyCommitment": "0x1dbf25bc6583b565755f92be37d1c0f3feb905f5657bc1ad798b1190c441258a",
+  "policyRegistered": true,
+  "policyTransaction": "0x001ad2bc9a96ee3117721abace6cc54f0a91a8a97f0c2a67a5e7ea577686a69e",
+  "policyGasCostSepEth": "0.00162231983264676",
+  "webUrl": "http://127.0.0.1:5173",
+  "relayerUrl": "http://127.0.0.1:8787",
+  "environmentFile": ".env",
+  "privateProofFlowValidated": false
+}

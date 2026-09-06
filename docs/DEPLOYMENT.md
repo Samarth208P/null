@@ -1,6 +1,6 @@
 # Deployment and service setup
 
-The repository currently contains development sources and compiled artifacts, **not a deployed NULL environment**. These instructions describe the existing scripts and configuration boundaries. No deployment, token approval, confidential simulation, or service publication was performed during development. Tests were skipped at the user's request; deployment readiness has not been established by compilation alone.
+This setup deploys the contracts to Ethereum Sepolia and runs the web app and relayer on your own computer. All local configuration is in one private root `.env`; no website hosting is required. Confirmed transactions and current execution evidence belong in [implementation status](IMPLEMENTATION_STATUS.md). Contract deployment and local service configuration do not establish a working proof/payment flow or a live Privy/CRE integration. See [free defaults and optional integration limits](FREE_SEPOLIA.md).
 
 ## 1. Install and preserve a matching artifact set
 
@@ -21,11 +21,21 @@ Preserve these outputs as one reviewed set:
 - `contracts/src/generated/{ShieldVerifier,CreateDistributionVerifier,ClaimVerifier}.sol`.
 - `contracts/artifacts/`, including `build-integrity.json`, and `contracts/abi/`.
 
+The Solidity integrity record includes source-qualified artifacts and library link references. This preserves distinct generated libraries with the same name; deployment resolves those references and deduplicates only matching library instructions and ABIs.
+
 A plain circuit compile without `--verifiers` does not produce a deployable verifier set and replaces the circuit manifest with a compile-only status. Regenerate with `--verifiers` and rebuild Solidity after any relevant source change. Do not substitute an accepting verifier or edit hashes to bypass integrity checks. Details are in [circuit development](../circuits/README.md) and [contract development](../contracts/README.md).
 
 ## 2. Review the actual deployment plan
 
-The [deployment script](../contracts/scripts/deploy.mjs) requires secret-managed process environment values:
+Prepare local configuration first:
+
+```sh
+pnpm setup:sepolia
+```
+
+This creates the single Git-ignored root `.env` from [the canonical template](../.env.example), restricts file access, and prints the deployer's public address. Existing wallets and nonempty settings are preserved. The same file holds deployment, local service, treasury signer, and public browser values. Optional service credentials remain empty until configured.
+
+The deployment commands load root `.env` automatically. Existing shell variables take precedence. The [deployment script](../contracts/scripts/deploy.mjs) uses:
 
 | Variable | Purpose |
 | --- | --- |
@@ -34,32 +44,37 @@ The [deployment script](../contracts/scripts/deploy.mjs) requires secret-managed
 | `NULL_DEPLOYER_PRIVATE_KEY` | Funded deployer key; never a browser environment value or committed file |
 | `NULL_CHAIN_ID` | Optional; defaults to Sepolia `11155111`. The script also permits local development chain `31337` |
 | `NULL_GIT_COMMIT` | Optional source revision recorded in deployment provenance |
+| `NULL_MAX_FEE_GWEI` | Maximum per-gas fee; setup defaults to `10` |
+| `NULL_MAX_DEPLOYMENT_ETH` | Total deployment budget in testnet ETH; setup defaults to `0.05` |
 
-The default invocation reads the RPC, checks chain/asset configuration and artifact integrity, and prints a concrete plan without broadcasting:
-
-```sh
-node contracts/scripts/deploy.mjs
-```
-
-It still requires the deployer key to identify the sender. When a deployment is deliberately authorized, the explicit sending command is:
+The plan reads the RPC, checks chain/asset configuration, artifact integrity and library links, and prints a conservative funding allowance based on the current RPC fee quote without broadcasting:
 
 ```sh
-node contracts/scripts/deploy.mjs --broadcast
+pnpm deploy:plan
 ```
 
-That command deploys Poseidon, the authorization registry, the three generated verifiers, and the pool, waits for their receipts, records runtime bytecode hashes, and writes **`deployments/11155111.json`** for Sepolia (or `deployments/31337.json` locally). It refuses to overwrite an existing manifest at that path. It does not approve tokens, shield funds, fund the deployer, or deploy a faucet asset onto a public chain.
+The allowance is not an exact cost; every send gets a fresh RPC gas estimate and fee check. The plan is saved to `.artifacts/deployment-plan-11155111.json`. Fund the displayed public address with the indicated amount of Sepolia ETH, then run:
 
-Keep [sepolia.template.json](../deployments/sepolia.template.json) as an unconfigured example. Use the numeric-chain manifest actually produced by the script for downstream configuration. Some component examples use `sepolia.json` as a chosen filename; update those values to the real file path rather than assuming that file was generated. The manifest's deployment block starts early enough to replay the authorization registry history as well as the pool.
+```sh
+pnpm deploy:sepolia
+```
 
-## 3. Publish reviewed public browser artifacts
+The current build needs eight deployments: Poseidon, two deduplicated verifier libraries, the authorization registry, three generated verifiers, and the pool. The command records signed transactions and receipts in `.artifacts/deployment-11155111.json` so the same command can resume an interrupted deployment with the same wallet/build. Preserve this journal. It waits for confirmations, records runtime hashes, checks pool bindings, and writes **`deployments/11155111.json`** for Sepolia (or `deployments/31337.json` locally). It refuses to overwrite an existing manifest. It does not approve tokens, shield funds, fund the deployer, or deploy a faucet asset onto a public chain.
 
-Serve the exact circuit JSONs at the URLs recorded in the reviewed deployment manifest. The web application currently includes `apps/web/public/circuits/` for `/circuits/` assets; synchronize it with the reviewed build when artifacts change. Public proving artifacts do not contain recipient secrets.
+Keep [sepolia.template.json](../deployments/sepolia.template.json) as an unconfigured example. Use the numeric-chain manifest produced by the script for downstream configuration. Its deployment block starts early enough to replay the authorization registry history as well as the pool.
 
-Serve the actual reviewed deployment manifest at a public URL such as `/deployment.json`, then configure [the browser environment example](../apps/web/.env.example):
+## 3. Synchronize the local browser artifacts
+
+Before any broadcast, the deployment script simulates all eight constructors using RPC state overrides and computes a gas allowance with a 20% margin. It requires an RPC that supports state overrides for `eth_call` and `eth_estimateGas`; the default PublicNode endpoint was verified. Actual deployed runtime must match both constructor simulation and linked compiler output. Repeating the deployment command with a matching completed journal and manifest can finish an interrupted browser synchronization without redeploying contracts.
+
+After successful deployment, the command copies the actual manifest to `apps/web/public/deployment.json`, synchronizes the matching circuit JSONs and artifact manifest into `apps/web/public/circuits/`, and updates the pool, deployment block, manifest URL, and default Sepolia workspace in root `.env`. It preserves the browser's existing public RPC instead of copying a deployment RPC that might contain credentials. Restart Vite. Public proving artifacts do not contain recipient secrets.
+
+Vite reads the root `.env` and exposes only the `VITE_` values listed in [the canonical example](../.env.example):
 
 | Browser value | Meaning |
 | --- | --- |
 | `VITE_DEPLOYMENT_MANIFEST_URL` | Reviewed deployed manifest URL; defaults to `/deployment.json` |
+| `VITE_DEFAULT_ENVIRONMENT` | `sandbox` for a fresh checkout; deployment sets `testnet` |
 | `VITE_RPC_URL` | Public RPC URL without private server credentials |
 | `VITE_POOL_ADDRESS`, `VITE_DEPLOYMENT_BLOCK` | Public discovery context matching the actual manifest |
 | `VITE_CONFIRMATIONS` | Confirmation threshold; never represent unconfirmed events as final |
@@ -68,31 +83,36 @@ Serve the actual reviewed deployment manifest at a public URL such as `/deployme
 | `VITE_PRIVY_APP_ID` | Public Privy app ID |
 | `VITE_ORGANIZATION_URL` | Authenticated organization API base URL |
 
-Use `apps/web/.env.local` for local Vite configuration and restart Vite after changes. Build and serve the application with the existing commands:
+Keep the web app local at **http://127.0.0.1:5173**. Restart it after root `.env` changes:
 
 ```sh
-pnpm build
-pnpm preview
+pnpm dev
 ```
 
 The final production web build, including the live-operation and balance-recovery interfaces, passed; evidence is tracked in [implementation status](IMPLEMENTATION_STATUS.md). A frontend bundle alone does not create a deployment or establish a working proof path. The live client must match runtime bytecode, immutable verifier addresses, artifact hashes, chain, asset, and pool to the reviewed manifest before preparation. See [live client configuration and recovery](LIVE_CLIENT.md).
 
-**Everything prefixed `VITE_` is public.** Never put app secrets, wallet keys, recipient view/spend keys, payroll, entropy, or private witnesses there. Hosting must preserve worker/WASM availability and circuit URLs; publishing a folder does not complete organization or confidential-execution setup.
+**Everything prefixed `VITE_` is public.** Never put app secrets, wallet keys, recipient view/spend keys, payroll, entropy, or private witnesses there. Vite uses strict file serving and denies environment files, private `.artifacts` outputs, research files, certificates, and Git metadata. A local browser build does not complete organization or confidential-execution setup.
 
-## 4. Configure organization authorization and the optional relayer
+## 4. Configure local authorization and the relayer
 
-The Node services read process environment variables; they do not automatically load `.env` files. The `.env.example` files are configuration references for your secret manager or process runner. Both hosts bind loopback and need an HTTPS reverse proxy for remote browser use, explicit allowed origins, and an appropriate edge rate limiter.
+The service scripts automatically load the same root `.env`, with shell variables taking precedence. Relative manifest paths also resolve from the repository root. The local treasury CLI provides authorization without a Privy account:
 
 Start only configured services with the existing scripts:
 
 ```sh
-pnpm --filter @null-protocol/organization dev
-pnpm --filter @null-protocol/relayer dev
+pnpm treasury:init
+pnpm treasury:register       # Review and simulate the public policy registration
+pnpm treasury:register --broadcast
+pnpm setup:relayer           # Create or reuse a separate gas wallet; show funding plan
+pnpm setup:relayer --fund    # Bring it to 0.05 Sepolia ETH once, using the deployer
+pnpm dev:all                # Start the local web app and relayer together
 ```
 
-Follow [organization service setup](../services/organization/README.md) for the real Privy app credentials, organization wallet, owner quorum, required policies, threshold, exact allowed member DIDs, and deployed chain/pool context. Membership grants access to request approval; actual Privy quorum and policy enforcement determine whether an intent can be signed. The service accepts public intent fields and session-bound approval tickets, not payroll or recipient keys. The [browser authorization adapter](../packages/auth/README.md) verifies the exact canonical intent and returned signature locally.
+Follow [the treasury guide](../tools/TREASURY.md) to import the private policy file and use `pnpm treasury:sign` for an exact reviewed distribution intent. The signer key and recovery values remain in root `.env`; private policy/signature files remain under `.artifacts`. Registration and relay funding do not shield or distribute tokens.
 
-For the relayer, configure `NULL_MANIFEST_PATH` to the actual numeric-chain manifest, `RELAYER_RPC_URL`, `RELAYER_PRIVATE_KEY`, and allowed origins. Resolve relative manifest paths from the service process working directory; through a pnpm filter, `../../deployments/11155111.json` points to the Sepolia manifest. Read [relayer setup and calldata export](../services/relayer/README.md). Relay health can report missing configuration; it does not claim a successful transaction. The browser's explicit self-broadcast path remains available when configured and authorized, subject to the same proof and deployment checks.
+Relayer setup writes its separate key, RPC, local endpoint, and allowed origins into root `.env`. Use `NULL_MANIFEST_PATH=deployments/11155111.json`. `pnpm relayer` starts only the service at `127.0.0.1:8787`; read [relay configuration and calldata export](../services/relayer/README.md). Its health endpoint checks configuration and deployment readiness, not a completed payment. Wallet submission remains available with the same proof and deployment checks.
+
+Privy remains optional. If enabling it, follow [organization service setup](../services/organization/README.md) for app credentials, wallet, owner quorum, policies, threshold, and member DIDs, then run `pnpm organization`. Membership grants access to request approval; the actual quorum and policies decide whether an intent can be signed. Empty credentials do not enable this integration.
 
 ## 5. Configure public discovery
 
@@ -124,7 +144,7 @@ The separate local compiler command in that guide is explicitly labeled `local-f
 
 ## Evidence to retain
 
-Record actual deployment manifests, build/source checksums, transaction receipts, hosted artifact URLs, Graph endpoint/deployment identity, organization policy/quorum configuration, and CRE execution/attestation evidence when those actions eventually occur. Avoid inserting credentials or private witnesses into evidence files. Current absence of these external results is recorded in [implementation status](IMPLEMENTATION_STATUS.md) and [sponsor compliance](SPONSOR_COMPLIANCE.md).
+Retain actual deployment manifests, build/source checksums, transaction receipts, and local service configuration status. Record Graph, Privy, or CRE execution evidence separately if those integrations are later enabled. Avoid inserting credentials or private witnesses into public evidence files. [Implementation status](IMPLEMENTATION_STATUS.md) and [sponsor compliance](SPONSOR_COMPLIANCE.md) distinguish recorded results from remaining work.
 
 The MVP has no withdrawal implementation, no security audit, and no executed test suite. Deployment should not be interpreted as permission to use real-value assets or as proof that the privacy and recovery guarantees are validated.
 
