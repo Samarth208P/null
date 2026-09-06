@@ -1,0 +1,39 @@
+{
+  "status": "awaiting-artifacts",
+  "protocolVersion": "0.1.0",
+  "chainId": 11155111,
+  "deploymentBlock": null,
+  "asset": { "symbol": "USDC", "decimals": 6, "address": null },
+  "contracts": {
+    "nullPool": null,
+    "nullAuthRegistry": null,
+    "poseidon3": null,
+    "shieldVerifier": null,
+    "createDistributionVerifier": null,
+    "claimVerifier": null
+  },
+  "codeHashes": {
+    "asset": null,
+    "nullPool": null,
+    "nullAuthRegistry": null,
+    "poseidon3": null,
+    "shieldVerifier": null,
+    "createDistributionVerifier": null,
+    "claimVerifier": null
+  },
+  "graph": { "subgraph": null, "substreamsPackage": null },
+  "build": {
+    "gitCommit": null,
+    "noir": "1.0.0-beta.22",
+    "barretenberg": "5.0.0-nightly.20260522",
+    "solidity": "0.8.28",
+    "poseidon": "circomlibjs@0.1.7/noir-lang-poseidon@v0.1.1",
+    "circuitArtifacts": null
+  },
+  "security": {
+    "audited": false,
+    "networkScope": "testnet-only",
+    "testsExecuted": false,
+    "withdrawalsImplemented": false
+  }
+}
