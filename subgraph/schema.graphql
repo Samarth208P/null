@@ -1,0 +1,65 @@
+"Public transport only. No recipient, plaintext amount, profile, viewing key or decrypted data."
+type PrivatePaymentEnvelope @entity(immutable: true) {
+  id: ID!
+  protocol: String!
+  chainId: BigInt!
+  emitter: Bytes!
+  blockNumber: BigInt!
+  blockHash: Bytes!
+  transactionHash: Bytes!
+  logIndex: Int!
+  version: Int!
+  schemeId: BigInt!
+  transportTag: Bytes
+  slot: Int
+  ephemeralPubKey: Bytes!
+  viewTag: Bytes!
+  ciphertext: Bytes!
+}
+type PrivateDistribution @entity(immutable: true) {
+  id: ID!
+  protocol: String!
+  chainId: BigInt!
+  emitter: Bytes!
+  blockNumber: BigInt!
+  blockHash: Bytes!
+  transactionHash: Bytes!
+  logIndex: Int!
+  commitment: BigInt!
+  envelopeRoot: Bytes!
+  transportTag: Bytes!
+  slotCount: Int!
+  leafIndex: BigInt!
+  postDistributionRoot: BigInt!
+  version: Int!
+}
+"No relation to a distribution entity: a claim does not publish its source distribution."
+type PrivateConsumption @entity(immutable: true) {
+  id: ID!
+  protocol: String!
+  chainId: BigInt!
+  emitter: Bytes!
+  blockNumber: BigInt!
+  blockHash: Bytes!
+  transactionHash: Bytes!
+  logIndex: Int!
+  nullifier: BigInt!
+  outputCommitment: BigInt!
+  noteIndex: BigInt!
+  postNoteRoot: BigInt!
+  version: Int!
+}
+type PrivateNote @entity(immutable: true) {
+  id: ID!
+  protocol: String!
+  chainId: BigInt!
+  emitter: Bytes!
+  blockNumber: BigInt!
+  blockHash: Bytes!
+  transactionHash: Bytes!
+  logIndex: Int!
+  commitment: BigInt!
+  noteIndex: BigInt!
+  postNoteRoot: BigInt!
+  noteType: Int!
+}

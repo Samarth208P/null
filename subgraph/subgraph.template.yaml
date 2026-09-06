@@ -1,0 +1,40 @@
+specVersion: 1.3.0
+description: Public private-payment transport for NULL and ERC-5564. Local viewing only.
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: never
+dataSources:
+  - kind: ethereum/contract
+    name: NullPool
+    network: sepolia
+    source:
+      address: '{{NULL_POOL}}'
+      abi: NullPool
+      startBlock: {{START_BLOCK}}
+    context:
+      chainId:
+        type: BigInt
+        data: '{{CHAIN_ID}}'
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - PrivatePaymentEnvelope
+        - PrivateDistribution
+        - PrivateConsumption
+        - PrivateNote
+      abis:
+        - name: NullPool
+          file: ../contracts/abi/NullPool.json
+      eventHandlers:
+        - event: EnvelopePublished(indexed bytes32,indexed uint8,uint8,bytes,bytes1,bytes)
+          handler: handleEnvelope
+        - event: DistributionInserted(indexed uint256,indexed uint256,uint256,bytes32,bytes32,uint8)
+          handler: handleDistribution
+        - event: AllocationConsumed(indexed uint256,indexed uint256,uint256,uint256,uint8)
+          handler: handleConsumption
+        - event: NoteInserted(indexed uint256,indexed uint256,uint256,uint8)
+          handler: handleNote
+      file: ./src/mapping.ts

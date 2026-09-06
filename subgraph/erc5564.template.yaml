@@ -1,0 +1,24 @@
+  - kind: ethereum/contract
+    name: ERC5564Announcer
+    network: sepolia
+    source:
+      address: '{{ERC5564_ANNOUNCER}}'
+      abi: ERC5564Announcer
+      startBlock: {{ERC5564_START_BLOCK}}
+    context:
+      chainId:
+        type: BigInt
+        data: '{{CHAIN_ID}}'
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - PrivatePaymentEnvelope
+      abis:
+        - name: ERC5564Announcer
+          file: ./abis/ERC5564Announcer.json
+      eventHandlers:
+        - event: Announcement(indexed uint256,indexed address,indexed address,bytes,bytes)
+          handler: handleAnnouncement
+      file: ./src/erc5564.ts
