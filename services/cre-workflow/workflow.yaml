@@ -1,0 +1,7 @@
+staging-settings:
+  user-workflow:
+    workflow-name: "null-private-distribution-compiler-v1"
+  workflow-artifacts:
+    workflow-path: "./src/main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: "./secrets.yaml"
