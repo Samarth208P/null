@@ -1,0 +1,28 @@
+{
+  "name": "null-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @null-protocol/web dev",
+    "build": "pnpm --filter @null-protocol/web build",
+    "check": "pnpm -r --if-present typecheck",
+    "preview": "pnpm --filter @null-protocol/web preview",
+    "relayer": "pnpm --filter @null-protocol/relayer dev",
+    "circuits:build": "node tools/build-circuits.mjs --verifiers",
+    "build:contracts": "node contracts/scripts/build.mjs",
+    "build:graph": "pnpm --filter @null-protocol/subgraph build:source",
+    "organization": "pnpm --filter @null-protocol/organization dev"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "22.19.0",
+    "tsx": "4.20.5",
+    "solc": "0.8.28",
+    "@noir-lang/noir_wasm": "1.0.0-beta.22"
+  }
+}
