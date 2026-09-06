@@ -1,0 +1,1 @@
+{ "name": "@null-protocol/relayer", "version": "0.1.0", "private": true, "type": "module", "scripts": { "dev": "tsx src/server.ts", "typecheck": "tsc --noEmit", "broadcast": "tsx src/broadcast.ts" }, "dependencies": { "@null-protocol/contracts": "workspace:*", "viem": "2.37.3" } }
