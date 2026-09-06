@@ -1,0 +1,36 @@
+{
+  "status": "generated",
+  "noirVersion": "1.0.0-beta.22",
+  "backendVersion": "5.0.0-nightly.20260522",
+  "verifierTarget": "evm",
+  "tested": false,
+  "circuits": {
+    "shield": {
+      "url": "/circuits/shield.json",
+      "sha256": "0x8c96ab11442794364f464463ef5e77b827c06607bf4e5382f383938cc9ea4d9d",
+      "verificationKeySha256": "0x9a162f74783ddd90d4843c0dc60cec3ef11a34b8378a38afa7fd01831c3510d2",
+      "verifierSourceSha256": "0xc9285a23a724161b2dab6678d9b1bb98f46150a86e774f2943b4ba0de55c0f0e",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "create_distribution": {
+      "url": "/circuits/create_distribution.json",
+      "sha256": "0xe9b5140c2e50cc3771dbd1af6bafdb9b8638ea28cad685ecbc6e59955f4ecc16",
+      "verificationKeySha256": "0x78d6f7496963fe4a08d53f99f893ec1028e585c3468e786c4358d832039a4852",
+      "verifierSourceSha256": "0xbad1fb420e40e42fc9d5df6f3c259faeb4c0ec49d3b2f24a0e81f11519f3db87",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "claim": {
+      "url": "/circuits/claim.json",
+      "sha256": "0x2c1fa766cb9e64f2fd48e591bc5aad346f50f93f3e87e5e01e529a79447991a9",
+      "verificationKeySha256": "0xa15e3694b4dace0f0b172cebbec6d232ca132dfe534ad5111ebfc22585942a30",
+      "verifierSourceSha256": "0x94c61fc5eda9d0fa634885f5c7e2336bd1bd5b2a11150e7cddbedda3c1e854dc",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    }
+  }
+}
