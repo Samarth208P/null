@@ -3,5 +3,5 @@
   "poolAddress": "0x0000000000000000000000000000000000000000",
   "payrollBaseUrl": "https://payroll.example.invalid/batches",
   "payrollSecretId": "NULL_PAYROLL_API_TOKEN",
-  "authorizedPublicKey": "REPLACE_WITH_CRE_TRIGGER_AUTHORIZED_PUBLIC_KEY"
+  "authorizedPublicKey": "REPLACE_WITH_CRE_TRIGGER_EVM_ADDRESS"
 }

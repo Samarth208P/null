@@ -1,36 +1,95 @@
 import { useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronRight, Circle, FileText, Inbox, LockKeyhole, Plus, Search, Send, Shield, ShieldCheck, SlidersHorizontal, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronRight, LockKeyhole, Plus, Search, Send, ShieldCheck } from 'lucide-react';
 import { useStore, type Distribution } from '../lib/store';
+import { useAccount } from '../lib/account';
 import { config } from '../lib/config';
-import { amount, date, money, short, stringify, download } from '../lib/format';
+import { amount, date, money } from '../lib/format';
+import { paymentStatusLabel } from '../lib/ui-copy';
 import { Badge, Button, EmptyState, KeyValue, Modal, Notice, PageHeader, SectionTitle } from '../components/ui';
 
+const isPublished = (item: Distribution) => ['Published locally', 'Confirmed'].includes(item.status);
+
 export function DistributionTable({ items, compact = false }: { items: Distribution[]; compact?: boolean }) {
-  const store = useStore(); const [selected, setSelected] = useState<Distribution | null>(null);
-  return <>{items.length ? <div className="table-scroll"><table className="distribution-table"><thead><tr><th>Distribution</th><th>Recipients</th><th>Total amount</th><th>Status</th>{!compact && <th>Created</th>}<th><span className="sr-only">Open</span></th></tr></thead><tbody>{items.map(item => <tr key={item.id}><td><button className="table-title" onClick={() => ['Published locally', 'Confirmed'].includes(item.status) ? setSelected(item) : store.editDistribution(item.id)}><span className="distribution-icon"><Send size={17} strokeWidth={1.6} /></span><span><strong>{item.name}</strong><small>{item.category}</small></span></button></td><td><span className="recipient-count">{item.recipients.length}<span> / 8 slots</span></span></td><td className="numeric"><strong>{store.hideBalances ? '••••••' : money(item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n))}</strong><span className="currency">USDC</span></td><td><Badge tone={['Published locally', 'Confirmed'].includes(item.status) ? 'success' : item.status === 'Prepared' ? 'purple' : 'neutral'} dot>{item.status === 'Published locally' ? 'Local publication' : item.status}</Badge></td>{!compact && <td className="muted">{date(item.createdAt)}</td>}<td><button className="icon-button" aria-label={`Open ${item.name}`} onClick={() => ['Published locally', 'Confirmed'].includes(item.status) ? setSelected(item) : store.editDistribution(item.id)}><ChevronRight size={16} /></button></td></tr>)}</tbody></table></div> : <EmptyState icon={Send} title="Your next distribution starts here" description="Prepare a private payout for up to eight recipients. Names and amounts stay in your browser." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>Create distribution</Button>} />}
-  <Modal title={selected?.name || 'Distribution'} description={selected?.status === 'Confirmed' ? 'Confirmed Sepolia distribution' : 'Local cryptographic artifact · No chain transaction'} open={!!selected} onClose={() => setSelected(null)}>{selected && <><div className="detail-list"><KeyValue label="Status"><Badge tone="success">{selected.status}</Badge></KeyValue><KeyValue label="Encrypted delivery">8 fixed-size envelopes</KeyValue><KeyValue label="Commitment"><code>{short(String(selected.compiled?.commitment || ''), 12)}</code></KeyValue><KeyValue label="Private total">{money(selected.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), true)} USDC</KeyValue></div><Notice>{selected.status === 'Confirmed' ? 'This distribution was confirmed on Sepolia. Its encrypted envelopes can be discovered by recipients from public history.' : 'Encrypted delivery is available in your local inbox. Live publication requires organization authorization, a local proof, and a verified deployment.'}</Notice>{selected.transactionHash && <a className="text-link" href={`https://sepolia.etherscan.io/tx/${selected.transactionHash}`} target="_blank" rel="noreferrer">View confirmed transaction<ArrowUpRight size={14} /></a>}<div className="modal-actions"><Button variant="secondary" onClick={() => download('null-public-distribution.json', stringify(selected.compiled?.publicBundle))}>Export public bundle</Button><Button onClick={() => { setSelected(null); store.navigate('inbox'); }}>Open private inbox<ArrowRight size={15} /></Button></div></>}</Modal></>;
+  const store = useStore();
+  const [selected, setSelected] = useState<Distribution | null>(null);
+  const openDistribution = (item: Distribution) => isPublished(item) ? setSelected(item) : store.editDistribution(item.id);
+
+  return <>
+    {items.length ? <div className="table-scroll"><table className="distribution-table">
+      <thead><tr><th>Payment</th><th>People</th><th>Total</th><th>Status</th>{!compact && <th>Created</th>}<th><span className="sr-only">Open</span></th></tr></thead>
+      <tbody>{items.map(item => <tr key={item.id}>
+        <td><button className="table-title" onClick={() => openDistribution(item)}><span className="distribution-icon"><Send size={17} strokeWidth={1.6} /></span><span><strong>{item.name}</strong>{!compact && <small>{item.category}</small>}</span></button></td>
+        <td><span className="recipient-count">{item.recipients.length}</span></td>
+        <td className="numeric"><strong>{store.hideBalances ? '••••••' : money(item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n))}</strong><span className="currency">USDC</span></td>
+        <td><Badge tone={isPublished(item) ? 'success' : item.status === 'Prepared' ? 'purple' : 'neutral'} dot>{paymentStatusLabel(item.status)}</Badge></td>
+        {!compact && <td className="muted">{date(item.createdAt)}</td>}
+        <td><button className="icon-button" aria-label={`Open ${item.name}`} onClick={() => openDistribution(item)}><ChevronRight size={16} /></button></td>
+      </tr>)}</tbody>
+    </table></div> : <EmptyState icon={Send} title="Make your first payment" description="Choose who to pay, enter the amounts, and check the details before sending." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />}
+    <Modal title={selected?.name || 'Payment'} description={selected?.status === 'Confirmed' ? 'Sent on the test network' : 'Sent in practice · No real money moved'} open={!!selected} onClose={() => setSelected(null)}>
+      {selected && <>
+        <div className="detail-list">
+          <KeyValue label="Status"><Badge tone="success">{paymentStatusLabel(selected.status)}</Badge></KeyValue>
+          <KeyValue label="People paid">{selected.recipients.length}</KeyValue>
+          <KeyValue label="Total">{store.hideBalances ? '••••••' : money(selected.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), true)} USDC</KeyValue>
+        </div>
+        <Notice>{selected.status === 'Confirmed' ? 'Each person can now open their inbox to collect their payment.' : 'This practice payment lasts until you reload or sign out. It cannot be restored later.'}</Notice>
+        {selected.transactionHash && <a className="text-link" href={`https://sepolia.etherscan.io/tx/${selected.transactionHash}`} target="_blank" rel="noreferrer">View payment receipt<ArrowUpRight size={14} /></a>}
+        <div className="modal-actions"><Button onClick={() => setSelected(null)}>Done<Check size={15} /></Button></div>
+      </>}
+    </Modal>
+  </>;
 }
 
 export function Overview() {
   const store = useStore();
-  const drafts = store.distributions.filter(item => !['Published locally', 'Confirmed'].includes(item.status));
-  const published = store.distributions.filter(item => ['Published locally', 'Confirmed'].includes(item.status));
+  const { profile } = useAccount();
+  const drafts = store.distributions.filter(item => !isPublished(item));
   const pending = drafts.reduce((total, item) => total + item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), 0n);
+
   return <>
-    <PageHeader title="Private by default." description="Your treasury, distributions, and the details that stay yours." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New distribution</Button>} />
-    {store.mode === 'testnet' && <Notice tone="warning">{config.poolAddress ? 'Sepolia contract configuration is loaded. Connect your wallet and import your treasury policy to prepare live operations. Each operation verifies the deployment before proving.' : 'This workspace uses Sepolia. Configure a verified deployment and proof artifacts to enable live funds. Local sample activity is hidden.'}</Notice>}
-    <div className="overview-financials">
-      <div className="treasury-overview"><div className="balance-label"><span><ShieldCheck size={17} />Shielded treasury</span><Badge tone="purple"><LockKeyhole size={11} />{store.mode === 'sandbox' ? 'Sandbox balance' : store.treasuryReady ? 'Recovered snapshot' : 'Not recovered'}</Badge></div><div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div><div className="balance-bottom"><p><span className="status-dot" />{store.mode === 'sandbox' ? 'Available for local distributions' : 'Connect a verified treasury'}</p><button className="text-link" onClick={() => store.navigate('treasury')}>Manage treasury<ArrowUpRight size={14} /></button></div></div>
-      <div className="financial-side"><div><span className="metric-label">In draft distributions</span><strong className="metric-value">{store.hideBalances ? '••••••' : money(pending)}<small>USDC</small></strong><p>{drafts.length} drafts in your workspace</p></div><div><span className="metric-label">Published distributions</span><strong className="metric-value">{published.length.toString().padStart(2, '0')}<span className="mini-lock"><LockKeyhole size={15} /></span></strong><p>{store.mode === 'sandbox' ? 'In this local session' : published.length ? 'Confirmed in this session' : 'No confirmed chain data yet'}</p></div></div>
-    </div>
-    <div className="workspace-callout"><span className="callout-symbol"><Shield size={22} strokeWidth={1.5} /></span><div><strong>Built to keep the details private.</strong><p>Eight encrypted slots. Local discovery. Your recipients’ information stays off the public record.</p></div><button className="text-link" onClick={() => store.navigate('inspector')}>See what’s visible<ArrowRight size={15} /></button></div>
-    <section className="section-block"><SectionTitle title="Recent distributions" caption="Prepare, review, and send from one private workspace." action={<button className="text-link" onClick={() => store.navigate('distributions')}>View all<ArrowRight size={14} /></button>} /><div className="table-panel"><DistributionTable items={store.distributions.slice(0, 4)} compact /><div className="table-footer"><LockKeyhole size={13} /><span>Names and amounts are visible only in this local session.</span><span>8-slot protocol</span></div></div></section>
-    <div className="overview-bottom"><section className="activity-section"><SectionTitle title="Workspace activity" action={<Badge>{store.mode === 'sandbox' ? 'Local' : 'Testnet'}</Badge>} />{store.activities.length ? <div className="activity-list">{store.activities.slice(0, 4).map(item => <div className="activity-row" key={item.id}><span className="activity-icon">{item.type === 'shield' ? <ArrowDownLeft size={16} /> : item.type === 'distribution' ? <Send size={16} /> : item.type === 'claim' ? <LockKeyhole size={16} /> : <Check size={16} />}</span><div><strong>{item.title}</strong><p>{item.detail}</p></div><time>{new Date(item.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time></div>)}</div> : <p className="subtle-empty">Confirmed network activity will appear here when connected.</p>}</section><section className="quick-start"><div className="section-title"><h2>A quieter way to pay.</h2><span className="brand-symbol small" /></div><p>Try the full recipient experience with a local distribution.</p><button onClick={() => store.editDistribution(store.distributions[0]?.id || null)}><span className="step-number">1</span><span>Prepare a distribution</span><ArrowUpRight size={15} /></button><button onClick={() => store.navigate('inbox')}><span className="step-number">2</span><span>Discover your allocation</span><ArrowUpRight size={15} /></button><button onClick={() => store.navigate('balance')}><span className="step-number">3</span><span>Keep your balance private</span><ArrowUpRight size={15} /></button></section></div>
+    <PageHeader title={profile?.organizationName || 'Organization overview'} description="Check your funds and manage payments." action={store.distributions.length ? <Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button> : undefined} />
+    {store.mode === 'testnet' && !store.treasuryReady && <Notice tone="warning">{config.poolAddress ? 'Check your funds before making a payment.' : 'Payments are not set up yet. Check your connection in Settings.'}<button className="text-link" onClick={() => store.navigate(config.poolAddress ? 'treasury' : 'settings')}>{config.poolAddress ? 'Check funds' : 'Open settings'}<ArrowRight size={14} /></button></Notice>}
+    <div className="overview-actions"><Button variant="secondary" icon={ArrowDownLeft} onClick={() => store.navigate('treasury')}>Manage funds</Button><Button variant="secondary" icon={Send} onClick={() => store.navigate('distributions')}>View payments</Button><Button variant="ghost" icon={ShieldCheck} onClick={() => store.navigate('about')}>Help</Button></div>
+    <div className="overview-account-grid"><section className="private-balance-panel organization-treasury" aria-label="Available funds">
+      <div className="balance-label"><span><ShieldCheck size={17} />Available funds</span><Badge tone="purple">{store.mode === 'sandbox' ? 'Practice money' : store.treasuryReady ? 'Last checked' : 'Not checked yet'}</Badge></div>
+      <div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div>
+      <div className="balance-bottom"><p>{store.mode === 'sandbox' ? 'Practice money only.' : store.treasuryReady ? 'Checked again before you send a payment.' : 'Check your funds to see the balance.'}</p><button className="text-link" onClick={() => store.navigate('treasury')}>Manage funds<ArrowRight size={14} /></button></div>
+      <div className="treasury-ledger"><div><span>Total in drafts</span><strong>{store.hideBalances ? '••••••' : money(pending)} <small>USDC</small></strong></div><div><span>Draft payments</span><strong>{drafts.length}</strong></div></div>
+    </section>
+    <section className="workspace-next" aria-labelledby="workspace-next-heading"><div className="workspace-next-heading"><h2 id="workspace-next-heading">Pick up where you left off</h2><span>{drafts.length} draft{drafts.length === 1 ? '' : 's'}</span></div>
+      {drafts.length ? <div className="draft-shortcuts">{drafts.slice(0, 3).map(item => <button key={item.id} onClick={() => store.editDistribution(item.id)}><span className="draft-shortcut-icon"><Send size={17} strokeWidth={1.6} /></span><span><strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? '' : 's'} · {paymentStatusLabel(item.status)}</small></span><ChevronRight size={16} /></button>)}</div> : <div className="workspace-next-empty"><p>No unfinished payments. Start a payment when you’re ready.</p><Button variant="secondary" icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button></div>}
+      <p className="workspace-next-note"><LockKeyhole size={13} />Only your workspace can see these details.</p>
+    </section></div>
+    <section className="section-block">
+      <SectionTitle title="Recent payments" caption={drafts.length ? `${drafts.length} draft${drafts.length === 1 ? '' : 's'} · ${store.hideBalances ? '••••••' : money(pending)} USDC in drafts` : 'Your latest drafts and sent payments.'} action={store.distributions.length ? <button className="text-link" onClick={() => store.navigate('distributions')}>View all<ArrowRight size={14} /></button> : undefined} />
+      <div className="table-panel"><DistributionTable items={store.distributions.slice(0, 4)} compact /></div>
+    </section>
+    <details className="progressive-details workspace-activity">
+      <summary>Recent activity{store.activities.length > 0 && <Badge>{store.activities.length}</Badge>}</summary>
+      {store.activities.length ? <div className="activity-list">{store.activities.slice(0, 6).map(item => <div className="activity-row" key={item.id}>
+        <span className="activity-icon">{item.type === 'shield' ? <ArrowDownLeft size={16} /> : item.type === 'distribution' ? <Send size={16} /> : item.type === 'claim' ? <LockKeyhole size={16} /> : <Check size={16} />}</span>
+        <div><strong>{item.title}</strong><p>{item.detail}</p></div><time>{new Date(item.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
+      </div>)}</div> : <p className="subtle-empty">Your payment and balance updates will appear here.</p>}
+    </details>
   </>;
 }
 
 export function Distributions() {
-  const store = useStore(); const [search, setSearch] = useState(''); const [filter, setFilter] = useState('All distributions');
-  const filtered = store.distributions.filter(item => item.name.toLowerCase().includes(search.toLowerCase()) && (filter === 'All distributions' || (filter === 'Drafts' ? item.status === 'Draft' : filter === 'Prepared' ? item.status === 'Prepared' : ['Published locally', 'Confirmed'].includes(item.status))));
-  return <><PageHeader title="Distributions" description="Private payouts, thoughtfully organized." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New distribution</Button>} /><div className="list-toolbar"><div className="tabs">{['All distributions', 'Drafts', 'Prepared', 'Published'].map(tab => <button key={tab} className={tab === filter ? 'selected' : ''} onClick={() => setFilter(tab)}>{tab}{tab === 'All distributions' && <span>{store.distributions.length}</span>}</button>)}</div><label className="search-field"><Search size={16} /><input aria-label="Search distributions" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search distributions…" /></label></div><div className="table-panel">{filtered.length || !search && filter === 'All distributions' ? <DistributionTable items={filtered} /> : <EmptyState icon={Search} title="No matching distributions" description="Try a different name or show all distributions." action={<Button variant="secondary" onClick={() => { setSearch(''); setFilter('All distributions'); }}>Clear filters</Button>} />}<div className="table-footer"><span>{filtered.length} distribution{filtered.length !== 1 ? 's' : ''}</span><span>Amounts are private to your workspace</span></div></div></>;
+  const store = useStore();
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All payments');
+  const filtered = store.distributions.filter(item => item.name.toLowerCase().includes(search.toLowerCase()) && (filter === 'All payments' || (filter === 'Drafts' ? item.status === 'Draft' : filter === 'Ready to send' ? item.status === 'Prepared' : isPublished(item))));
+
+  return <>
+    <PageHeader title="Payments" description="See drafts and payments you have sent." action={store.distributions.length ? <Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button> : undefined} />
+    {store.distributions.length > 0 && <div className="list-toolbar">
+      <div className="tabs">{['All payments', 'Drafts', 'Ready to send', 'Sent'].map(tab => <button key={tab} className={tab === filter ? 'selected' : ''} onClick={() => setFilter(tab)}>{tab}{tab === 'All payments' && <span>{store.distributions.length}</span>}</button>)}</div>
+      <label className="search-field"><Search size={16} /><input aria-label="Search payments" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search payments…" /></label>
+    </div>}
+    <div className="table-panel">
+      {filtered.length || !search && filter === 'All payments' ? <DistributionTable items={filtered} /> : <EmptyState icon={Search} title="No matching payments" description="Try another name or clear the filters." action={<Button variant="secondary" onClick={() => { setSearch(''); setFilter('All payments'); }}>Clear filters</Button>} />}
+      {store.distributions.length > 0 && <div className="table-footer"><span>{filtered.length} payment{filtered.length !== 1 ? 's' : ''}</span><span>Amounts are private to your workspace</span></div>}
+    </div>
+  </>;
 }

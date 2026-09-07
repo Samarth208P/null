@@ -1,5 +1,5 @@
 import { gcm } from '@noble/ciphers/aes';
-import { compileDistribution } from '@null-protocol/sdk';
+import { compileDistribution, parsePrivacyProfile } from '@null-protocol/sdk';
 
 export interface PayrollInput {
   batchId: string;
@@ -19,7 +19,12 @@ export function parsePayroll(value: unknown, batchId?: string): PayrollInput {
   for (const recipient of value.recipients) {
     object(recipient);
     if (Object.keys(recipient).sort().some(key => !['employeeRef', 'amountAtomic', 'stealthMetaAddress'].includes(key)) || typeof recipient.employeeRef !== 'string' || recipient.employeeRef.length < 1 || recipient.employeeRef.length > 128 || names.has(recipient.employeeRef) || typeof recipient.amountAtomic !== 'string' || !/^[1-9][0-9]{0,19}$/.test(recipient.amountAtomic) || BigInt(recipient.amountAtomic) > 18_446_744_073_709_551_615n || typeof recipient.stealthMetaAddress !== 'string') throw new Error('NULL_CRE_INPUT_INVALID');
-    names.add(recipient.employeeRef);
+    const canonicalRef = recipient.employeeRef.normalize('NFKC').trim();
+    const uniqueRef = canonicalRef.toLocaleLowerCase('en-US');
+    if (!canonicalRef || new TextEncoder().encode(canonicalRef).length > 200 || /[\u0000-\u001f\u007f]/u.test(canonicalRef) || names.has(uniqueRef)) throw new Error('NULL_CRE_INPUT_INVALID');
+    try { parsePrivacyProfile(recipient.stealthMetaAddress); }
+    catch { throw new Error('NULL_CRE_INPUT_INVALID'); }
+    names.add(uniqueRef);
   }
   return value as unknown as PayrollInput;
 }

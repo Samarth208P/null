@@ -1,6 +1,6 @@
 export const config = {
   chainId: 11155111n,
-  defaultEnvironment: import.meta.env.VITE_DEFAULT_ENVIRONMENT === 'testnet' && import.meta.env.VITE_POOL_ADDRESS ? 'testnet' as const : 'sandbox' as const,
+  defaultEnvironment: 'testnet' as const,
   privyAppId: import.meta.env.VITE_PRIVY_APP_ID as string | undefined,
   rpcUrl: (import.meta.env.VITE_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com') as string,
   graphUrl: import.meta.env.VITE_GRAPH_URL as string | undefined,

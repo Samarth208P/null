@@ -21,5 +21,10 @@ Minimal and premium, as requested. Precise language and a quiet interface serve 
 ## Design Principles
 Keep the next action clear. Reveal technical detail progressively. Separate local sandbox activity from confirmed chain activity. Treat privacy failures as blocking. Keep recipient secrets on the recipient device.
 
+## Entry and workspace flow
+Authenticate with email or wallet before displaying workspace content. On the first authenticated visit, ask whether the user is an individual or an organization. Individuals start in their inbox and see private balance navigation. Organizations name their workspace and see overview, distributions, and treasury navigation. Help, privacy explanations, and account settings are shared secondary destinations.
+
+The choice personalizes the interface; it does not grant organization membership. Remember the choice per authenticated account in this browser. A type change preserves the current in-memory session. Sign-out or a different authenticated account disposes of private workspace state. Authentication does not restore private profile keys; clearly offer encrypted recovery.
+
 ## Accessibility & Inclusion
 Keyboard access, visible focus, responsive layouts, readable text, and reduced-motion support are implementation choices for the reference app.

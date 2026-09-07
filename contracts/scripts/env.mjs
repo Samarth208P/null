@@ -44,7 +44,9 @@ function encodeValue(name, value) {
 // Merge only the supplied updates. The temporary file is protected before writing.
 export function updateRootEnv(updates) {
   execFileSync('git', ['check-ignore', '--quiet', '--no-index', '.env'], { cwd: rootPath });
-  const values = { ...readRootEnv(), ...updates };
+  const existing = readRootEnv();
+  if (Object.entries(updates).every(([name, value]) => Object.hasOwn(existing, name) && existing[name] === value)) return;
+  const values = { ...existing, ...updates };
   const body = '# Private local configuration. Never commit or serve this file. Only VITE_ values are public.\n' +
     Object.entries(values).map(([name, value]) => `${name}=${encodeValue(name, value)}`).join('\n') + '\n';
   const parsed = parseEnv(body);

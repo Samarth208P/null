@@ -78,12 +78,12 @@ pnpm deploy:sepolia        # Deploy or resume the contracts and configure public
 pnpm treasury:init         # Create the separate local authorization policy
 pnpm treasury:register --broadcast
 pnpm setup:relayer --fund  # Fund a separate local relay wallet with up to 0.05 Sepolia ETH
-pnpm dev:all               # Run the web app and relayer locally
+pnpm dev:all               # Run the web app, relayer, and configured local services
 ```
 
 All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111.json`, the browser manifest/circuits, and public deployment values in that same file. Restart the local processes after configuration changes. Confirmed deployment and setup evidence is recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md).
 
-The web app and relayer run on your computer; no website hosting is configured or required. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
+The web app and relayer run on your computer; no website hosting is configured or required. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. `pnpm dev:all` also starts the private payroll API when its token is configured. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [current integration setup](docs/INTEGRATION_SETUP.md), [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
 
 **Never place wallet private keys, Privy app secrets, view/spend keys, payroll rows, or private witnesses in `VITE_` variables.** These are public bundle values.
 

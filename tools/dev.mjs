@@ -13,6 +13,17 @@ const children = [
   spawn(process.execPath, [`--env-file=${envPath}`, '--import', 'tsx', 'services/relayer/src/server.ts'],
     { cwd: rootPath, stdio: 'inherit', windowsHide: true }),
 ];
+if (env.NULL_PAYROLL_API_TOKEN) {
+  children.push(spawn(process.execPath, [`--env-file=${envPath}`, '--import', 'tsx', 'services/cre-workflow/src/payroll-server.ts'],
+    { cwd: rootPath, stdio: 'inherit', windowsHide: true }));
+}
+const organizationSettings = ['VITE_ORGANIZATION_URL', 'PRIVY_APP_ID', 'PRIVY_APP_SECRET',
+  'PRIVY_ORGANIZATION_MEMBER_IDS', 'PRIVY_ORGANIZATION_WALLET_ID', 'PRIVY_ORGANIZATION_WALLET_ADDRESS',
+  'PRIVY_ORGANIZATION_OWNER_QUORUM_ID', 'PRIVY_ORGANIZATION_ENTITY_ID', 'PRIVY_ORGANIZATION_POLICY_IDS'];
+if (organizationSettings.every(name => env[name])) {
+  children.push(spawn(process.execPath, [`--env-file=${envPath}`, '--import', 'tsx', 'services/organization/src/server.ts'],
+    { cwd: rootPath, stdio: 'inherit', windowsHide: true }));
+}
 let stopping = false;
 function stop(code) {
   if (stopping) return;

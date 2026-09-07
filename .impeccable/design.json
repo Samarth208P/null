@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-06T07:14:24.113Z",
+  "title": "Design System: NULL",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "toast",
+        "value": "0 10px 34px rgb(0 0 0 / 22%)",
+        "purpose": "Temporary pale feedback toast; resting workspace panels remain flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Existing short interaction easing."
+      },
+      {
+        "name": "control-response",
+        "value": "160ms",
+        "purpose": "Control color and pointer press feedback; disabled for reduced motion."
+      },
+      {
+        "name": "entry-reveal",
+        "value": "220ms",
+        "purpose": "Entry opacity and blur appearance only when motion is allowed."
+      },
+      {
+        "name": "drawer-and-organization-reveal",
+        "value": "200ms",
+        "purpose": "Drawer and organization-field transitions; keyboard and reduced-motion safeguards remain."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "reduced-desktop-gutters",
+        "value": "1200px"
+      },
+      {
+        "name": "single-column-overview",
+        "value": "1080px"
+      },
+      {
+        "name": "mobile-navigation",
+        "value": "760px"
+      },
+      {
+        "name": "small-mobile",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The next financial or setup action.",
+      "html": "<button class=\"ds-button ds-primary\">New distribution</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 17px;border:1px solid transparent;border-radius:999px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;font-weight:500;line-height:20px;cursor:pointer;transition:background-color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),transform 160ms var(--ease,cubic-bezier(0.22,1,0.36,1))}.ds-button:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:3px}.ds-button:active:not(:disabled):not(:focus-visible){transform:scale(.97)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}.ds-button:active:not(:disabled):not(:focus-visible){transform:none}}.ds-primary{background:var(--primary,#5266eb);color:#fff}.ds-primary:hover:not(:disabled){background:#465bdb}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Supporting workspace actions.",
+      "html": "<button class=\"ds-button ds-secondary\">Manage treasury</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 17px;border:1px solid transparent;border-radius:999px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;font-weight:500;line-height:20px;cursor:pointer;transition:background-color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),transform 160ms var(--ease,cubic-bezier(0.22,1,0.36,1))}.ds-button:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:3px}.ds-button:active:not(:disabled):not(:focus-visible){transform:scale(.97)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}.ds-button:active:not(:disabled):not(:focus-visible){transform:none}}.ds-secondary{background:var(--surface-hover,#272735);color:var(--ink,#ededf3)}.ds-secondary:hover:not(:disabled){background:#343444}"
+    },
+    {
+      "name": "Ghost button",
+      "kind": "button",
+      "description": "Quiet secondary navigation.",
+      "html": "<button class=\"ds-button ds-ghost\">Help &amp; privacy</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 17px;border:1px solid transparent;border-radius:999px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;font-weight:500;line-height:20px;cursor:pointer;transition:background-color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),transform 160ms var(--ease,cubic-bezier(0.22,1,0.36,1))}.ds-button:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:3px}.ds-button:active:not(:disabled):not(:focus-visible){transform:scale(.97)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}.ds-button:active:not(:disabled):not(:focus-visible){transform:none}}.ds-ghost{background:none;color:var(--secondary,#c3c3cc)}.ds-ghost:hover:not(:disabled){background:var(--surface-hover,#272735);color:var(--ink,#ededf3)}"
+    },
+    {
+      "name": "Danger button",
+      "kind": "button",
+      "description": "Existing destructive actions.",
+      "html": "<button class=\"ds-button ds-danger\">Remove</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 17px;border:1px solid transparent;border-radius:999px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;font-weight:500;line-height:20px;cursor:pointer;transition:background-color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),color 160ms var(--ease,cubic-bezier(0.22,1,0.36,1)),transform 160ms var(--ease,cubic-bezier(0.22,1,0.36,1))}.ds-button:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:3px}.ds-button:active:not(:disabled):not(:focus-visible){transform:scale(.97)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}.ds-button:active:not(:disabled):not(:focus-visible){transform:none}}.ds-danger{background:#b6384a;color:#fff}.ds-danger:hover:not(:disabled){background:#c94355}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A labeled workspace field with visible keyboard focus.",
+      "html": "<label class=\"ds-field\">Organization name<input value=\"Acme Studio\" autocomplete=\"organization\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:8px;color:var(--ink,#ededf3);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;font-weight:500}.ds-field input{min-height:43px;padding:10px 12px;border:1px solid var(--line-strong,#555565);border-radius:8px;background:var(--bg,#171721);color:var(--ink,#ededf3);font:400 14px Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-field input:hover:not(:disabled){border-color:#838393}.ds-field input:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:2px}.ds-field input:disabled{opacity:.5}"
+    },
+    {
+      "name": "Active navigation",
+      "kind": "nav",
+      "description": "Current route in the dark workspace rail.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#/overview\" aria-current=\"page\">Overview</a><a href=\"#/distributions\">Distributions</a></nav>",
+      "css": ".ds-nav{background:#111119;padding:12px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-nav a{display:flex;align-items:center;min-height:40px;padding:9px 12px;margin:3px 0;border-radius:6px;color:#c3c3cc;font-size:13px;font-weight:420;text-decoration:none}.ds-nav a[aria-current]{background:#2b2b38;color:#f4f4f7;font-weight:500}.ds-nav a:hover{background:#242430;color:#f4f4f7}.ds-nav a[aria-current]:hover{background:#333340}.ds-nav a:focus-visible{outline:2px solid var(--focus,#a7b2ff);outline-offset:3px}"
+    },
+    {
+      "name": "Private status badge",
+      "kind": "chip",
+      "refersTo": "badge-private",
+      "description": "A labeled private-state status, rather than color alone.",
+      "html": "<span class=\"ds-badge\">Not recovered</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 8px;border-radius:5px;background:var(--primary-soft,#282d49);color:var(--primary-ink,#b4bfff);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;font-weight:450;line-height:17px;white-space:nowrap}"
+    },
+    {
+      "name": "Treasury panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A flat balance surface with an explicit unrecovered state.",
+      "html": "<section class=\"ds-panel\" aria-label=\"Treasury balance\"><span>Treasury balance</span><p class=\"ds-balance\">— <small>USDC</small></p><p class=\"ds-note\">Recover your treasury to see its balance.</p></section>",
+      "css": ".ds-panel{padding:28px;border:1px solid var(--line,#32323f);border-radius:12px;background:var(--surface,#1e1e2a);color:var(--ink,#ededf3);font:14px Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.ds-balance{margin:20px 0 0;font-size:38px;font-weight:400;line-height:1.2;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.ds-balance small{font-size:14px;letter-spacing:normal}.ds-note{margin:16px 0 0;color:var(--muted,#aaaab9);font-size:12px;line-height:1.7}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A quiet financial workspace",
+    "overview": "NULL adopts the inspected Mercury dashboard's dark canvas, graphite surfaces, compact navigation, ivory text, and cobalt pill actions. Entry screens follow Mercury's light lavender login canvas and centered white panel. This replaces the former white workspace direction.\n\nThe reference is a visual adaptation: NULL retains its name, slashed-circle mark, product content, existing transaction functions, and Privy email/wallet authentication. Locally hosted Inter substitutes for Mercury's custom Arcadia fonts. It is not a pixel-identical copy. The Operate surface contract and review evidence live in [the Mercury reference brief](docs/DESIGN_REFERENCE.md); durable product commitments live in [PRODUCT.md](PRODUCT.md).",
+    "keyCharacteristics": [
+      "Flat, restrained surfaces with thin boundaries and generous content gutters.",
+      "Regular-weight headings, compact labels, and tabular financial values.",
+      "A light, focused entry sequence leading into a dark workspace.",
+      "Clear next actions and progressive disclosure of technical details."
+    ],
+    "rules": [],
+    "dos": [
+      "**Do** extend the current dark workspace and scoped light entry palette.",
+      "**Do** preserve NULL branding, real data, authentication, recovery, financial actions, visible focus, and reduced-motion behavior.",
+      "**Do** keep amounts legible, masked consistently when requested, and paired with accurate recovery or transaction status."
+    ],
+    "donts": [
+      "**Don't** restore the old white workspace or square off the current pill actions.",
+      "**Don't** import Mercury banking copy, password forms, invented performance history, or unsupported product claims.",
+      "**Don't** describe the adaptation as pixel-identical or treat a visual review as a complete accessibility or transaction audit."
+    ]
+  }
+}

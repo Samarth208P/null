@@ -1,11 +1,14 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
+import { loadRootEnv, rootPath } from '../contracts/scripts/env.mjs';
 
+loadRootEnv();
 const directory = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const arg = key => { const index = args.indexOf(key); return index < 0 ? undefined : args[index + 1]; };
-const manifestPath = resolve(arg('--manifest') ?? resolve(directory, '../deployments/sepolia.json'));
+const suppliedManifest = arg('--manifest');
+const manifestPath = suppliedManifest ? resolve(suppliedManifest) : resolve(rootPath, process.env.NULL_MANIFEST_PATH || 'deployments/11155111.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const pool = manifest.contracts?.nullPool;
 const start = manifest.deploymentBlock;

@@ -40,14 +40,17 @@ export async function createPrivyAuthorizationRequest(options: {
 }
 /** This result is a private circuit witness. Never attach it to relay payloads or logs. */
 export async function verifyPrivyIntentSignature(digest: Hex, signature: Hex, expectedSigner: Address) {
-  if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error('NULL_PRIVY_AUTH_FAILED');
-  const signer = await recoverAddress({ hash: digest, signature });
-  if (signer.toLowerCase() !== expectedSigner.toLowerCase()) throw new Error('NULL_PRIVY_AUTH_FAILED');
-  const publicKey = await recoverPublicKey({ hash: digest, signature });
+  if (!/^0x[0-9a-fA-F]{64}$/.test(digest) || !/^0x[0-9a-fA-F]{40}$/.test(expectedSigner) || !/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error('NULL_PRIVY_AUTH_FAILED');
   const r = signature.slice(2, 66); const s = BigInt(`0x${signature.slice(66, 130)}`);
-  if (s === 0n || s >= ORDER) throw new Error('NULL_PRIVY_AUTH_FAILED');
+  const recovery = Number.parseInt(signature.slice(130), 16);
+  if (BigInt(`0x${r}`) === 0n || BigInt(`0x${r}`) >= ORDER || s === 0n || s >= ORDER || ![0, 1, 27, 28].includes(recovery)) throw new Error('NULL_PRIVY_AUTH_FAILED');
   const compactSignature = `0x${r}${toHex(s > ORDER / 2n ? ORDER - s : s, { size: 32 }).slice(2)}` as Hex;
-  return { digest, signer, publicKey, compactSignature };
+  try {
+    const signer = await recoverAddress({ hash: digest, signature });
+    const publicKey = await recoverPublicKey({ hash: digest, signature });
+    if (signer.toLowerCase() !== expectedSigner.toLowerCase() || !secp256k1.verify(fromHex(compactSignature), fromHex(digest), fromHex(publicKey), { prehash: false, lowS: true })) throw new Error('NULL_PRIVY_AUTH_FAILED');
+    return { digest, signer, publicKey, compactSignature };
+  } catch { throw new Error('NULL_PRIVY_AUTH_FAILED'); }
 }
 
 export interface OrganizationAuthorizationResult { digest: Hex; signer: Address; publicKey: Hex; compactSignature: Hex }
@@ -79,7 +82,7 @@ export async function authorizeOrganizationDistribution(options: {
   const request = prepared.authorizationRequest as AuthorizationRequest;
   const digest = await distributionIntentDigest(options.publicInputs);
   const expiry = Number(request?.headers?.['privy-request-expiry']);
-  if (typeof prepared.ticket !== 'string' || typeof prepared.walletAddress !== 'string' || prepared.walletAddress.toLowerCase() !== options.expectedSigner.toLowerCase() || !Number.isSafeInteger(prepared.minimumApprovals) || Number(prepared.minimumApprovals) < 1 || Number(prepared.minimumApprovals) > 20 || request?.version !== 1 || request?.method !== 'POST' || !/^https:\/\/api\.privy\.io\/v1\/wallets\/[a-zA-Z0-9_-]+\/rpc$/.test(request.url) || request.headers?.['privy-app-id'] !== options.appId || request.body?.method !== 'secp256k1_sign' || request.body.params?.hash !== digest || !Number.isSafeInteger(expiry) || expiry <= Date.now() || expiry > Date.now() + 300_000 || BigInt(expiry) > BigInt(options.publicInputs[14]) * 1000n) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (typeof prepared.ticket !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(prepared.ticket) || typeof prepared.walletAddress !== 'string' || prepared.walletAddress.toLowerCase() !== options.expectedSigner.toLowerCase() || !Number.isSafeInteger(prepared.minimumApprovals) || Number(prepared.minimumApprovals) < 1 || Number(prepared.minimumApprovals) > 20 || request?.version !== 1 || request?.method !== 'POST' || !/^https:\/\/api\.privy\.io\/v1\/wallets\/[a-zA-Z0-9_-]+\/rpc$/.test(request.url) || request.headers?.['privy-app-id'] !== options.appId || request.body?.method !== 'secp256k1_sign' || request.body.params?.hash !== digest || !Number.isSafeInteger(expiry) || String(expiry) !== request.headers['privy-request-expiry'] || expiry <= Date.now() || expiry > Date.now() + 300_000 || BigInt(expiry) > BigInt(options.publicInputs[14]) * 1000n) throw new Error('NULL_CONTEXT_MISMATCH');
   // Prevent injected fields from obtaining approval for a broader/different Privy operation.
   if (Object.keys(request).some(key => !['version', 'method', 'url', 'headers', 'body'].includes(key)) || Object.keys(request.headers).some(key => !['privy-app-id', 'privy-request-expiry'].includes(key)) || Object.keys(request.body).some(key => !['method', 'params'].includes(key)) || Object.keys(request.body.params).some(key => key !== 'hash')) throw new Error('NULL_CONTEXT_MISMATCH');
   if (Number(prepared.minimumApprovals) > 1 && !options.collectAdditionalSignatures) throw new Error('NULL_PRIVY_APPROVALS_REQUIRED');

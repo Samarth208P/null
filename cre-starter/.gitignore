@@ -1,0 +1,7 @@
+*.env
+.env.*
+node_modules/
+dist/
+*.wasm
+.artifacts/
+**/.cre_build_tmp.js

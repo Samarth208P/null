@@ -1,1 +1,1 @@
-{ "extends": "../../tsconfig.base.json", "compilerOptions": { "types": ["node"] }, "include": ["src/local.ts", "src/compiler.ts"] }
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "types": ["node"] }, "include": ["src/local.ts", "src/compiler.ts", "src/payroll-*.ts", "scripts/trigger.mts"] }

@@ -1,0 +1,19 @@
+[build]
+  command = "pnpm --filter @null-protocol/web build"
+  publish = "apps/web/dist"
+
+[build.environment]
+  NODE_VERSION = "22.16.0"
+  PNPM_VERSION = "11.9.0"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Download, FileUp, KeyRound } from 'lucide-react';
-import { profileFromKeys } from '@null-protocol/sdk';
+import { NullError, profileFromKeys } from '@null-protocol/sdk';
 import { decryptRecovery, encryptRecovery, loadVault, saveVault } from '@null-protocol/wallet';
 import { useStore } from '../lib/store';
 import { download } from '../lib/format';
@@ -17,19 +17,47 @@ export function Recovery({ open, onClose, initialMode = 'export' }: { open: bool
         if (password.length < 12) throw new Error('Choose a password with at least 12 characters.');
         const encrypted = await encryptRecovery(store.identity.keys, password);
         download('null-encrypted-recovery.json', encrypted);
-        if (persist) { try { await saveVault(encrypted); } catch { store.toast('Recovery downloaded. Browser storage was unavailable.'); close(); return; } }
-        store.toast('Encrypted recovery downloaded. Keep the password separately.');
+        if (persist) { try { await saveVault(encrypted); } catch { store.toast('Backup downloaded, but could not also be saved in this browser. Keep the downloaded file.'); close(); return; } }
+        store.toast('Backup downloaded. Keep your password in a separate safe place.');
       } else {
-        if (file && file.size > 16384) throw new Error('Choose a NULL recovery file under 16 KB.');
+        if (file && file.size > 16384) throw new Error('Choose a NULL Payment ID backup file under 16 KB.');
         const encrypted = file ? await file.text() : await loadVault();
-        if (!encrypted) throw new Error('Choose a recovery file, or save an encrypted vault on this device first.');
+        if (!encrypted) throw new Error('No backup is saved in this browser. Choose your downloaded backup file.');
         const keys = await decryptRecovery(encrypted, password);
         store.setIdentity({ keys, profile: profileFromKeys(keys) });
-        store.toast('Privacy profile restored. Scan your inbox to recover published entitlements.');
+        store.toast('Payment ID restored. Check your inbox for payments.');
       }
       close();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not complete recovery.'); }
+    } catch (reason) {
+      if (reason instanceof NullError) {
+        setError(reason.code === 'NULL_PASSWORD_INVALID' ? 'Use a password with 12 to 1,024 characters.'
+          : reason.code === 'NULL_STORAGE_UNAVAILABLE' ? 'Could not open the backup saved in this browser. Choose your downloaded backup file.'
+          : 'Could not open this backup. Check that you chose your Payment ID backup and entered its password.');
+      } else setError(reason instanceof Error ? reason.message : 'Could not save or restore your backup. Please try again.');
+    }
     finally { setBusy(false); }
   }
-  return <Modal title="Your keys. Your recovery." description="Encrypted on your device with a password only you know." open={open} onClose={() => { if (!busy) close(); }}><div className="tabs recovery-tabs"><button className={mode === 'export' ? 'selected' : ''} onClick={() => { setMode('export'); setError(''); }}>Export recovery</button><button className={mode === 'restore' ? 'selected' : ''} onClick={() => { setMode('restore'); setError(''); }}>Restore profile</button></div><Notice icon={KeyRound}>This file contains encrypted spending and viewing keys. Anyone with the file and password can access the profile. Store them separately.</Notice>{mode === 'restore' && <><button className="file-restore" onClick={() => fileInput.current?.click()}><FileUp size={20} /><span>{file?.name || 'Choose an encrypted recovery file'}</span></button><input type="file" accept=".json,application/json" ref={fileInput} hidden onChange={event => setFile(event.target.files?.[0])} /><p className="field-hint">Without a file, restore the encrypted vault saved in this browser.</p></>}<label className="field">{mode === 'export' ? 'Recovery password' : 'Unlock password'}<input type="password" autoComplete={mode === 'export' ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 12 characters" /></label>{mode === 'export' && <><label className="field">Repeat password<input type="password" autoComplete="new-password" value={repeat} onChange={event => setRepeat(event.target.value)} /></label><label className="checkbox-field"><input type="checkbox" checked={persist} onChange={event => setPersist(event.target.checked)} /><span>Also save this encrypted vault in my browser.</span></label></>}<p className="field-hint">Recovery preserves your profile keys. Sandbox drafts and sample balances reset when the page reloads; chain history is required to recover real notes.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><Button variant="secondary" disabled={busy} onClick={close}>Cancel</Button><Button busy={busy} icon={mode === 'export' ? Download : KeyRound} onClick={() => void submit()}>{mode === 'export' ? 'Download encrypted recovery' : 'Restore profile'}</Button></div></Modal>;
+  return <Modal title="Payment ID backup" description="Keep your Payment ID if you change devices or clear your browser." open={open} onClose={() => { if (!busy) close(); }}>
+    <div className="tabs recovery-tabs">
+      <button className={mode === 'export' ? 'selected' : ''} onClick={() => { setMode('export'); setError(''); }}>Save backup</button>
+      <button className={mode === 'restore' ? 'selected' : ''} onClick={() => { setMode('restore'); setError(''); }}>Restore backup</button>
+    </div>
+    <Notice icon={KeyRound}>Anyone with your backup file and password can access your payments. Keep both private and store them separately. Signing in does not restore this backup.</Notice>
+    {mode === 'restore' && <>
+      <button className="file-restore" onClick={() => fileInput.current?.click()}><FileUp size={20} /><span>{file?.name || 'Choose backup file'}</span></button>
+      <input type="file" accept=".json,application/json" ref={fileInput} hidden onChange={event => setFile(event.target.files?.[0])} />
+      <p className="field-hint">Choose your NULL Payment ID backup (.json, under 16 KB). Leave this empty to use the backup saved in this browser.</p>
+    </>}
+    <label className="field">Backup password
+      <input type="password" autoComplete={mode === 'export' ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} placeholder={mode === 'export' ? 'At least 12 characters' : 'Enter your backup password'} />
+      {mode === 'export' && <small>Use 12 to 1,024 characters. You will need this password to restore your backup.</small>}
+    </label>
+    {mode === 'export' && <>
+      <label className="field">Repeat password<input type="password" autoComplete="new-password" value={repeat} onChange={event => setRepeat(event.target.value)} /></label>
+      <label className="checkbox-field"><input type="checkbox" checked={persist} onChange={event => setPersist(event.target.checked)} /><span>Also save a password-protected copy in this browser.</span></label>
+    </>}
+    <p className="field-hint">This saves access to your Payment ID. It does not save practice payments or drafts, which reset when you reload the page. Your funds backup is separate, under Restore balance.</p>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <div className="modal-actions"><Button variant="secondary" disabled={busy} onClick={close}>Cancel</Button><Button busy={busy} icon={mode === 'export' ? Download : KeyRound} onClick={() => void submit()}>{mode === 'export' ? 'Download backup' : 'Restore backup'}</Button></div>
+  </Modal>;
 }

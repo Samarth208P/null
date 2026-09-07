@@ -1,0 +1,6 @@
+# Public Sepolia RPC from the official template. This compiler simulation does
+# not read or write the chain; chain and pool bind the encrypted output.
+staging-settings:
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia
+      url: https://ethereum-sepolia-rpc.publicnode.com

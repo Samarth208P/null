@@ -7,7 +7,7 @@ import type { Hex } from 'viem';
 
 class OrganizationError extends Error { constructor(public code: string, public status = 400) { super(code); } }
 function exact(value: unknown, keys: readonly string[]): asserts value is Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !keys.includes(key))) throw new OrganizationError('NULL_REQUEST_REJECTED');
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== keys.length || Object.keys(value).some(key => !keys.includes(key))) throw new OrganizationError('NULL_REQUEST_REJECTED');
 }
 function required(name: string) { const value = process.env[name]?.trim(); if (!value) throw new OrganizationError('NULL_ORGANIZATION_CONFIG_REQUIRED', 503); return value; }
 function list(name: string) { return required(name).split(',').map(value => value.trim()).filter(Boolean); }
@@ -102,7 +102,7 @@ const server = createServer(async (request, response) => {
       reply(200, { ticket, authorizationRequest, walletAddress: config.walletAddress, minimumApprovals: config.minimumApprovals }); return;
     }
     exact(body, ['ticket', 'signatures']);
-    if (typeof body.ticket !== 'string' || !/^[a-f0-9-]{36}$/.test(body.ticket) || !Array.isArray(body.signatures) || body.signatures.some(value => typeof value !== 'string')) throw new OrganizationError('NULL_REQUEST_REJECTED');
+    if (typeof body.ticket !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(body.ticket) || !Array.isArray(body.signatures) || body.signatures.length < config.minimumApprovals || body.signatures.length > 20 || body.signatures.some(value => typeof value !== 'string')) throw new OrganizationError('NULL_REQUEST_REJECTED');
     const prepared = intents.get(body.ticket);
     if (!prepared || prepared.expiresAt <= Date.now()) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
     if (prepared.userId !== session.user_id || prepared.sessionId !== session.session_id) throw new OrganizationError('NULL_ORGANIZATION_FORBIDDEN', 403);

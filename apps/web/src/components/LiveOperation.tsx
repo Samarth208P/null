@@ -4,7 +4,7 @@ import { createWalletClient, custom, type EIP1193Provider, type Hex, type Wallet
 import { publicKeyToAddress } from 'viem/accounts';
 import { Check, Download, FileUp, KeyRound, ShieldCheck, Wallet } from 'lucide-react';
 import {
-  NullLiveClient, SubmissionUncertainError, createEncryptedCheckpointStore, exportPublicOperation,
+  NullLiveClient, SubmissionUncertainError, createEncryptedCheckpointStore,
   validateDeploymentManifest, type ConfirmedOperation, type DeploymentManifest, type DistributionOptions,
   type OperationStage, type OwnedTreasuryNote, type PreparedOperation,
 } from '@null-protocol/client';
@@ -33,13 +33,13 @@ type WalletBridge = {
   authorize?: (intent: Intent, policy: AuthPolicyOpening) => Promise<Hex>;
 };
 const stageCopy: Record<OperationStage, string> = {
-  deployment: 'Checking the deployed contracts and proof versions…', history: 'Reconstructing confirmed public history…',
-  authorization: 'Waiting for the exact business approval…', 'saving-recovery': 'Encrypting your recovery checkpoint on this device…',
-  loading: 'Loading the pinned proving artifact…', witness: 'Preparing the private witness on this device…',
-  proving: 'Generating the zero-knowledge proof locally…', complete: 'Proof prepared. Review before submitting.',
-  approval: 'Approve the exact token allowance in your wallet…', simulating: 'Checking this transaction against current chain state…',
-  submitting: 'Submitting the reviewed transaction…', confirming: 'Waiting for the required chain confirmations…',
-  confirmed: 'The expected onchain result is confirmed.',
+  deployment: 'Checking the connection…', history: 'Checking your balance and payment history…',
+  authorization: 'Waiting for organization approval…', 'saving-recovery': 'Saving your encrypted funds backup…',
+  loading: 'Getting ready…', witness: 'Preparing payment details…',
+  proving: 'Preparing your payment securely…', complete: 'Ready for your review. Nothing has been sent.',
+  approval: 'Approve access to this amount in your wallet…', simulating: 'Checking that this payment can go through…',
+  submitting: 'Sending your request…', confirming: 'Waiting for confirmation…',
+  confirmed: 'Confirmed on the test network.',
 };
 const organizationUrl = import.meta.env.VITE_ORGANIZATION_URL as string | undefined;
 
@@ -48,7 +48,7 @@ function chainDefinition(id: number) {
 }
 async function injectedWallet(chainId: number): Promise<WalletClient> {
   const provider = (window as unknown as { ethereum?: EIP1193Provider }).ethereum;
-  if (!provider) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Install a browser wallet, or configure Privy to continue.');
+  if (!provider) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Open NULL in a browser with a wallet installed to continue.');
   const accounts = await provider.request({ method: 'eth_requestAccounts' });
   if (!accounts[0]) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Connect an account in your wallet.');
   await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${chainId.toString(16)}` }] });
@@ -64,13 +64,13 @@ function PrivyOperation(props: LiveOperationProps) {
     if (!ready) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Your secure wallet is still opening.');
     if (!authenticated) { login(); throw new NullError('NULL_SESSION_REQUIRED', 'Finish signing in, then select Connect wallet again.'); }
     const wallet = wallets[0];
-    if (!wallet) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Finish setting up a wallet in your Privy account.');
+    if (!wallet) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Finish setting up your account’s wallet to continue.');
     await wallet.switchChain(chainId);
     const provider = await wallet.getEthereumProvider();
     return createWalletClient({ account: wallet.address as Hex, chain: chainDefinition(chainId), transport: custom(provider) });
   }, [ready, authenticated, login, wallets]);
   const authorize = useCallback(async (intent: Intent, policy: AuthPolicyOpening) => {
-    if (!organizationUrl || !config.privyAppId) throw new NullError('NULL_ORGANIZATION_CONFIG_REQUIRED', 'Configure the organization approval service.');
+    if (!organizationUrl || !config.privyAppId) throw new NullError('NULL_ORGANIZATION_CONFIG_REQUIRED', 'Ask your administrator to finish setting up organization approval.');
     if (!ready) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Your secure wallet is still opening.');
     if (!authenticated) { login(); throw new NullError('NULL_SESSION_REQUIRED', 'Finish signing in, then select Approve with organization again.'); }
     const key = toHex(secp256k1.ProjectivePoint.fromHex(fromHex(policy.signerPublicKey)).toRawBytes(false));
@@ -90,18 +90,35 @@ export function LiveOperation(props: LiveOperationProps) {
 }
 
 function errorCopy(reason: unknown): string {
-  if (reason instanceof NullError) return reason.message;
   const codes: Record<string, string> = {
-    NULL_PRIVY_APPROVALS_REQUIRED: 'This business policy requires additional approvers. Complete its quorum through your organization integration, or import the resulting compact signature.',
+    NULL_PRIVY_APPROVALS_REQUIRED: 'More people in your organization need to approve this payment. Complete approval with your organization, then import it using Advanced approval.',
     NULL_SESSION_REQUIRED: 'Sign in to your organization account before requesting approval.',
-    NULL_PRIVY_AUTH_FAILED: 'The business signature does not authorize this exact distribution.',
-    NULL_CONTEXT_MISMATCH: 'The requested action does not match the reviewed deployment or distribution.',
-    NULL_ORGANIZATION_UNAVAILABLE: 'The organization approval service is unavailable. You can import approval for this exact intent.',
-    NULL_ARTIFACT_MISMATCH: 'The proving artifact does not match its pinned checksum. Regenerate or restore the deployment artifacts.',
-    NULL_ARTIFACT_UNAVAILABLE: 'The required proving artifact is unavailable. Configure the generated artifacts before continuing.',
-    NULL_PROOF_FAILED: 'The local proof could not be generated. Your encrypted recovery remains on this device.',
+    NULL_PRIVY_AUTH_FAILED: 'The organization’s approval does not match this payment. Request approval again.',
+    NULL_CONTEXT_MISMATCH: 'The payment or wallet network does not match your current setup. Check the selected network and payment before continuing.',
+    NULL_ORGANIZATION_UNAVAILABLE: 'Organization approval is unavailable right now. Try again later, or import this payment’s approval using Advanced approval.',
+    NULL_ARTIFACT_MISMATCH: 'Payment setup failed a safety check. Ask your administrator to repair the test network setup.',
+    NULL_ARTIFACT_UNAVAILABLE: 'Payment setup is incomplete. Ask your administrator to finish the test network setup.',
+    NULL_PROOF_FAILED: 'The payment could not be prepared. Your encrypted funds backup is still on this device. Try again.',
+    NULL_SUBMISSION_UNCERTAIN: 'We could not confirm the result. Keep your funds backup and check the transaction status before trying again.',
+    NULL_DEPLOYMENT_UNAVAILABLE: 'The test network is not set up yet. Ask your administrator to finish setup.',
+    NULL_BALANCE_INSUFFICIENT: 'Your wallet does not have enough test USDC for this amount.',
+    NULL_NULLIFIER_SPENT: 'This payment has already been collected, or the selected funds have already been used. Refresh your balance before continuing.',
+    NULL_ROOT_STALE: 'Your balance or payment history has changed. Refresh it and prepare the payment again.',
+    NULL_INTENT_EXPIRED: 'This payment’s approval period has ended. Prepare it again to continue.',
+    NULL_DISTRIBUTION_UNCONFIRMED: 'This payment is not confirmed yet. Wait for confirmation, then check again.',
+    NULL_TRANSACTION_REVERTED: 'The transaction failed on the network. No payment was completed.',
+    NULL_TRANSACTION_MISMATCH: 'The transaction does not match the payment you reviewed. Check its status before trying again.',
+    NULL_RPC_UNAVAILABLE: 'The network could not be reached. Try checking the status again later.',
+    NULL_WALLET_REJECTED: 'The wallet request was declined. Approve it in your wallet if you want to continue.',
+    NULL_APPROVAL_FAILED: 'Your wallet’s permission to use this amount was not confirmed. Check your wallet before trying again.',
+    NULL_RELAY_REJECTED: 'The sending service did not accept this payment. You can choose My connected wallet to send it yourself.',
+    NULL_STORAGE_UNAVAILABLE: 'Your encrypted funds backup could not be opened or saved. Check that this browser allows local storage before continuing.',
+    NULL_RECOVERY_UNLOCK_FAILED: 'The funds backup could not be unlocked. Check your password and try again.',
+    NULL_RECOVERY_INVALID: 'This funds backup could not be read. Use the encrypted funds backup for this account and test network, under 2 MB.',
+    NULL_ENDPOINT_INVALID: 'The network connection is not set up correctly. Ask your administrator to check Advanced setup.',
   };
-  return reason instanceof Error && codes[reason.message] ? codes[reason.message]! : 'This step could not be completed. Check your configuration and try again.';
+  if (reason instanceof NullError) return codes[reason.code] ?? reason.message;
+  return reason instanceof Error && codes[reason.message] ? codes[reason.message]! : 'This step could not be completed. Check your connection and try again.';
 }
 
 function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: LiveOperationProps & { bridge: WalletBridge }) {
@@ -150,13 +167,13 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     setManifestError('');
     let url: URL;
     try { url = new URL(import.meta.env.VITE_DEPLOYMENT_MANIFEST_URL || '/deployment.json', window.location.origin); }
-    catch { setManifestError('The deployment manifest URL is invalid. Update the environment configuration.'); return () => abort.abort(); }
+    catch { setManifestError('The test network setup is incomplete. Ask your administrator to check it.'); return () => abort.abort(); }
     void fetch(url, { signal: abort.signal, credentials: 'omit', redirect: 'error' }).then(async response => {
       if (!response.ok) throw new Error('manifest');
       const value = await response.json() as DeploymentManifest;
       validateDeploymentManifest(value);
       setManifest(value);
-    }).catch(() => { if (!abort.signal.aborted) setManifestError('A deployed testnet environment has not been configured. Publish the generated contracts and provide the matching deployment manifest to enable this action.'); });
+    }).catch(() => { if (!abort.signal.aborted) setManifestError('The test network is not ready. Ask your administrator to finish setup before using this action.'); });
     return () => abort.abort();
   }, [open]);
   useEffect(() => () => { controller.current?.abort(); pendingApproval.current?.reject(new DOMException('Cancelled', 'AbortError')); passwordRef.current = ''; }, []);
@@ -184,7 +201,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   }
   async function unlock() {
     if (!manifest) return;
-    if (password.length < 12) throw new NullError('NULL_PASSWORD_INVALID', 'Choose a local recovery password with at least 12 characters.');
+    if (password.length < 12) throw new NullError('NULL_PASSWORD_INVALID', 'Use a funds backup password with at least 12 characters.');
     passwordRef.current = password;
     const store = createEncryptedCheckpointStore({ namespace: `null-${manifest.chainId}-${manifest.contracts.nullPool.slice(2).toLowerCase()}`, getPassword: async () => passwordRef.current });
     const live = new NullLiveClient({ manifest, rpcUrls: [config.rpcUrl], graphUrl: config.graphUrl,
@@ -200,20 +217,20 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   }
   async function importPolicy(file?: File) {
     if (!file || !vault) return;
-    if (file.size > 16_384) throw new NullError('NULL_POLICY_INVALID', 'Choose an organization policy file under 16 KB.');
+    if (file.size > 16_384) throw new NullError('NULL_POLICY_INVALID', 'Choose an organization setup file under 16 KB.');
     let opening: AuthPolicyOpening;
     try {
       const json = JSON.parse(await file.text()) as Record<string, unknown>;
       if (typeof json.signerPublicKey !== 'string' || typeof json.policyMetadata !== 'string' || typeof json.registrationBlinder !== 'string') throw new Error('shape');
       opening = { signerPublicKey: json.signerPublicKey as Hex, policyMetadata: BigInt(json.policyMetadata), registrationBlinder: BigInt(json.registrationBlinder) };
       authPolicyCommitment(opening);
-    } catch { throw new NullError('NULL_POLICY_INVALID', 'This is not a valid organization policy recovery file.'); }
+    } catch { throw new NullError('NULL_POLICY_INVALID', 'This organization setup file could not be read. Ask your administrator for the correct file.'); }
     await vault.persistLocalPolicy(opening);
     const values = (await vault.load()).policies; setPolicies(values); setSelectedPolicy(authPolicyCommitment(opening));
   }
   async function importRecovery(file?: File) {
     if (!file || !vault || !client) return;
-    if (file.size > 2_000_000) throw new NullError('NULL_RECOVERY_INVALID', 'Choose an encrypted recovery archive under 2 MB.');
+    if (file.size > 2_000_000) throw new NullError('NULL_RECOVERY_INVALID', 'Choose an encrypted funds backup file under 2 MB.');
     await vault.importEncrypted(await file.text()); await refreshRecovery(vault, client);
   }
   async function exportRecovery() {
@@ -230,14 +247,14 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     if (!client) return;
     let result: PreparedOperation;
     if (operation.kind === 'shield') {
-      if (!policy || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Select a policy and acknowledge the public deposit boundary.');
+      if (!policy || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Choose your organization in Advanced setup and confirm that you understand the deposit notice.');
       result = await client.prepareShield({ amountAtomic: operation.amountAtomic, policyCommitment: authPolicyCommitment(policy), acknowledgePublicDepositAndNoWithdrawal: true, ...proofOptions() });
     } else if (operation.kind === 'claim') {
       result = await client.prepareClaim({ allocation: operation.allocation, ...proofOptions() });
     } else {
-      if (!policy) throw new NullError('NULL_POLICY_INVALID', 'Import or unlock your business policy first.');
+      if (!policy) throw new NullError('NULL_POLICY_INVALID', 'Add your organization file in Advanced setup first.');
       const chosen = notes.filter(note => selectedNotes.includes(note.commitment) && note.policyCommitment === selectedPolicy);
-      if (chosen.length < 1 || chosen.length > 2) throw new NullError('NULL_NOTE_INVALID', 'Select one or two funded treasury notes.');
+      if (chosen.length < 1 || chosen.length > 2) throw new NullError('NULL_NOTE_INVALID', 'Choose one or two available balances in Advanced setup.');
       result = await client.prepareDistribution({ compiled: operation.compiled, treasuryNotes: chosen, authPolicy: policy, ...proofOptions(),
         authorize: async intent => {
           setManualIntent(intent);
@@ -257,7 +274,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     finally { setApprovalBusy(false); }
   }
   function importSignature() {
-    if (!/^0x[0-9a-fA-F]{128}$/.test(signature.trim())) { setError('Paste the 64-byte compact signature for this exact raw digest.'); return; }
+    if (!/^0x[0-9a-fA-F]{128}$/.test(signature.trim())) { setError('This approval code could not be read. Copy the full code from your organization’s signing tool; it starts with 0x.'); return; }
     pendingApproval.current?.resolve(signature.trim() as Hex); pendingApproval.current = undefined;
     setSignature(''); setManualIntent(undefined); setError('');
   }
@@ -284,65 +301,66 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
       try { onConfirmed?.(state.result); } catch { /* Confirmed chain state remains authoritative. */ }
     } else if (state.status === 'reverted') {
       setUncertain(false); setPrepared(undefined); setBackupSaved(false); setTransactionHash(state.transactionHash); setStage(undefined);
-      setReconciliation('The submitted transaction is confirmed as reverted. No successful operation was recorded. You can prepare a fresh proof before trying again.');
+      setReconciliation('The network confirmed that this transaction failed. No payment was completed. You can prepare it again.');
     } else {
       if (state.status === 'pending') setTransactionHash(state.transactionHash);
       setStage(undefined);
-      setReconciliation(state.status === 'pending' ? 'The transaction has not reached the required confirmations. Check its status again before attempting another submission.' : state.explanation);
+      setReconciliation(state.status === 'pending' ? 'The transaction is still waiting for confirmation. Check again before trying to send it again.' : 'The result is still unknown. Keep your funds backup and check again before trying to send it again.');
     }
   }
 
-  const title = operation.kind === 'shield' ? 'Shield treasury funds' : operation.kind === 'claim' ? 'Claim your private note' : 'Publish private distribution';
-  return <Modal title={title} description="Prepared on your device. Submitted only after your review." open={open} onClose={close} wide>
+  const title = operation.kind === 'shield' ? 'Add funds' : operation.kind === 'claim' ? 'Collect payment' : 'Send payment';
+  return <Modal title={title} description="Review the details before you confirm." open={open} onClose={close} wide>
     <div className="claim-amount">{money(amountAtomic, true)}<span>USDC</span></div>
-    {manifestError ? <Notice tone="warning">{manifestError}<p>Your local preparation is still available. No transaction has been sent.</p></Notice>
-      : !manifest ? <p className="processing-status" role="status">Loading the deployment configuration…</p>
+    {manifestError ? <Notice tone="warning">{manifestError}<p>Nothing has been sent.</p></Notice>
+      : !manifest ? <p className="processing-status" role="status">Checking the connection…</p>
       : <>
-        <div className="detail-list"><KeyValue label="Network"><Badge tone="warning">{manifest.chainId === 11155111 ? 'Sepolia testnet' : 'Local test chain'}</Badge></KeyValue><KeyValue label="Pool"><span className="code-with-copy"><code>{short(manifest.contracts.nullPool)}</code><CopyButton value={manifest.contracts.nullPool} /></span></KeyValue></div>
-        {operation.kind === 'shield' && <Notice tone="warning">Your funding wallet and deposit amount are public. Keep deposits separate from payroll timing. This prototype has no withdrawal path; use testnet assets only.</Notice>}
-        {operation.kind !== 'shield' && <Notice>Private values stay on this device. The submitted proof carries commitments and nullifiers. Network providers can still observe your requests.</Notice>}
+        <div className="detail-list"><KeyValue label="Mode"><Badge tone="warning">Test network</Badge></KeyValue></div>
+        {operation.kind === 'shield' && <Notice tone="warning">Your wallet and the amount you add are public. Adding funds close to payment time may help others link them. Use test funds only; withdrawals are not available.</Notice>}
+        {operation.kind !== 'shield' && <Notice>Use test funds only; withdrawals are not available. Your network provider can see when you connect.</Notice>}
         {!client ? <>
-          <label className="field">Local recovery password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>Unlock existing notes, or choose a password for this device. The password is never sent to a server.</small></label>
-          <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock local recovery</Button>
+          <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>Enter your existing password, or choose one if this is your first payment. It stays on this device.</small></label>
+          <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
           {!prepared && <>
-            <div className="button-row"><Button variant="secondary" disabled={busy} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? short(wallet.account.address, 5) : 'Connect wallet'}</Button><Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore encrypted recovery</Button></div>
+            <div className="button-row"><Button variant="secondary" disabled={busy} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? short(wallet.account.address, 5) : 'Connect wallet'}</Button><Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button></div>
             <input ref={recoveryFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importRecovery(file)); }} />
-            {treasuryOperation && <details className="section-block" open={!policy}>
-              <summary>Organization policy and treasury notes</summary>
-              <p className="field-hint">The policy recovery file contains your signer public key and registration blinder. It is imported and encrypted locally.</p>
-              {policies.length > 0 && <label className="field">Business authorization policy<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); }}>{policies.map(item => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>{short(commitment, 10)}</option>; })}</select></label>}
-              <div className="button-row"><Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import policy file</Button><Button variant="ghost" disabled={busy || !policy} onClick={() => void work(registerPolicy)}>Register policy onchain</Button></div>
+            {treasuryOperation && <>
+              {(!policy || operation.kind === 'create_distribution' && selectedNotes.length === 0) && <p className="field-hint">Open Advanced setup to {policy ? 'choose which available funds to use.' : 'add your organization’s setup file before continuing.'}</p>}
+              <details className="section-block">
+              <summary>Advanced setup</summary>
+              <p className="field-hint">Use the setup file from your organization’s administrator. It controls who can approve payments and is encrypted on this device.</p>
+              {policies.length > 0 && <label className="field">Organization setup<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); }}>{policies.map((item, index) => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>Setup {index + 1} · {short(commitment, 5)}</option>; })}</select></label>}
+              <div className="button-row"><Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import setup file</Button><Button variant="ghost" disabled={busy || !policy} onClick={() => void work(registerPolicy)}>Activate organization setup</Button></div>
               <input ref={policyFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importPolicy(file)); }} />
               {operation.kind === 'create_distribution' && <>
-                <p className="field-hint">Choose up to two confirmed notes. Any unallocated value returns as a private change note.</p>
-                {notes.filter(note => note.policyCommitment === selectedPolicy).length === 0 && <Notice tone="warning">No spendable treasury notes were recovered for this policy. Restore its encrypted recovery archive or shield testnet funds first.</Notice>}
+                <p className="field-hint">Choose one or two available balances to cover this payment. Any money left over stays in your funds.</p>
+                {notes.filter(note => note.policyCommitment === selectedPolicy).length === 0 && <Notice tone="warning">No available funds were found for this organization. Restore its encrypted funds backup or add test funds first.</Notice>}
                 {notes.filter(note => note.policyCommitment === selectedPolicy).map(note => <label className="checkbox-field" key={note.commitment}><input type="checkbox" checked={selectedNotes.includes(note.commitment)} disabled={busy || (!selectedNotes.includes(note.commitment) && selectedNotes.length >= 2)} onChange={event => setSelectedNotes(values => event.target.checked ? [...values, note.commitment] : values.filter(value => value !== note.commitment))} /><span>{money(note.amountAtomic, true)} USDC · <code>{short(note.commitment, 5)}</code></span></label>)}
               </>}
-            </details>}
-            {operation.kind === 'shield' && <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy} onChange={event => setAcknowledged(event.target.checked)} /><span>I understand that this public deposit uses testnet assets and the prototype has no withdrawal path.</span></label>}
+            </details></>}
+            {operation.kind === 'shield' && <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy} onChange={event => setAcknowledged(event.target.checked)} /><span>I understand that my wallet and deposit amount will be public. These are test funds, and I cannot withdraw them.</span></label>}
           </>}
           {manualIntent && <div className="section-block">
-            <h3>Approve this exact distribution</h3><p className="field-hint">The approval binds this network, pool, distribution, envelopes, private change and deadline. The raw signature stays a private proof input.</p>
-            <KeyValue label="Approval digest"><span className="code-with-copy"><code>{short(manualIntent.digest)}</code><CopyButton value={manualIntent.digest} /></span></KeyValue>
+            <h3>Organization approval needed</h3><p className="field-hint">Your organization must approve this payment before it can be sent.</p>
             {bridge.authorize && <Button icon={ShieldCheck} busy={approvalBusy} onClick={() => void approveWithOrganization()}>Approve with organization</Button>}
-            <details><summary>Import an approval from your signing workflow</summary><label className="field">Compact signature<input value={signature} disabled={approvalBusy} onChange={event => setSignature(event.target.value)} spellCheck={false} autoComplete="off" placeholder="0x… (64 bytes, raw digest, low-s)" /></label><div className="button-row"><Button variant="secondary" icon={Download} onClick={() => download('null-public-approval-intent.json', JSON.stringify({ digest: manualIntent.digest, publicInputs: manualIntent.publicInputs }, null, 2))}>Export public intent</Button><Button disabled={approvalBusy} onClick={importSignature}>Use this approval</Button></div></details>
+            {!bridge.authorize && <p className="field-hint">Open Advanced approval to download a request for your administrator, then paste the approval they provide.</p>}
+            <details><summary>Advanced approval</summary><p className="field-hint">Use an approval from your organization’s signing tool for this payment only.</p><KeyValue label="Approval reference"><span className="code-with-copy"><code>{short(manualIntent.digest)}</code><CopyButton value={manualIntent.digest} /></span></KeyValue><label className="field">Approval code<input value={signature} disabled={approvalBusy} onChange={event => setSignature(event.target.value)} spellCheck={false} autoComplete="off" placeholder="Paste the full approval code, starting with 0x" /><small>The signing tool must return a 64-byte compact signature for the raw approval digest.</small></label><div className="button-row"><Button variant="secondary" icon={Download} onClick={() => download('null-public-approval-intent.json', JSON.stringify({ digest: manualIntent.digest, publicInputs: manualIntent.publicInputs }, null, 2))}>Download approval request</Button><Button disabled={approvalBusy} onClick={importSignature}>Use this approval</Button></div></details>
           </div>}
           {prepared && !confirmed && <div className="section-block">
-            <h3>Review your transaction</h3><div className="detail-list"><KeyValue label="Action">{prepared.publicOperation.method}</KeyValue><KeyValue label="Public proof inputs">{prepared.publicOperation.publicInputs.length} fields</KeyValue><KeyValue label="Private recovery"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
-            <Button variant="secondary" icon={Download} disabled={busy} onClick={() => void work(exportRecovery)}>Download encrypted note recovery</Button><p className="field-hint">Save this file and your password separately before submitting. It includes the new note's recovery secret.</p>
-            <label className="field">Broadcast through<select value={transport} disabled={busy || uncertain} onChange={event => setTransport(event.target.value as 'relay' | 'wallet')}><option value="wallet">My connected wallet</option>{config.relayerUrl && operation.kind !== 'shield' && <option value="relay">Configured relayer</option>}</select><small>{transport === 'wallet' ? 'The sending wallet and transaction timing are public.' : 'The relayer receives the proof and public inputs; it cannot redirect the output.'}</small></label>
-            <Button variant="ghost" icon={Download} onClick={() => download('null-public-transaction.json', exportPublicOperation(prepared))}>Export public proof for another broadcaster</Button>
+            <h3>Save funds backup before confirming</h3><div className="detail-list"><KeyValue label="Action">{title}</KeyValue><KeyValue label="Funds backup"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
+            <Button variant="secondary" icon={Download} disabled={busy} onClick={() => void work(exportRecovery)}>Download funds backup</Button><p className="field-hint">This file is encrypted. Keep it and your password in separate safe places. You need them to recover your funds on another device.</p>
+            <label className="field">Send through<select value={transport} disabled={busy || uncertain} onChange={event => setTransport(event.target.value as 'relay' | 'wallet')}><option value="wallet">My connected wallet</option>{config.relayerUrl && operation.kind !== 'shield' && <option value="relay">Payment sending service</option>}</select><small>{transport === 'wallet' ? 'Your sending wallet and the time you send are public.' : 'The service can see this request and when you send it. It cannot change who receives the payment.'}</small></label>
           </div>}
-          {confirmed && <Notice tone={confirmed.localRecoverySaved ? 'success' : 'warning'} icon={Check}><strong>The expected note is confirmed onchain.</strong><p>{confirmed.localRecoverySaved ? 'Your encrypted recovery checkpoint now includes the confirmed note index.' : 'The transaction succeeded, but the latest local checkpoint could not be saved. Keep the prepared recovery archive; the note index can be rebuilt from chain history.'}</p><Button variant="ghost" icon={Download} onClick={() => void work(exportRecovery)}>Download updated recovery</Button></Notice>}
-          {uncertain && <Notice tone="warning">Submission could not be confirmed. A timeout does not mean failure. Keep your recovery archive and check the transaction before attempting another submission.<p><Button variant="secondary" busy={busy} onClick={() => void work(reconcile)}>Check transaction status</Button></p></Notice>}
+          {confirmed && <Notice tone={confirmed.localRecoverySaved ? 'success' : 'warning'} icon={Check}><strong>{operation.kind === 'shield' ? 'Funds added on the test network.' : operation.kind === 'claim' ? 'Payment collected on the test network.' : 'Payment sent on the test network.'}</strong><p>{confirmed.localRecoverySaved ? 'Your encrypted funds backup has been updated with this payment.' : 'The payment succeeded, but the funds backup on this device could not be updated. Keep the file you saved before sending; it can still be used to recover your funds.'}</p><Button variant="ghost" icon={Download} onClick={() => void work(exportRecovery)}>Download funds backup</Button></Notice>}
+          {uncertain && <Notice tone="warning">The result is still unknown. A slow response does not mean the payment failed. Keep your funds backup and check the status before trying again.<p><Button variant="secondary" busy={busy} onClick={() => void work(reconcile)}>Check transaction status</Button></p></Notice>}
           {reconciliation && <Notice tone="warning">{reconciliation}</Notice>}
-          {busy && (stage === 'submitting' || stage === 'confirming') && <p className="field-hint">Closing this window does not cancel a transaction already sent. Keep your encrypted recovery archive.</p>}
+          {busy && (stage === 'submitting' || stage === 'confirming') && <p className="field-hint">Closing this window will not cancel a request already sent. Keep your encrypted funds backup.</p>}
           {transactionHash && <p className="field-hint">{manifest.chainId === 11155111 ? <ExternalLink href={`https://sepolia.etherscan.io/tx/${transactionHash}`}>View submitted transaction</ExternalLink> : <code>{transactionHash}</code>}</p>}
         </>}
       </>}
     {stage && <p className="processing-status" role="status" aria-live="polite">{stageCopy[stage]}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="modal-actions"><Button variant="secondary" onClick={close}>{confirmed ? 'Done' : busy ? 'Close' : 'Cancel'}</Button>{client && !prepared && <Button busy={busy} disabled={treasuryOperation && !policy || operation.kind === 'shield' && !acknowledged} icon={ShieldCheck} onClick={() => void work(prepare)}>Prepare local proof</Button>}{prepared && !confirmed && <Button busy={busy} disabled={!backupSaved || uncertain} icon={ShieldCheck} onClick={() => void work(submit)}>Submit reviewed transaction</Button>}</div>
+    <div className="modal-actions"><Button variant="secondary" onClick={close}>{confirmed ? 'Done' : busy ? 'Close' : 'Cancel'}</Button>{client && !prepared && <Button busy={busy} disabled={treasuryOperation && !policy || operation.kind === 'shield' && !acknowledged} icon={ShieldCheck} onClick={() => void work(prepare)}>Prepare payment</Button>}{prepared && !confirmed && <Button busy={busy} disabled={!backupSaved || uncertain} icon={ShieldCheck} onClick={() => void work(submit)}>{operation.kind === 'shield' ? 'Confirm add funds' : operation.kind === 'claim' ? 'Confirm collection' : 'Confirm payment'}</Button>}</div>
   </Modal>;
 }

@@ -1,14 +1,54 @@
 import { useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Download, LockKeyhole, Plus, Shield, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, Plus, ShieldCheck, Wallet } from 'lucide-react';
 import { parseAmount } from '@null-protocol/sdk';
 import { useStore } from '../lib/store';
 import { money } from '../lib/format';
-import { Badge, Button, EmptyState, KeyValue, Modal, Notice, PageHeader, SectionTitle } from '../components/ui';
+import { Badge, Button, EmptyState, Modal, Notice, PageHeader, SectionTitle } from '../components/ui';
 import { LiveOperationLoader, type LiveOperationInput } from '../components/LiveOperationLoader';
 
 export function Treasury() {
   const store = useStore(); const [open, setOpen] = useState(false); const [value, setValue] = useState('10000'); const [acknowledged, setAcknowledged] = useState(false); const [error, setError] = useState('');
   const [liveOperation, setLiveOperation] = useState<LiveOperationInput | null>(null);
-  const shield = () => { try { if (!acknowledged) throw new Error('Acknowledge the public entry boundary first.'); const atomic = parseAmount(value); if (store.mode === 'testnet') { setOpen(false); setLiveOperation({ kind: 'shield', amountAtomic: atomic }); return; } if (atomic > 1_000_000_000000n) throw new Error('Add at most 1,000,000 sandbox USDC at a time.'); store.shield(atomic); setOpen(false); store.toast('Sandbox treasury updated.'); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not add funds.'); } };
-  return <><PageHeader title="Treasury" description="A private starting point for every distribution." action={<div className="button-row">{store.mode === 'testnet' && <Button variant="secondary" onClick={store.recoverLiveBalances}>Recover balances</Button>}<Button icon={Plus} onClick={() => { setOpen(true); setError(''); setAcknowledged(false); }}>Shield funds</Button></div>} /><div className="treasury-layout"><section className="treasury-main-panel"><div className="balance-label"><span><ShieldCheck size={18} />Available treasury</span><Badge tone="purple">{store.mode === 'sandbox' ? 'Sandbox' : store.treasuryReady ? 'Recovered from chain' : 'Not recovered'}</Badge></div><div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div><p className="muted">{store.mode === 'sandbox' ? 'Sample funds, held only in this browser session.' : store.treasuryReady ? 'Latest recovered snapshot. Recover again after a transaction.' : 'Recover verified treasury notes to display a live balance.'}</p><div className="treasury-rule" /><KeyValue label="Network">Ethereum Sepolia</KeyValue><KeyValue label="Asset precision">6 decimal places</KeyValue><KeyValue label="Custody">Organization-controlled notes</KeyValue><Button variant="secondary" onClick={() => store.editDistribution(null)}>Create a distribution<ArrowRight size={15} /></Button></section><section className="boundary-panel"><span className="boundary-icon"><ArrowDownLeft size={24} /></span><h2>The entry is public.<br />What follows can be private.</h2><p>A standard deposit reveals its sender, token, amount, and time. Privacy begins after funds enter the shielded pool.</p><div className="boundary-divider" /><h3>Keep a rolling treasury</h3><p>Funding a larger balance separately from your payout schedule helps reduce obvious amount and timing correlations.</p><button className="text-link" onClick={() => store.navigate('inspector')}>Explore privacy boundaries<ArrowUpRight size={14} /></button></section></div><section className="section-block"><SectionTitle title="Treasury activity" caption="Deposits and local distribution movements." />{store.activities.filter(item => ['shield', 'distribution'].includes(item.type)).length ? <div className="table-panel"><table><thead><tr><th>Activity</th><th>Source</th><th>Time</th><th>Status</th></tr></thead><tbody>{store.activities.filter(item => ['shield', 'distribution'].includes(item.type)).map(item => <tr key={item.id}><td><strong>{item.title}</strong></td><td>Local sandbox</td><td className="muted">{new Date(item.createdAt).toLocaleString()}</td><td><Badge tone="success">Recorded locally</Badge></td></tr>)}</tbody></table></div> : <div className="table-panel"><EmptyState icon={Wallet} title="Ready when you are" description="Shield a rolling treasury balance, then create your first private distribution." action={<Button variant="secondary" icon={Plus} onClick={() => setOpen(true)}>{store.mode === 'sandbox' ? 'Add sandbox funds' : 'Prepare shield deposit'}</Button>} /></div>}</section><Modal title="Shield treasury funds" description="Understand the public boundary before entering the private zone." open={open} onClose={() => setOpen(false)}><Notice tone="warning" icon={ArrowDownLeft}><strong>Deposits are public.</strong><p>A live deposit reveals the sending wallet, token, amount, and time. Avoid depositing an exact payroll total immediately before distributing it.</p></Notice><label className="field">Amount in USDC<input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" autoFocus /><small>{store.mode === 'sandbox' ? 'Local sample funds. No wallet transaction or faucet is needed.' : 'A live shield proof must bind the note value to the deposit amount.'}</small></label><label className="checkbox-field"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} /><span>I understand that a live deposit is public at the pool boundary.</span></label>{store.mode === 'testnet' && <Notice>The next step checks the deployed pool, encrypts a recovery checkpoint, and generates a shield proof locally. This version has no public withdrawal path.</Notice>}{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={!acknowledged} icon={Shield} onClick={shield}>{store.mode === 'sandbox' ? 'Add sandbox funds' : 'Prepare shield proof'}</Button></div></Modal><LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={() => store.toast('Deposit confirmed. Its recovery checkpoint is encrypted on this device.')} /></>;
+  const practice = store.mode === 'sandbox';
+  const activities = store.activities.filter(item => ['shield', 'distribution'].includes(item.type));
+  const openDeposit = () => { setOpen(true); setError(''); setAcknowledged(false); };
+  const addFunds = () => {
+    try {
+      if (!acknowledged) throw new Error('Confirm that you understand the deposit notice.');
+      const atomic = parseAmount(value);
+      if (!practice) { setOpen(false); setLiveOperation({ kind: 'shield', amountAtomic: atomic }); return; }
+      if (atomic > 1_000_000_000000n) throw new Error('Add no more than 1,000,000 sample USDC at a time.');
+      store.shield(atomic); setOpen(false); store.toast('Sample funds added.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not add funds.'); }
+  };
+  return <>
+    <PageHeader title="Funds" description="Add funds and manage your payments." action={<div className="button-row">{!practice && <Button variant="secondary" onClick={store.recoverLiveBalances}>Restore balance</Button>}<Button icon={Plus} onClick={openDeposit}>Add funds</Button></div>} />
+    <div className="treasury-layout">
+      <section className="treasury-main-panel">
+        <div className="balance-label"><span><ShieldCheck size={18} />Available balance</span><Badge tone="purple">{practice ? 'Practice mode' : 'Test network'}</Badge></div>
+        <div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div>
+        <p className="muted">{practice ? 'Sample money for trying payments. It resets when you reload.' : store.treasuryReady ? 'Restore your balance again after a payment or deposit to see the latest amount.' : 'Choose Restore balance to see the funds you can use.'}</p>
+        <div className="treasury-rule" />
+        <Button variant="secondary" onClick={() => store.editDistribution(null)}>New payment<ArrowRight size={15} /></Button>
+      </section>
+      <section className="boundary-panel">
+        <span className="boundary-icon"><ArrowDownLeft size={24} /></span><h2>Deposits are public.</h2>
+        <p>Others can see which wallet added funds, how much it added, and when. Depositing the exact total just before paying can make payments easier to connect.</p>
+        <div className="boundary-divider" /><h3>For testing only</h3>
+        <p>Use sample funds or test tokens only. NULL cannot send funds back to a wallet yet.</p>
+      </section>
+    </div>
+    <section className="section-block">
+      <SectionTitle title="Recent activity" />
+      {activities.length ? <div className="table-panel"><table><thead><tr><th>Activity</th><th>Time</th><th>Status</th></tr></thead><tbody>{activities.map(item => <tr key={item.id}><td><strong>{item.title}</strong></td><td className="muted">{new Date(item.createdAt).toLocaleString()}</td><td><Badge tone="success">Saved in this session</Badge></td></tr>)}</tbody></table></div> : <div className="table-panel"><EmptyState icon={Wallet} title="No activity yet" description="Add funds to make your first payment." action={<Button variant="secondary" icon={Plus} onClick={openDeposit}>Add funds</Button>} /></div>}
+    </section>
+    <Modal title="Add funds" description={practice ? 'Try a deposit with sample money.' : 'Add test tokens to your balance.'} open={open} onClose={() => setOpen(false)}>
+      <Notice tone="warning" icon={ArrowDownLeft}><strong>Deposits are public.</strong><p>On the test network, anyone can see the sending wallet, token, amount, and time. You cannot withdraw these funds to a wallet yet.</p></Notice>
+      <label className="field">Amount in USDC<input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" autoFocus /><small>{practice ? 'Sample funds only. No wallet or real money is needed.' : 'Use test USDC only. You will review the deposit before sending it.'}</small></label>
+      <label className="checkbox-field"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} /><span>I understand that deposits are public and withdrawals are not available.</span></label>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="modal-actions"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={!acknowledged} icon={Plus} onClick={addFunds}>{practice ? 'Add sample funds' : 'Continue'}</Button></div>
+    </Modal>
+    <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={() => store.toast('Funds added on the test network.')} />
+  </>;
 }

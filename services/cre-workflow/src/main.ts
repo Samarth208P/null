@@ -5,7 +5,7 @@ interface Config extends CompilerContext { payrollBaseUrl: string; payrollSecret
 function parseConfig(bytes: Uint8Array): Config {
   const config = JSON.parse(new TextDecoder().decode(bytes)) as Config;
   const url = new URL(config.payrollBaseUrl);
-  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !/^0x[0-9a-fA-F]{40}$/.test(config.poolAddress) || BigInt(config.poolAddress) === 0n || !/^[1-9][0-9]*$/.test(config.chainId) || !config.payrollSecretId || !config.authorizedPublicKey) throw new Error('NULL_CRE_CONFIG_REQUIRED');
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !/^0x[0-9a-fA-F]{40}$/.test(config.poolAddress) || BigInt(config.poolAddress) === 0n || !/^[1-9][0-9]*$/.test(config.chainId) || !config.payrollSecretId || !/^0x[0-9a-fA-F]{40}$/.test(config.authorizedPublicKey) || BigInt(config.authorizedPublicKey) === 0n) throw new Error('NULL_CRE_CONFIG_REQUIRED');
   return config;
 }
 async function confidentialCompile(runtime: TeeRuntime<Config>, payload: HTTPPayload) {

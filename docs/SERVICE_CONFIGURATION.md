@@ -2,7 +2,7 @@
 
 All onchain adapters use the generated ABI and `deployments/11155111.json` written by the deployment command. Keep `deployments/sepolia.template.json` as an unconfigured example. A circuit source file without its matching generated verifier/proving artifacts does not make a live proof path available.
 
-One access-restricted root `.env` holds all local configuration; [the root example](../.env.example) is the canonical template. Deployment and local service commands load it automatically. Vite reads the same file and exposes only `VITE_` values. Relative `NULL_MANIFEST_PATH` values resolve from the repository root. `pnpm dev:all` starts the local web app and relayer; the browser stays on `127.0.0.1:5173` and the relay on `127.0.0.1:8787`. No website hosting is needed.
+One access-restricted root `.env` holds all local configuration; [the root example](../.env.example) is the canonical template. Deployment and local service commands load it automatically. Vite reads the same file and exposes only `VITE_` values. Relative `NULL_MANIFEST_PATH` values resolve from the repository root. `pnpm dev:all` starts the local web app and relayer; the browser stays on `127.0.0.1:5173` and the relay on `127.0.0.1:8787`. With its token configured, the authenticated payroll API also starts on `127.0.0.1:8789`. No website hosting is needed. See [current integration setup](INTEGRATION_SETUP.md) for provider status and remaining access requirements.
 
 | Component | Required configuration | Failure behavior |
 | --- | --- | --- |
