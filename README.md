@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="apps/web/public/logo.svg" width="96" height="96" alt="NULL Protocol Logo" />
+  <img src="docs/assets/logo.svg" width="96" height="96" alt="NULL Protocol Logo" />
   <h1>NULL Protocol</h1>
   <p><strong>Private distribution infrastructure for Ethereum. Distribute value, reveal nothing.</strong></p>
 
