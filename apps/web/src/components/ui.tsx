@@ -7,8 +7,8 @@ export function Button({ variant = 'primary', icon: Icon, children, className = 
 export function Badge({ children, tone = 'neutral', dot = false }: { children: ReactNode; tone?: 'neutral' | 'success' | 'warning' | 'purple'; dot?: boolean }) {
   return <span className={`badge badge-${tone}`}>{dot && <span className="badge-dot" />}{children}</span>;
 }
-export function PageHeader({ title, description, action, breadcrumb }: { title: string; description: string; action?: ReactNode; breadcrumb?: string }) {
-  return <header className="page-heading">{breadcrumb && <p className="breadcrumb">{breadcrumb}<ChevronRight size={13} /><span>{title}</span></p>}<div className="heading-row"><div><h1>{title}</h1><p>{description}</p></div>{action && <div className="heading-action">{action}</div>}</div></header>;
+export function PageHeader({ title, description, action, breadcrumb }: { title: string; description?: string; action?: ReactNode; breadcrumb?: string }) {
+  return <header className="page-heading">{breadcrumb && <p className="breadcrumb">{breadcrumb}<ChevronRight size={13} /><span>{title}</span></p>}<div className="heading-row"><div><h1>{title}</h1>{description && <p>{description}</p>}</div>{action && <div className="heading-action">{action}</div>}</div></header>;
 }
 export function EmptyState({ icon: Icon, title, description, action }: { icon: LucideIcon; title: string; description: string; action?: ReactNode }) {
   return <div className="empty-state"><span className="empty-icon"><Icon size={24} strokeWidth={1.5} /></span><h3>{title}</h3><p>{description}</p>{action}</div>;

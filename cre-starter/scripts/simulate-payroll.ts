@@ -11,9 +11,9 @@ import { parsePublicBundle } from '../../packages/sdk/src/index.ts';
 // Host-side simulation helper only. This file is never compiled into the workflow.
 const projectDir = fileURLToPath(new URL('../', import.meta.url));
 const repositoryDir = resolve(projectDir, '..');
-let artifactsDir = resolve(projectDir, '.artifacts');
+let artifactsDir = resolve(projectDir, '.artifacts', 'synthetic-withdrawals-v2');
 const port = 8791;
-let batchId = 'null-cre-synthetic-payroll-v1';
+let batchId = 'null-cre-synthetic-payroll-v2';
 const workflowLog = 'NULL payroll simulation: validated batch and compiled 8 encrypted envelopes.';
 const maximumOutputBytes = 2 * 1024 * 1024;
 let receiptPath = resolve(artifactsDir, 'simulation-receipt.json');
@@ -92,11 +92,13 @@ async function main(): Promise<void> {
     runStartedAt = new Date().toISOString();
     await writeFile(receiptPath, `${JSON.stringify({ verified: false, status: 'running', startedAt: runStartedAt }, null, 2)}\n`);
   }
-  const manifest = JSON.parse(await readFile(resolve(repositoryDir, 'deployments/11155111.json'), 'utf8'));
+  const manifest = JSON.parse(await readFile(resolve(repositoryDir, 'apps/web/public/deployment.json'), 'utf8'));
   if (manifest.status !== 'deployed' || manifest.chainId !== 11155111 || !/^0x[0-9a-fA-F]{40}$/.test(manifest.contracts?.nullPool)) {
     throw new Error('The public Sepolia deployment manifest is missing its deployed pool.');
   }
   const context = { chainId: String(manifest.chainId), poolAddress: manifest.contracts.nullPool as `0x${string}` };
+  const workflowConfig = JSON.parse(await readFile(resolve(projectDir, 'payroll/config.staging.json'), 'utf8'));
+  if (workflowConfig.chainId !== context.chainId || workflowConfig.poolAddress?.toLowerCase() !== context.poolAddress.toLowerCase()) throw new Error('Update the CRE staging pool and chain to match the current public deployment manifest before simulating.');
   const batch = importedBatch ?? parsePayroll({
     batchId,
     batchEntropyHex: toHex(sha256(utf8('NULL CRE SYNTHETIC FIXTURE ONLY - NEVER FUND OR REUSE'))),

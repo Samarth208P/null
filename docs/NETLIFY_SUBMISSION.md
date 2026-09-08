@@ -1,4 +1,27 @@
-# Deploy the reviewed submission without a commit
+# Deploy the reviewed submission
+
+## Git-based deployment
+
+### Withdrawal release values
+
+Use these public values for this release. The user is configuring Netlify manually; local `.env` changes do not update Netlify.
+
+```text
+VITE_POOL_ADDRESS=0x734da58C285D211e7C0ad904f522c221c982447E
+VITE_DEPLOYMENT_BLOCK=11659529
+VITE_DEPLOYMENT_MANIFEST_URL=/deployment.json
+VITE_GRAPH_URL=https://api.studio.thegraph.com/query/1758859/null-protocol/v0.2.0
+NULL_POOL_ADDRESS=0x734da58C285D211e7C0ad904f522c221c982447E
+NULL_CHAIN_ID=11155111
+```
+
+The `VITE_*` entries belong in Builds; the two `NULL_*` entries belong in Functions. Include the new public `deployment.json` and all four circuit artifacts through the normal build. Preserve the archived v0.1 manifest for existing history. See [withdrawal verification](WITHDRAWAL_VERIFICATION.md).
+
+Commit all reviewed source files, including the new `packages/ens` workspace package, app components, lockfile and public deployment manifests. Push to the existing Netlify site's configured production branch. The root `netlify.toml` builds `apps/web/dist` and bundles the organization Function. Keep private inputs, backups, credentials and `.artifacts` out of the commit.
+
+The frontend production build passes locally. **A Git deployment does not copy your local environment into Netlify.** As of 2026-09-08, the hosted organization API returns HTTP 503 `NULL_ORGANIZATION_CONFIG_REQUIRED`. Configure the server variables below in Netlify's Functions scope and redeploy before expecting organization approval to work. Keep the existing public `VITE_*` values in the Builds scope.
+
+## Optional CLI deployment
 
 The root `netlify.toml` builds the web app and the organization function. Local CLI deployment includes the current working tree; no Git commit is required. Do not deploy a drag-and-drop frontend folder alone: that omits the approval API.
 

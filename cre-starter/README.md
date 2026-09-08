@@ -52,7 +52,7 @@ cd ../..
 ## Configuration and data boundaries
 
 - `payroll/workflow.ts` accepts only `batchId`, `expectedCommitment`, and `expectedEnvelopeRoot`. Configuration requires `simulationOnly: true` and the loopback payroll URL. The handler keeps the bearer, HTTP response, and compilation on `TeeRuntime`; it makes no DON crossover, report, or chain-write call. Its fixed log is for simulation only.
-- The helper reads the public `../deployments/11155111.json`: Sepolia `11155111`, pool `0x5d67Ff96D115127645437C0E3a71c61d37465E71`. These bind the encrypted output; the workflow does not read or write the chain.
+- The helper reads the current public `../apps/web/public/deployment.json` and checks that the staging workflow configuration uses the same chain and pool. These bind the encrypted output; the workflow does not read or write the chain. The withdrawal release uses Sepolia pool `0x734da58C285D211e7C0ad904f522c221c982447E`.
 - Two fictional recipients use explicitly public demo scalars and deterministic demo entropy. These public demo values provide no wallet security. Never fund their derived addresses or reuse them for real payroll. The raw batch stays in memory; the API serves only that immutable batch.
 - There is one `.env`, at the repository root. Only CRE consumes it opaquely; the helper does not read or change it. A fresh random bearer is passed through the child environment as `NULL_CRE_SIMULATION_TOKEN`, mapped by `secrets.yaml` to `PAYROLL_API_TOKEN`. It is never written to files, command arguments, or logs.
 - CLI output is captured before saving or displaying it. Output containing the bearer or raw payroll field names is withheld. The receipt explicitly records `remoteExecutionVerified: false` and `attestationVerified: false`.

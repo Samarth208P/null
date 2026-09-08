@@ -19,7 +19,7 @@ Use Payments, Funds, Balance, Payment ID, Collect payment, Save backup, and Rest
 
 Show Practice mode and Test network in the interface, while retaining existing `sandbox` and `testnet` state values. Show Prepared as Ready to send, Published locally as Sent in practice, and Confirmed as Sent. Never label a prepared or uncertain payment as sent.
 
-Keep proof, commitment, envelope, padding, and connection diagnostics out of the normal payment and inbox screens. Preserve the facts needed to act safely: this version uses test money, deposits are public, withdrawals are not available, unsaved local state can be lost, and signing in does not restore Payment ID keys. Keep necessary organization approval inputs under Advanced setup; simplifying the display must not change the approval checks.
+Keep proof, commitment, envelope, padding, and connection diagnostics out of the normal payment and inbox screens. Preserve the facts needed to act safely: this version uses test money, deposits are public, withdrawals reveal the receiving address and amount, unsaved local state can be lost, and signing in does not restore Payment ID keys. Keep necessary organization approval inputs under Advanced setup; simplifying the display must not change the approval checks.
 
 ## Design references
 

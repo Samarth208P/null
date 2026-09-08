@@ -138,7 +138,7 @@ export function LiveBalanceRecovery({ open, onClose, onRecovered, identityKeys }
     let treasuryWarning: string | undefined;
     if (password) {
       setStage('Opening your saved funds backup…');
-      try { checkpoints = (await store.load()).checkpoints.filter(checkpoint => checkpoint.kind === 'treasury' && checkpoint.context.chainId === client.context.chainId && checkpoint.context.poolAddress.toLowerCase() === client.context.poolAddress.toLowerCase()); }
+      try { checkpoints = (await store.load()).checkpoints.filter(checkpoint => checkpoint.context.chainId === client.context.chainId && checkpoint.context.poolAddress.toLowerCase() === client.context.poolAddress.toLowerCase()); }
       catch (reason) { treasuryWarning = `${readableError(reason)} Received payments can still be restored using your saved Payment ID.`; }
     }
     if (!treasuryWarning && checkpoints.length === 0) treasuryWarning = password
@@ -146,7 +146,7 @@ export function LiveBalanceRecovery({ open, onClose, onRecovered, identityKeys }
       : 'Your available funds have not been checked. Enter your funds backup password, or restore the backup file, to include them.';
     let treasuryBalance: bigint | null = null;
     let treasuryNotes: OwnedTreasuryNote[] = [];
-    if (checkpoints.length > 0) {
+    if (checkpoints.some(checkpoint => checkpoint.kind === 'treasury')) {
       setStage('Checking your available funds…');
       try {
         const recovered = await client.recoverTreasuryNotes(checkpoints, { signal });
@@ -159,7 +159,7 @@ export function LiveBalanceRecovery({ open, onClose, onRecovered, identityKeys }
     setStage('Finding your collected payments…');
     const keys = { spendPrivateKey: new Uint8Array(identityKeys.spendPrivateKey), viewPrivateKey: new Uint8Array(identityKeys.viewPrivateKey) };
     let privateNotes;
-    try { privateNotes = await client.recoverPrivateNotes({ keys, forceRpc, signal }); }
+    try { privateNotes = await client.recoverPrivateNotes({ keys, checkpoints, forceRpc, signal }); }
     finally { keys.spendPrivateKey.fill(0); keys.viewPrivateKey.fill(0); }
     setStage('Confirming payment amounts and dates…');
     const history = await client.syncHistory({ forceRpc, signal });

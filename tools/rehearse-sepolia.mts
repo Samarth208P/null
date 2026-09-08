@@ -52,7 +52,7 @@ const live=new NullLiveClient({manifest,rpcUrls:['https://ethereum-sepolia-rpc.p
 const progress={onProgress:(stage:string)=>console.log(stage),onTransactionSubmitted:async(tx:unknown)=>{evidence.steps.push(tx);await writeFile(publicPath,JSON.stringify(evidence,null,2));}};
 try {
  await live.registerPolicy({opening:policy,wallet:wallet as any,persistLocalPolicy:async()=>save(),...progress});
- const shield=await live.prepareShield({amountAtomic:amount,policyCommitment:authPolicyCommitment(policy),acknowledgePublicDepositAndNoWithdrawal:true,...progress});
+ const shield=await live.prepareShield({amountAtomic:amount,policyCommitment:authPolicyCommitment(policy),acknowledgePublicDeposit:true,...progress});
  const funded=await live.submit(shield,{mode:'wallet',wallet:wallet as any},progress);
  const compiled=await compileDistribution({context,recipients:[{employeeRef:'Rehearsal recipient',amountAtomic:amount,stealthMetaAddress:profileFromKeys(keys).stealthMetaAddress}]});
  const distribution=await live.prepareDistribution({compiled,treasuryNotes:[funded.note as OwnedTreasuryNote],authPolicy:policy,authorize:async intent=>toHex(secp256k1.sign(fromHex(intent.digest),fromHex(signer),{prehash:false,lowS:true}).toCompactRawBytes()),...progress});

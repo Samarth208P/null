@@ -3,7 +3,7 @@ import { memoryIntents, type IntentStore, type StoredIntent } from './intents.js
 import { randomUUID } from 'node:crypto';
 import { PrivyClient } from '@privy-io/node';
 import { createPrivyOrganizationAuthorizer, type PrivyOrganizationConfig } from '@null-protocol/auth/server';
-import { validateDistributionIntent, type CompiledIntentContext } from '@null-protocol/auth';
+import { validatePaymentIntent, type CompiledIntentContext } from '@null-protocol/auth';
 import type { Hex } from 'viem';
 
 class OrganizationError extends Error { constructor(public code: string, public status = 400) { super(code); } }
@@ -48,15 +48,24 @@ function admit(key: string, maximum: number) {
 }
 function parseIntent(value: unknown) {
   exact(value, ['publicInputs', 'expected']);
-  exact(value.expected, ['chainId', 'poolAddress', 'commitment', 'envelopeRoot']);
-  const expected = value.expected;
-  if (!Array.isArray(value.publicInputs) || value.publicInputs.length !== 15 || value.publicInputs.some(input => typeof input !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(input)) || typeof expected.chainId !== 'string' || !/^[1-9][0-9]*$/.test(expected.chainId) || typeof expected.poolAddress !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(expected.poolAddress) || typeof expected.commitment !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(expected.commitment) || typeof expected.envelopeRoot !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(expected.envelopeRoot)) throw new OrganizationError('NULL_REQUEST_REJECTED');
-  const publicInputs = value.publicInputs as Hex[];
-  const context: CompiledIntentContext = { chainId: BigInt(expected.chainId), poolAddress: expected.poolAddress as Hex, commitment: expected.commitment as Hex, envelopeRoot: expected.envelopeRoot as Hex };
+  const candidate = value.expected as Record<string,unknown> | undefined;
+  const withdrawal = candidate?.kind === 'withdrawal';
+  exact(candidate, withdrawal ? ['kind','chainId','poolAddress','recipient','amountAtomic'] : ['chainId','poolAddress','commitment','envelopeRoot']);
+  if (!Array.isArray(value.publicInputs) || value.publicInputs.length !== (withdrawal ? 10 : 15) || value.publicInputs.some(input => typeof input !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(input)) || typeof candidate.chainId !== 'string' || !/^[1-9][0-9]*$/.test(candidate.chainId) || typeof candidate.poolAddress !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(candidate.poolAddress)) throw new OrganizationError('NULL_REQUEST_REJECTED');
+  let context: CompiledIntentContext;
+  const base = {chainId:BigInt(candidate.chainId),poolAddress:candidate.poolAddress as Hex};
+  if (withdrawal) {
+    if (typeof candidate.recipient !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(candidate.recipient) || typeof candidate.amountAtomic !== 'string' || !/^[1-9][0-9]{0,19}$/.test(candidate.amountAtomic)) throw new OrganizationError('NULL_REQUEST_REJECTED');
+    context = {...base,kind:'withdrawal',recipient:candidate.recipient as Hex,amountAtomic:BigInt(candidate.amountAtomic)};
+  } else {
+    if (typeof candidate.commitment !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(candidate.commitment) || typeof candidate.envelopeRoot !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(candidate.envelopeRoot)) throw new OrganizationError('NULL_REQUEST_REJECTED');
+    context = {...base,commitment:candidate.commitment as Hex,envelopeRoot:candidate.envelopeRoot as Hex};
+  }
   if (!config || context.chainId !== config.chainId || context.poolAddress.toLowerCase() !== config.poolAddress.toLowerCase()) throw new OrganizationError('NULL_CONTEXT_MISMATCH');
-  validateDistributionIntent(publicInputs, context);
-  return { publicInputs, expected: context };
+  const publicInputs = value.publicInputs as Hex[]; validatePaymentIntent(publicInputs,context);
+  return {publicInputs,expected:context};
 }
+
 const safeErrors: Record<string, number> = {
   NULL_PRIVY_AUTH_FAILED: 403, NULL_PRIVY_CONTROL_MISMATCH: 409, NULL_PRIVY_APPROVALS_REQUIRED: 409,
   NULL_CONTEXT_MISMATCH: 409, NULL_CRE_COMPILE_MISMATCH: 409, NULL_INTENT_EXPIRED: 409,

@@ -7,7 +7,7 @@ import { createDiscoveryClient } from '@null-protocol/graph-client';
 import { proveInWorker, type CircuitKind, type ProofRequest } from '@null-protocol/prover';
 import {
   NullError, IncrementalMerkleTree, authPolicyCommitment, buildClaimWitness, buildCreateDistributionWitness,
-  buildShieldWitness, buildPrivateNote, deriveField, fieldFromHex, fieldHex, finalNoteCommitment, fromHex, noteNullifier,
+  buildShieldWitness, buildPrivateNote, buildWithdrawalWitness, prepareWithdrawalIntent, privateNoteBody, deriveField, fieldFromHex, fieldHex, finalNoteCommitment, fromHex, noteNullifier,
   prepareDistributionIntent, randomBytes, scanEnvelopes, treasuryNoteBody, utf8,
   type AuthPolicyOpening, type ChainContext, type PreparedWitness,
 } from '@null-protocol/sdk';
@@ -15,7 +15,7 @@ import {
   CONTRACT_NAMES, type BroadcastTransport, type ClaimOptions, type ConfirmedOperation, type DeploymentManifest,
   type DiscoveryOptions, type DistributionOptions, type LiveClientOptions, type OperationOptions,
   type OperationStage, type OwnedPrivateNote, type OwnedTreasuryNote, type PreparedOperation,
-  type PublicHistory, type PublicOperation, type ReconciliationResult, type SecretCheckpoint, type ShieldOptions,
+  type WithdrawalOptions, type PublicHistory, type PublicOperation, type ReconciliationResult, type SecretCheckpoint, type ShieldOptions,
 } from './types';
 export * from './types';
 export * from './storage';
@@ -40,8 +40,15 @@ function secureUrl(value: string, base?: string): string {
   return url.toString();
 }
 export function validateDeploymentManifest(manifest: DeploymentManifest): void {
-  if (manifest.status !== 'deployed' || manifest.protocolVersion !== '0.1.0' || ![11155111, 31337].includes(manifest.chainId) || !Number.isSafeInteger(manifest.deploymentBlock) || manifest.deploymentBlock < 0 || manifest.asset?.decimals !== 6 || manifest.security?.networkScope !== 'testnet-only') throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'A complete testnet deployment manifest is required.');
+  if (manifest.status !== 'deployed' || !['0.1.0', '0.2.0'].includes(manifest.protocolVersion) || ![11155111, 31337].includes(manifest.chainId) || !Number.isSafeInteger(manifest.deploymentBlock) || manifest.deploymentBlock < 0 || manifest.asset?.decimals !== 6 || manifest.security?.networkScope !== 'testnet-only') throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'A complete testnet deployment manifest is required.');
   for (const name of CONTRACT_NAMES) { requireHex(manifest.contracts?.[name], 20); requireHex(manifest.codeHashes?.[name], 32); }
+  if (manifest.security.withdrawalsImplemented) {
+    if (manifest.protocolVersion !== '0.2.0') throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'Withdrawals require a version 0.2 deployment.');
+    requireHex(manifest.contracts.withdrawVerifier, 20); requireHex(manifest.codeHashes.withdrawVerifier, 32);
+    const artifact = manifest.build?.circuitArtifacts?.withdraw;
+    if (!artifact?.url || artifact.verifierTarget !== 'evm' || artifact.noirVersion !== manifest.build.noir || artifact.backendVersion !== manifest.build.barretenberg) throw new NullError('NULL_ARTIFACT_UNAVAILABLE', 'The withdrawal verifier is not configured.');
+    requireHex(artifact.sha256, 32); requireHex(artifact.verificationKeySha256, 32); requireHex(artifact.verifierSourceSha256, 32);
+  }
   requireHex(manifest.asset.address, 20); requireHex(manifest.codeHashes.asset, 32);
   if (manifest.build?.noir !== '1.0.0-beta.22' || manifest.build.barretenberg !== '5.0.0-nightly.20260522') throw new NullError('NULL_ARTIFACT_MISMATCH', 'The deployment uses an unsupported proving toolchain.');
   for (const kind of ['shield', 'create_distribution', 'claim'] as const) {
@@ -109,6 +116,7 @@ export class NullLiveClient {
     if (!Number.isSafeInteger(confirmations) || confirmations < 1) throw new NullError('NULL_CONFIGURATION_INVALID', 'At least one confirmation is required.');
     this.manifest = structuredClone(options.manifest);
     for (const kind of ['shield', 'create_distribution', 'claim'] as const) this.manifest.build.circuitArtifacts[kind].url = secureUrl(this.manifest.build.circuitArtifacts[kind].url, options.artifactBaseUrl);
+    if (this.manifest.security.withdrawalsImplemented) this.manifest.build.circuitArtifacts.withdraw!.url = secureUrl(this.manifest.build.circuitArtifacts.withdraw!.url, options.artifactBaseUrl);
     const rpcUrls = options.rpcUrls.map(url => secureUrl(url));
     this.options = { ...options, rpcUrls, confirmations, receiptTimeoutMs: options.receiptTimeoutMs ?? 180_000, maxGas: options.maxGas ?? 10_000_000n };
     this.context = Object.freeze({ chainId: BigInt(this.manifest.chainId), poolAddress: this.manifest.contracts.nullPool });
@@ -125,6 +133,12 @@ export class NullLiveClient {
       const code = await this.rpc.getCode({ address });
       if (!code || code === '0x' || keccak256(code).toLowerCase() !== this.manifest.codeHashes[name].toLowerCase()) throw new NullError('NULL_VERIFIER_MISMATCH', 'Deployed runtime code does not match the pinned manifest.');
     }));
+    if (this.manifest.security.withdrawalsImplemented) {
+      const verifier = this.manifest.contracts.withdrawVerifier!;
+      const code = await this.rpc.getCode({address:verifier});
+      const [address, hash] = await Promise.all([this.rpc.readContract({address:this.context.poolAddress,abi:nullPoolAbi,functionName:'withdrawVerifier'}),this.rpc.readContract({address:this.context.poolAddress,abi:nullPoolAbi,functionName:'withdrawVerifierCodeHash'})]);
+      if (!code || keccak256(code) !== this.manifest.codeHashes.withdrawVerifier || address.toLowerCase() !== verifier.toLowerCase() || hash !== this.manifest.codeHashes.withdrawVerifier) throw new NullError('NULL_VERIFIER_MISMATCH', 'Withdrawal code does not match the deployment.');
+    }
     const dependencies = { ASSET: this.manifest.asset.address, AUTH_REGISTRY: this.manifest.contracts.nullAuthRegistry, HASHER: this.manifest.contracts.poseidon3, shieldVerifier: this.manifest.contracts.shieldVerifier, createDistributionVerifier: this.manifest.contracts.createDistributionVerifier, claimVerifier: this.manifest.contracts.claimVerifier } as const;
     for (const [name, expected] of Object.entries(dependencies)) {
       const actual = await this.rpc.readContract({ address: this.manifest.contracts.nullPool, abi: nullPoolAbi, functionName: name as keyof typeof dependencies });
@@ -210,7 +224,7 @@ export class NullLiveClient {
     const data = encodeFunctionData({ abi: nullAuthRegistryAbi, functionName: 'register', args: [fieldFromHex(policyCommitment)] });
     progress(options, 'simulating'); await this.rpc.call({ account, to: this.manifest.contracts.nullAuthRegistry, data });
     checkAbort(options); progress(options, 'submitting');
-    const hash = await options.wallet.sendTransaction({ account, chain: this.chain, to: this.manifest.contracts.nullAuthRegistry, data, value: 0n });
+    const hash = await options.wallet.sendTransaction({ account: options.wallet.account ?? account, chain: this.chain, to: this.manifest.contracts.nullAuthRegistry, data, value: 0n });
     submitted(options, hash, 'register-policy'); progress(options, 'confirming');
     const receipt = await this.rpc.waitForTransactionReceipt({ hash, confirmations: this.options.confirmations, timeout: this.options.receiptTimeoutMs });
     if (receipt.status !== 'success') throw new NullError('NULL_POLICY_REGISTRATION_FAILED', 'The policy registration transaction reverted.');
@@ -250,7 +264,7 @@ export class NullLiveClient {
   }
 
   /** Base stealth keys plus public history recover claim notes without a hosted wallet database. */
-  async recoverPrivateNotes(options: DiscoveryOptions): Promise<OwnedPrivateNote[]> {
+  async recoverPrivateNotes(options: DiscoveryOptions & { checkpoints?: readonly SecretCheckpoint[] }): Promise<OwnedPrivateNote[]> {
     await this.verifyDeployment(options); const history = await this.syncHistory(options);
     const allocations = await scanEnvelopes({ envelopes: history.envelopes, distributions: history.distributions, keys: options.keys, context: this.context, source: 'chain', signal: options.signal });
     const recovered: OwnedPrivateNote[] = [];
@@ -260,7 +274,22 @@ export class NullLiveClient {
         if (!await this.rpc.readContract({ address: this.manifest.contracts.nullPool, abi: nullPoolAbi, functionName: 'spentClaimNullifier', args: [fieldFromHex(draft.claimNullifier)] })) continue;
         const leafIndex = history.noteLeaves.findIndex((commitment, index) => finalNoteCommitment(draft.bodyCommitment, index) === commitment);
         if (leafIndex < 0) continue; // The consumption may be newer than the confirmed history window.
+        if (await this.rpc.readContract({address:this.context.poolAddress,abi:nullPoolAbi,functionName:'spentNoteNullifier',args:[fieldFromHex(noteNullifier(history.noteLeaves[leafIndex]!, draft.ownerNullifierKey))]})) continue;
         recovered.push({ ...draft, leafIndex, commitment: history.noteLeaves[leafIndex]!, transactionHash: await this.findNoteTransaction(leafIndex, history.blockNumber) });
+      }
+      // A funds backup also carries the claim opening. Recover it even when the
+      // current browser has a different Payment ID, without trusting saved status.
+      for (const checkpoint of options.checkpoints ?? []) {
+        checkAbort(options);
+        if (checkpoint.kind !== 'private-note' || !checkpoint.claimNullifier || checkpoint.context.chainId !== this.context.chainId || checkpoint.context.poolAddress.toLowerCase() !== this.context.poolAddress.toLowerCase()) continue;
+        const body = privateNoteBody(checkpoint.ownerNullifierKey, checkpoint.amountAtomic, checkpoint.noteSecret);
+        if (body !== checkpoint.bodyCommitment) continue;
+        for (let leafIndex = 0; leafIndex < history.noteLeaves.length; leafIndex++) {
+          const commitment = history.noteLeaves[leafIndex]!;
+          if (finalNoteCommitment(body, leafIndex) !== commitment || recovered.some(note => note.commitment === commitment)) continue;
+          if (await this.rpc.readContract({ address: this.context.poolAddress, abi: nullPoolAbi, functionName: 'spentNoteNullifier', args: [fieldFromHex(noteNullifier(commitment, checkpoint.ownerNullifierKey))] })) continue;
+          recovered.push({ ownerNullifierKey: checkpoint.ownerNullifierKey, noteSecret: checkpoint.noteSecret, amountAtomic: checkpoint.amountAtomic, claimNullifier: checkpoint.claimNullifier, bodyCommitment: body, commitment, leafIndex, transactionHash: await this.findNoteTransaction(leafIndex, history.blockNumber) });
+        }
       }
       return recovered;
     } finally { for (const allocation of allocations) allocation.stealthPrivateKey.fill(0); }
@@ -282,7 +311,8 @@ export class NullLiveClient {
   }
 
   async prepareShield(options: ShieldOptions): Promise<PreparedOperation> {
-    if (options.acknowledgePublicDepositAndNoWithdrawal !== true) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Acknowledge the public deposit and absence of withdrawals before shielding.');
+    if (options.acknowledgePublicDeposit !== true) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Acknowledge the public deposit before adding funds.');
+    if (!this.manifest.security.withdrawalsImplemented) throw new NullError('NULL_WITHDRAWAL_UNAVAILABLE', 'New deposits are disabled until a withdrawal-capable pool is deployed.');
     await this.verifyDeployment(options);
     if (!await this.rpc.readContract({ address: this.manifest.contracts.nullAuthRegistry, abi: nullAuthRegistryAbi, functionName: 'registered', args: [fieldFromHex(options.policyCommitment)] })) throw new NullError('NULL_POLICY_UNREGISTERED', 'Register the business authorization policy before funding the treasury.');
     const ownerNullifierKey = newField('null.v1.treasury-owner'); const noteSecret = newField('null.v1.treasury-secret');
@@ -326,6 +356,30 @@ export class NullLiveClient {
     return this.proveAndPrepare('claim', built, recovery, options);
   }
 
+  async prepareWithdrawal(options: WithdrawalOptions): Promise<PreparedOperation> {
+    if (!this.manifest.security.withdrawalsImplemented) throw new NullError('NULL_WITHDRAWAL_UNAVAILABLE', 'This pool has no withdrawal verifier.');
+    if (options.acknowledgePublicWithdrawal !== true) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Acknowledge the public withdrawal destination and amount.');
+    await this.verifyDeployment(options); const history = await this.syncHistory(options);
+    const note = options.note;
+    const treasury = 'policyCommitment' in note;
+    if (treasury && (!options.authPolicy || !options.authorize || authPolicyCommitment(options.authPolicy) !== note.policyCommitment)) throw new NullError('NULL_PRIVY_AUTH_FAILED', 'Treasury withdrawals require organization approval.');
+    const body = treasury ? treasuryNoteBody(note.ownerNullifierKey, note.policyCommitment, note.amountAtomic, note.noteSecret) : privateNoteBody(note.ownerNullifierKey, note.amountAtomic, note.noteSecret);
+    if (body !== note.bodyCommitment || finalNoteCommitment(body, note.leafIndex) !== note.commitment || history.noteLeaves[note.leafIndex] !== note.commitment) throw new NullError('NULL_NOTE_INVALID', 'Restore this note from confirmed history before withdrawing.');
+    const authTree = new IncrementalMerkleTree(20, history.policyLeaves);
+    const policyIndex = treasury ? history.policyLeaves.indexOf(note.policyCommitment) : -1;
+    if (treasury && policyIndex < 0) throw new NullError('NULL_POLICY_UNREGISTERED', 'The organization policy is missing from confirmed history.');
+    const base = { context:this.context, note:{...note,path:new IncrementalMerkleTree(20,history.noteLeaves).getPath(note.leafIndex)}, recipient:options.recipient, authRoot:authTree.root,
+      ...(treasury ? {authPolicy:options.authPolicy!,policyPath:authTree.getPath(policyIndex)} : {}), nonce:newField('null.v1.withdraw-nonce'), validUntil:await this.deadline(options.validForSeconds) };
+    const intent = prepareWithdrawalIntent(base);
+    await this.preflight({chainId:this.manifest.chainId,pool:this.context.poolAddress,method:'withdraw',proof:'0x',publicInputs:intent.publicInputs});
+    let signerSignature: Hex | undefined;
+    if (treasury) { progress(options,'authorization'); checkAbort(options); signerSignature = await options.authorize!({digest:intent.digest,publicInputs:intent.publicInputs,context:this.context,recipient:options.recipient,amountAtomic:note.amountAtomic}); }
+    checkAbort(options);
+    const built = buildWithdrawalWitness({...base,signerSignature});
+    const recovery: SecretCheckpoint = {...note,kind:treasury ? 'treasury' : 'private-note',phase:'confirmed',context:this.context};
+    return this.proveAndPrepare('withdraw',built,recovery,options);
+  }
+
   private async deadline(seconds = 3_600): Promise<bigint> {
     if (!Number.isInteger(seconds) || seconds < 60 || seconds > 86_400) throw new NullError('NULL_INTENT_INVALID', 'Choose a proof deadline between one minute and one day.');
     return (await this.rpc.getBlock()).timestamp + BigInt(seconds);
@@ -333,7 +387,7 @@ export class NullLiveClient {
   private async proveAndPrepare(kind: CircuitKind, built: PreparedWitness, recovery: SecretCheckpoint, options: OperationOptions, envelopes?: PublicOperation['envelopes']): Promise<PreparedOperation> {
     progress(options, 'saving-recovery'); checkAbort(options);
     await this.options.persistLocalSecret(structuredClone(recovery));
-    const proof = await proveInWorker({ kind, artifact: this.manifest.build.circuitArtifacts[kind], witness: built.witness as ProofRequest['witness'], expectedPublicInputs: built.publicInputs }, { signal: options.signal, onProgress: stage => progress(options, stage) });
+    const proof = await proveInWorker({ kind, artifact: this.manifest.build.circuitArtifacts[kind]!, witness: built.witness as ProofRequest['witness'], expectedPublicInputs: built.publicInputs }, { signal: options.signal, onProgress: stage => progress(options, stage) });
     const operation: PublicOperation = { chainId: this.manifest.chainId, pool: this.manifest.contracts.nullPool, method: kind === 'create_distribution' ? 'createDistribution' : kind, proof: proof.proof, publicInputs: proof.publicInputs, ...(envelopes ? { envelopes } : {}) };
     const prepared: PreparedOperation = { publicOperation: structuredClone(operation), transaction: { chainId: operation.chainId, to: operation.pool, data: encodePublicOperation(operation), value: '0x0' }, recovery: structuredClone(recovery), createdAt: Date.now() };
     this.prepared.set(prepared, { operation: structuredClone(operation), recovery: structuredClone(recovery) });
@@ -361,7 +415,7 @@ export class NullLiveClient {
       if (transport.mode === 'wallet') {
         const gas = (await this.rpc.estimateGas({ account: account!, to: operation.pool, data, value: 0n })) * 120n / 100n;
         if (gas > this.options.maxGas!) throw new NullError('NULL_GAS_LIMIT', 'The estimated gas exceeds the configured transaction limit.');
-        try { hash = await transport.wallet.sendTransaction({ account: account!, chain: this.chain, to: operation.pool, data, value: 0n, gas }); }
+        try { hash = await transport.wallet.sendTransaction({ account: transport.wallet.account ?? account!, chain: this.chain, to: operation.pool, data, value: 0n, gas }); }
         catch (error) {
           if (walletRequestRejected(error)) throw new NullError('NULL_WALLET_REJECTED', 'The wallet request was declined.');
           throw new SubmissionUncertainError(operation);
@@ -411,7 +465,8 @@ export class NullLiveClient {
           const claimMatch = operation.method === 'claim' && event.eventName === 'AllocationConsumed' && BigInt(String(event.args.claimNullifier)) === BigInt(operation.publicInputs[4]!);
           const distributionMatch = operation.method === 'createDistribution' && event.eventName === 'DistributionInserted' && BigInt(String(event.args.distributionCommitment)) === BigInt(operation.publicInputs[7]!);
           const shieldMatch = operation.method === 'shield' && event.eventName === 'Shielded' && finalNoteCommitment(stored.recovery.bodyCommitment, Number(event.args.noteIndex)) === fieldHex(BigInt(String(event.args.noteCommitment)));
-          if (claimMatch || distributionMatch || shieldMatch) { hash = log.transactionHash; break; }
+          const withdrawalMatch = operation.method === 'withdraw' && event.eventName === 'Withdrawn' && BigInt(String(event.args.noteNullifier)) === BigInt(operation.publicInputs[5]!);
+          if (claimMatch || distributionMatch || shieldMatch || withdrawalMatch) { hash = log.transactionHash; break; }
         }
       }
       if (!hash) return { status: 'not-observed', explanation: 'No matching operation is present in confirmed history. The original request may still be pending; this is not evidence of failure.' };
@@ -435,6 +490,11 @@ export class NullLiveClient {
   private async preflight(operation: PublicOperation): Promise<void> {
     const pool = this.manifest.contracts.nullPool;
     if (operation.method !== 'shield' && BigInt(operation.publicInputs.at(-1)!) <= (await this.rpc.getBlock()).timestamp) throw new NullError('NULL_INTENT_EXPIRED', 'The proof deadline expired. Prepare a new operation.');
+    if (operation.method === 'withdraw') {
+      if (!this.manifest.security.withdrawalsImplemented) throw new NullError('NULL_WITHDRAWAL_UNAVAILABLE', 'Withdrawals are not deployed.');
+      if (!await this.rpc.readContract({address:pool,abi:nullPoolAbi,functionName:'isKnownNoteRoot',args:[BigInt(operation.publicInputs[3]!)]}) || !await this.rpc.readContract({address:this.manifest.contracts.nullAuthRegistry,abi:nullAuthRegistryAbi,functionName:'isKnownAuthRoot',args:[BigInt(operation.publicInputs[4]!)]})) throw new NullError('NULL_ROOT_STALE','Refresh note history before withdrawing.');
+      if (await this.rpc.readContract({address:pool,abi:nullPoolAbi,functionName:'spentNoteNullifier',args:[BigInt(operation.publicInputs[5]!)]})) throw new NullError('NULL_NULLIFIER_SPENT','This note was already spent. Restore your balance.');
+    }
     if (operation.method === 'claim') {
       if (!await this.rpc.readContract({ address: pool, abi: nullPoolAbi, functionName: 'isKnownDistributionRoot', args: [BigInt(operation.publicInputs[3]!)] })) throw new NullError('NULL_ROOT_STALE', 'Refresh distribution history and create a new proof.');
       if (await this.rpc.readContract({ address: pool, abi: nullPoolAbi, functionName: 'spentClaimNullifier', args: [BigInt(operation.publicInputs[4]!)] })) throw new NullError('NULL_NULLIFIER_SPENT', 'This allocation is already consumed.');
@@ -464,7 +524,7 @@ export class NullLiveClient {
       const data = encodeFunctionData({ abi: tokenAbi, functionName: 'approve', args: [this.manifest.contracts.nullPool, value] });
       const simulation = await this.rpc.call({ account, to: this.manifest.asset.address, data });
       if (simulation.data && simulation.data !== '0x' && BigInt(simulation.data) !== 1n) throw new NullError('NULL_APPROVAL_FAILED', 'The token rejected its allowance update.');
-      const hash = await wallet.sendTransaction({ account, chain: this.chain, to: this.manifest.asset.address, data, value: 0n });
+      const hash = await wallet.sendTransaction({ account: wallet.account ?? account, chain: this.chain, to: this.manifest.asset.address, data, value: 0n });
       submitted(options, hash, 'approval');
       const receipt = await this.rpc.waitForTransactionReceipt({ hash, confirmations: this.options.confirmations, timeout: this.options.receiptTimeoutMs });
       if (receipt.status !== 'success') throw new NullError('NULL_APPROVAL_FAILED', 'The token allowance transaction failed.');
@@ -489,6 +549,12 @@ export class NullLiveClient {
     for (const log of receipt.logs) {
       if (log.address.toLowerCase() !== operation.pool.toLowerCase()) continue;
       try { events.push(decodeEventLog({ abi: nullPoolAbi, data: log.data, topics: log.topics }) as unknown as typeof events[number]); } catch { /* unrelated pool event */ }
+    }
+    if (operation.method === 'withdraw') {
+      const nullifier = operation.publicInputs[5]!, recipient = `0x${BigInt(operation.publicInputs[6]!).toString(16).padStart(40,'0')}` as Address, amountAtomic = BigInt(operation.publicInputs[7]!);
+      if (!events.some(event => event.eventName === 'Withdrawn' && BigInt(String(event.args.noteNullifier)) === BigInt(nullifier) && String(event.args.recipient).toLowerCase() === recipient.toLowerCase() && BigInt(String(event.args.amount)) === amountAtomic) || !await this.rpc.readContract({address:operation.pool,abi:nullPoolAbi,functionName:'spentNoteNullifier',args:[BigInt(nullifier)]})) throw new NullError('NULL_TRANSACTION_MISMATCH','The withdrawal was not confirmed.');
+      const note = { ...recovery, commitment:recovery.commitment!,leafIndex:recovery.leafIndex!,transactionHash:recovery.transactionHash! } as OwnedPrivateNote | OwnedTreasuryNote;
+      return {transactionHash:receipt.transactionHash,receipt,note,localRecoverySaved:true,withdrawal:{recipient,amountAtomic,nullifier}};
     }
     const noteEvent = events.find(event => event.eventName === 'NoteInserted' && finalNoteCommitment(recovery.bodyCommitment, Number(event.args.noteIndex)) === fieldHex(BigInt(String(event.args.noteCommitment))));
     if (!noteEvent) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The confirmed transaction did not insert the expected note.');

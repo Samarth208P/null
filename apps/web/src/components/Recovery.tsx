@@ -17,6 +17,7 @@ export function Recovery({ open, onClose, initialMode = 'export' }: { open: bool
         if (password.length < 12) throw new Error('Choose a password with at least 12 characters.');
         const encrypted = await encryptRecovery(store.identity.keys, password);
         download('null-encrypted-recovery.json', encrypted);
+        store.markIdentityBackedUp();
         if (persist) { try { await saveVault(encrypted); } catch { store.toast('Backup downloaded, but could not also be saved in this browser. Keep the downloaded file.'); close(); return; } }
         store.toast('Backup downloaded. Keep your password in a separate safe place.');
       } else {

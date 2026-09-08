@@ -9,7 +9,7 @@ import { ProofWorker } from './proof-worker-adapter.mts';
 import { createPublicClient, http, parseAbi } from '../apps/web/node_modules/viem/_esm/index.js';
 const requireProver = createRequire(new URL('../packages/prover/package.json', import.meta.url));
 const { Noir } = requireProver('@noir-lang/noir_js');
-const manifest = JSON.parse(await readFile('deployments/11155111.json', 'utf8'));
+const manifest = JSON.parse(await readFile('apps/web/public/deployment.json', 'utf8'));
 const context = { chainId: 11155111n, poolAddress: manifest.contracts.nullPool };
 // Publicly specified synthetic scalars, for isolated witness/proof tests only. Never funded.
 const signer = bigintToBytes(11n), keys = { spendPrivateKey: bigintToBytes(12n), viewPrivateKey: bigintToBytes(13n) };

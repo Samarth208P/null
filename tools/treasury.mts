@@ -139,7 +139,7 @@ async function initialize() {
 
 async function deployment() {
   await loadRootEnv();
-  const manifest = jsonFile(resolve(root, 'deployments/11155111.json'), 256_000) as DeploymentManifest;
+  const manifest = jsonFile(resolve(root, process.env.NULL_MANIFEST_PATH || 'apps/web/public/deployment.json'), 256_000) as DeploymentManifest;
   validateDeploymentManifest(manifest);
   if (manifest.chainId !== 11155111 || process.env.NULL_CHAIN_ID !== '11155111') fail('Treasury operations are restricted to the deployed Ethereum Sepolia environment.');
   if (process.env.NULL_POOL_ADDRESS && process.env.NULL_POOL_ADDRESS.toLowerCase() !== manifest.contracts.nullPool.toLowerCase()) fail('The configured pool differs from the deployment manifest.');

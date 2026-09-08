@@ -7,10 +7,11 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/lib/account.test.ts src/lib/cre.test.ts",
+    "test": "node --import tsx --test src/lib/account.test.ts src/lib/cre.test.ts src/lib/ens-pending.test.ts",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@null-protocol/ens": "workspace:*",
     "@null-protocol/client": "workspace:*",
     "@null-protocol/auth": "workspace:*",
     "@null-protocol/sdk": "workspace:*",

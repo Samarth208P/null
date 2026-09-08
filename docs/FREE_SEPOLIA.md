@@ -2,7 +2,7 @@
 
 The local sandbox needs no environment file, wallet funding, or contract deployment. Actual Sepolia operations need deployed NULL contracts, matching proving artifacts, a public RPC endpoint, and test tokens. The web app and relayer run on your own computer with one private root `.env`; no website hosting or paid service subscription is required.
 
-Use **Sepolia ETH and test USDC only**. This is an unaudited prototype with no withdrawal route: a claim creates a private note, not a token transfer to the recipient's wallet. Deployment does not establish that the complete proof, recovery, or payment flow has been validated.
+Use **Sepolia ETH and test USDC only**. This is an unaudited prototype. A claim creates a private note; a separate v0.2 withdrawal transfers its full value to the reviewed public wallet. The archived v0.1 pool cannot withdraw. Deployment does not establish that the complete proof, recovery, or payment flow has been validated.
 
 ## Configure and deploy
 

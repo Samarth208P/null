@@ -16,7 +16,7 @@ Use the deployment manifest emitted by `contracts/scripts/deploy.mjs`, after the
 
 Serve the circuit JSON files at the URLs in the manifest. `artifactBaseUrl` resolves relative artifact paths against the hosted application's origin. The client rejects ordinary insecure HTTP endpoints; loopback HTTP is allowed for development. Large proof artifacts remain public downloads. The worker never uploads witnesses or recipient secrets.
 
-The manifest itself is the trust anchor. Review and pin it in the deployment process; accepting a manifest from an arbitrary party would accept that party's contracts and hashes. Asset runtime pinning does not pin a proxy implementation behind an upgradeable token. The prototype remains testnet-only and has no withdrawal path.
+The manifest itself is the trust anchor. Review and pin it in the deployment process; accepting a manifest from an arbitrary party would accept that party's contracts and hashes. Asset runtime pinning does not pin a proxy implementation behind an upgradeable token. The prototype remains testnet-only. Protocol v0.2 adds full-note withdrawal with exact destination and amount binding; v0.1 cannot withdraw.
 
 ## Construct the client and encrypted local storage
 
@@ -92,7 +92,7 @@ Registration is a real registry transaction. A preexisting policy is accepted on
 
 ## Shield treasury funds
 
-The product must disclose that the deposit wallet, asset, amount, and time are public, and that v1 has no withdrawal function. The API requires an explicit acknowledgment of this boundary. Do not automatically shield the exact payroll total immediately before a private distribution.
+The product must disclose that the deposit wallet, asset, amount, and time are public, and that withdrawals reveal the receiving wallet, amount and time. The API requires an explicit acknowledgment of this boundary. Do not automatically shield the exact payroll total immediately before a private distribution.
 
 ```ts
 import { parseAmount } from '@null-protocol/sdk';

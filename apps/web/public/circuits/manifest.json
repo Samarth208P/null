@@ -31,6 +31,15 @@
       "noirVersion": "1.0.0-beta.22",
       "backendVersion": "5.0.0-nightly.20260522",
       "verifierTarget": "evm"
+    },
+    "withdraw": {
+      "url": "/circuits/withdraw.json",
+      "sha256": "0x3cd04a082036d6509add317dd52224bb602ff3399bd18133ba74de2e49ab4d10",
+      "verificationKeySha256": "0xfdf11c4ae853cf72a795bed10781aaddf606537de28a8b764ce93877df71d610",
+      "verifierSourceSha256": "0xb49fce8efd35b79570b8c37d79864a2f6a82598155214cdc9f3dd9650e83f402",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
     }
   }
 }

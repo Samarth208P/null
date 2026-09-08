@@ -3,9 +3,10 @@ import { createPrivacyProfile, parseAmount, type CompiledDistribution } from '@n
 import { LiveBalanceRecoveryLoader } from '../components/LiveBalanceRecoveryLoader';
 import { config } from './config';
 import { useAccount } from './account';
+import type { PaymentNameSnapshot } from '@null-protocol/ens';
 
 export type Route = 'overview' | 'distributions' | 'new' | 'treasury' | 'inbox' | 'balance' | 'inspector' | 'protocol' | 'settings' | 'about';
-export type RecipientRow = { id: string; name: string; amount: string; profile: string };
+export type RecipientRow = { id: string; name: string; amount: string; profile: string; destination?: string; paymentName?: PaymentNameSnapshot };
 export type Distribution = { id: string; name: string; category: string; createdAt: string; status: 'Draft' | 'Prepared' | 'Published locally' | 'Confirmed'; recipients: RecipientRow[]; compiled?: CompiledDistribution; transactionHash?: string };
 export type Activity = { id: string; title: string; detail: string; createdAt: string; type: 'shield' | 'distribution' | 'claim' | 'workspace' };
 export type PrivateNote = { id: string; amount: bigint; commitment: string; createdAt: string; allocationId: string };
@@ -13,6 +14,7 @@ export type Identity = ReturnType<typeof createPrivacyProfile>;
 
 function newWorkspace() {
   const identity = createPrivacyProfile();
+  if (config.defaultEnvironment === 'testnet') return { identity, recipients: [] as RecipientRow[], drafts: [] as Distribution[] };
   const otherProfiles = Array.from({ length: 3 }, () => createPrivacyProfile().profile.stealthMetaAddress);
   const recipients: RecipientRow[] = ['Alice Chen', 'Bob Williams', 'Carol Park', 'Dave Miller'].map((name, index) => ({
     id: crypto.randomUUID(), name, amount: ['4201.123456', '7503.654321', '3107.777777', '9211.222222'][index], profile: index === 0 ? identity.profile.stealthMetaAddress : otherProfiles[index - 1],
@@ -27,8 +29,11 @@ function newWorkspace() {
 }
 
 type Store = {
+  receivingName?: PaymentNameSnapshot; setReceivingName: (snapshot?: PaymentNameSnapshot) => void;
+  paymentPins: Record<string, PaymentNameSnapshot>; rememberPaymentName: (snapshot: PaymentNameSnapshot) => void;
   mode: 'sandbox' | 'testnet';
   organization: string; setOrganization: (name: string) => void;
+  identityBackedUp: boolean; markIdentityBackedUp: () => void;
   identity: Identity; setIdentity: (identity: Identity) => void;
   recipients: RecipientRow[]; setRecipients: (rows: RecipientRow[]) => void;
   distributions: Distribution[]; saveDistribution: (distribution: Distribution) => void; removeDraft: (id: string) => void;
@@ -36,6 +41,7 @@ type Store = {
   treasuryReady: boolean; recoverLiveBalances: () => void;
   notes: PrivateNote[]; addNote: (note: PrivateNote) => void;
   activities: Activity[]; addActivity: (title: string, detail: string, type: Activity['type']) => void;
+  recordWithdrawal: (commitment: string, amount: bigint, treasury: boolean) => void;
   hideBalances: boolean; setHideBalances: (hidden: boolean) => void;
   toast: (message: string) => void; toastMessage: string;
   navigate: (route: Route) => void; editingId: string | null; editDistribution: (id: string | null) => void;
@@ -47,7 +53,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [mode] = useState<'sandbox' | 'testnet'>(config.defaultEnvironment);
   const [organization, setOrganization] = useState(profile?.organizationName || 'My organization');
   const [identity, setIdentity] = useState(initial.identity);
+  const [identityBackedUp, setIdentityBackedUp] = useState(false);
   const [recipients, setRecipients] = useState(initial.recipients);
+  const [paymentPins, setPaymentPins] = useState<Record<string, PaymentNameSnapshot>>({});
+  const [receivingName, setReceivingName] = useState<PaymentNameSnapshot>();
   const [allDistributions, setDistributions] = useState(initial.drafts);
   const [testnetDistributions, setTestnetDistributions] = useState<Distribution[]>([]);
   const [treasury, setTreasury] = useState(100_000_000000n);
@@ -55,7 +64,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [liveRecoveryOpen, setLiveRecoveryOpen] = useState(false);
   const [allNotes, setNotes] = useState<PrivateNote[]>([]);
   const [liveNotes, setLiveNotes] = useState<PrivateNote[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([{ id: crypto.randomUUID(), title: 'Ready to try NULL', detail: 'Try the sample payments with 100,000 USDC in practice money.', createdAt: new Date().toISOString(), type: 'workspace' }]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [hideBalances, setHideBalances] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -64,7 +73,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addActivity = (title: string, detail: string, type: Activity['type']) => setActivities(items => [{ id: crypto.randomUUID(), title, detail, type, createdAt: new Date().toISOString() }, ...items]);
   const saveDistribution = (distribution: Distribution) => (mode === 'sandbox' ? setDistributions : setTestnetDistributions)(items => items.some(item => item.id === distribution.id) ? items.map(item => item.id === distribution.id ? distribution : item) : [distribution, ...items]);
   const value: Store = {
-    mode, organization, setOrganization, identity, setIdentity: next => { setIdentity(next); setNotes([]); setLiveNotes([]); }, recipients, setRecipients,
+    recordWithdrawal: (commitment, amount, treasury) => { if (treasury) setLiveTreasury(value => value === null ? null : value >= amount ? value - amount : null); else setLiveNotes(items => items.filter(note => note.commitment !== commitment)); addActivity('Withdrawal confirmed', 'Tokens sent to your reviewed receiving address.', 'claim'); },
+    receivingName, setReceivingName,
+    paymentPins, rememberPaymentName: snapshot => setPaymentPins(pins => ({ ...pins, [snapshot.name]: snapshot })),
+    identityBackedUp, markIdentityBackedUp: () => setIdentityBackedUp(true),
+    mode, organization, setOrganization, identity, setIdentity: next => { setIdentity(next); setIdentityBackedUp(true); setReceivingName(undefined); setNotes([]); setLiveNotes([]); }, recipients, setRecipients,
     distributions: mode === 'sandbox' ? allDistributions : testnetDistributions, saveDistribution, removeDraft: id => (mode === 'sandbox' ? setDistributions : setTestnetDistributions)(items => items.filter(item => item.id !== id || item.status === 'Published locally')),
     treasury: mode === 'sandbox' ? treasury : liveTreasury ?? 0n,
     treasuryReady: mode === 'sandbox' || liveTreasury !== null,

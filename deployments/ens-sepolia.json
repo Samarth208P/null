@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "chainId": 11155111,
+  "verifiedAt": "2026-09-08T05:36:30.733Z",
+  "sourceRevision": "97a57293f3b4279d94b571e678edb53ce62638f4",
+  "namespace": "nullpay2026.eth",
+  "paymentName": "receive.nullpay2026.eth",
+  "alias": "pay.nullpay2026.eth",
+  "owner": "0x523FF8d1Ce8A64690Bf592d73DF62AAB9FFdF434",
+  "editor": "0xC8203B189c2F4783f81D0b19a5787a3255Cb72f5",
+  "editorAccessAfterVerification": "revoked",
+  "registry": "0x3f59C62b03673a321A0bA12857afA46617aE9040",
+  "resolver": "0x674be7717ed119C26c7f81dC1BE424fFb5AEf8b5",
+  "recordKey": "null.paymentProfile",
+  "profileFingerprint": "0x335495d63b470d5a6c7e5b5dca09cb63058f54c3cfc2e224bbd18141785e8444",
+  "lastVerifiedBlock": "11659150",
+  "transactions": [
+    {
+      "step": "deploy-resolver",
+      "hash": "0x51843eb91e364742da67a6a406d7b1fff8909a2c4effaf153e4fc66b1fc40453"
+    },
+    {
+      "step": "deploy-subregistry",
+      "hash": "0xb2dba639fac11fe28d430b379f63beff01dbf19786082379b40e3d220746452c"
+    },
+    {
+      "step": "set-registry-parent",
+      "hash": "0xa0271215ee8f97daf02034a3dddcc951b8a20b14f02e70195c367dab9ee47d22"
+    },
+    {
+      "step": "mint-registration-test-token",
+      "hash": "0x3eeee10edde029e987960ec424b5740a224866c13309b4aa745fc04cb31146f9"
+    },
+    {
+      "step": "approve-registration-fee",
+      "hash": "0x14f00d44deacae73f92d9abfb97b215b34b0ccf9db679cfcae0a02c4c40f15e7"
+    },
+    {
+      "step": "commit-name",
+      "hash": "0x78158568044097bcc5780809b3b9aa2456f3752ac2a905956e7101d3797ab67d"
+    },
+    {
+      "step": "register-name",
+      "hash": "0xc00833c3d5e6525e34554bba3c863d5421d7ec0e35d98ef8088b7d47d9a858b7"
+    },
+    {
+      "step": "clear-registration-allowance",
+      "hash": "0x1476ee2684f6ec5462d870228adfdfd2a2be8f30e87d8a026aabe18d2fd76643"
+    },
+    {
+      "step": "register-recipient-subname",
+      "hash": "0x0bcf8a45e461acdc70e95685ceff78dd80153147b3d25bd6a54d325090d1af96"
+    },
+    {
+      "step": "delegate-payment-record",
+      "hash": "0xba4885200cdde907627502d147d0969cfc6e321f5015d35f361d7867f0163647"
+    },
+    {
+      "step": "fund-record-editor",
+      "hash": "0xf1fe81a35f6d2bf597748950ea4f223187ae1dbb9a37d6183d3a2398af878d5e"
+    },
+    {
+      "step": "publish-payment-record",
+      "hash": "0x7b273e5e3c3ba7bf1d081d8d1dc6cb035fa325c14c5136ab069d630dccb8f326"
+    },
+    {
+      "step": "rotate-payment-record",
+      "hash": "0x0f62b195a90a5f57073eb398920ba3823a6fc85b00f603a240307641f1c16c42"
+    },
+    {
+      "step": "restore-payment-record",
+      "hash": "0xccee09f9ca367ed55eeb67184d70682ba8ff61a377342b55ffb5d7e66b1b6f21"
+    },
+    {
+      "step": "create-payment-alias",
+      "hash": "0xc749e241c6a9423f625ab784e14dac2628ab11f1554459258ff91c59f6eb6078"
+    },
+    {
+      "step": "revoke-payment-record-access",
+      "hash": "0x99ee5828f3e599701e55382efd249c72f8e8d5bfab25c5e3293f2e26ef54a9d7"
+    }
+  ],
+  "checks": {
+    "scopedRecordWrite": true,
+    "forbiddenOperationsRejected": [
+      "different text key",
+      "different name",
+      "wallet address record",
+      "delegate admin escalation",
+      "write after revocation"
+    ],
+    "changedDestinationBlocked": true,
+    "aliasResolution": true,
+    "aliasWriteBlocked": true,
+    "liveNameToEncryptedAllocationDiscovery": true,
+    "onchainPayment": false
+  },
+  "recipientSetup": {
+    "name": "inbox.nullpay2026.eth",
+    "wallet": "0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433",
+    "recordKey": "null.paymentProfile",
+    "recordAccess": "scoped to this name and key",
+    "profilePublished": false,
+    "transactions": [
+      {
+        "step": "assign-name",
+        "hash": "0x251bd70949b83f416d991d5609e8f361692c2f7b4d4c2169167ccb9165e803a2"
+      },
+      {
+        "step": "grant-payment-record",
+        "hash": "0x7c178a30a69a2797745487a0b955da442bc4da93890ad31be0b197a197438553"
+      },
+      {
+        "step": "fund-name-gas",
+        "hash": "0x8901295da1ab7ecf12f1f6e978b79cfacfa171caa7b1c26de4b30971bda172f1"
+      }
+    ]
+  }
+}

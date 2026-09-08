@@ -28,6 +28,7 @@ Drafts, payroll rows, and sandbox funds live in memory. Export password-encrypte
 
 - Organization overview, treasury and distribution history.
 - Four-step distribution creation with CSV import, exact decimal amounts, profile validation, eight-slot padding, and deterministic preflight.
+- Real ENSv2 payment names, scoped Privy-wallet record access, aliases and changed-destination checks. See [ENS integration and live evidence](docs/ENS_INTEGRATION.md).
 - Local worker-based encryption and discovery.
 - Recipient inbox, claim preparation, private-note balances, encrypted key recovery.
 - Public payload inspector and explicit entry/exit privacy boundaries.
@@ -42,18 +43,19 @@ The UI uses React, TypeScript and Vite. Styling is local CSS; there are no remot
 |---|---|
 | Cryptography | secp256k1 stealth profiles, circomlib-compatible Poseidon hashing, HKDF domain separation, strict field encoding |
 | Encrypted delivery | 512-byte plaintext, 540-byte AES-GCM ciphertext, 608-byte wire envelope, eight slots |
-| SDK | Compilation, scanning, commitments, nullifiers, Merkle paths, Shield/Distribution/Claim witness builders |
+| SDK | Compilation, scanning, commitments, nullifiers, Merkle paths, Shield/Distribution/Claim/Withdraw witness builders |
 | Wallet | Password-encrypted key files and IndexedDB; separate encrypted live-note checkpoints and archives |
-| Circuits | Noir Shield, CreateDistribution and Claim, including hidden ECDSA authorization and value constraints |
-| Contracts | Immutable verifier bindings, note/distribution/auth trees, double-spend nullifiers, exact ERC-20 deposits |
+| Circuits | Noir Shield, CreateDistribution, Claim and Withdraw, including hidden ECDSA authorization and value constraints |
+| Contracts | Immutable verifier bindings, note/distribution/auth trees, double-spend nullifiers, exact ERC-20 deposits and withdrawals |
 | Live client | Runtime/hash checks, tree reconstruction, local proving, simulation, relayed/self-broadcast transactions, receipt reconciliation |
 | Organization | Privy authorization adapter and authenticated organization service |
+| ENSv2 | Live Sepolia registry/resolver, one-key delegation, name-to-profile resolution and payment destination snapshots |
 | CRE | Confidential `handlerInTee` workflow and independent local compiler |
 | Discovery | Public Graph schema and mappings, RPC fallback, confirmations, reorg handling |
 | Relayer | Strict public payloads, rate limits, deployment checks, simulation and broadcast fallback |
 | Substreams | Rust normalizer, protobuf and package source |
 
-See [implementation status](docs/IMPLEMENTATION_STATUS.md) for compilation evidence and outstanding release work. **Development compilation is not security validation.** Tests were deliberately omitted at the user's request. No deployment or integration success is implied by a package being present.
+See the current [submission readiness review](docs/SUBMISSION_READINESS.md) for executed checks, live evidence and outstanding release work. Development compilation is not a security audit. No deployment or integration success is implied by a package being present.
 
 ## Build commands
 
@@ -83,13 +85,13 @@ pnpm setup:relayer --fund  # Fund a separate local relay wallet with up to 0.05 
 pnpm dev:all               # Run the web app, relayer, and configured local services
 ```
 
-All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111.json`, the browser manifest/circuits, and public deployment values in that same file. Restart the local processes after configuration changes. Confirmed deployment and setup evidence is recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md).
+All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111-withdrawals-v2.json`, the browser manifest/circuits, and public deployment values in that same environment file. Restart local processes after configuration changes. See [withdrawal verification](docs/WITHDRAWAL_VERIFICATION.md) for the latest deployment and complete-flow evidence.
 
 The web app can run locally or on Netlify using `netlify.toml`; the Privy organization API is included as a Function. The relayer and remote payroll service require separate hosting. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. `pnpm dev:all` also starts the private payroll API when its token is configured. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [current integration setup](docs/INTEGRATION_SETUP.md), [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
 
 **Never place wallet private keys, Privy app secrets, view/spend keys, payroll rows, or private witnesses in `VITE_` variables.** These are public bundle values.
 
-The ordinary public deposit and withdrawal boundaries reveal their wallet, amount, and time. **This MVP has no withdrawal route.** Do not deposit real-value assets. Authorization policies cannot seize notes.
+The ordinary public deposit and withdrawal boundaries reveal their wallet, amount, and time. The v0.2 pool supports proof-authorized full-note withdrawals, including approved treasury refunds. The immutable v0.1 pool has no exit; new deposits into it are disabled. Do not deposit real-value assets. Authorization policies cannot seize notes.
 
 ## Structure
 

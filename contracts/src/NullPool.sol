@@ -24,9 +24,11 @@ contract NullPool {
     IVerifier public immutable shieldVerifier;
     IVerifier public immutable createDistributionVerifier;
     IVerifier public immutable claimVerifier;
+    IVerifier public immutable withdrawVerifier;
     bytes32 public immutable shieldVerifierCodeHash;
     bytes32 public immutable createDistributionVerifierCodeHash;
     bytes32 public immutable claimVerifierCodeHash;
+    bytes32 public immutable withdrawVerifierCodeHash;
 
     IncrementalTree.Tree private notes;
     IncrementalTree.Tree private distributions;
@@ -45,6 +47,7 @@ contract NullPool {
         bytes ephemeralPubKey, bytes1 viewTag, bytes ciphertext);
     event AllocationConsumed(uint256 indexed claimNullifier, uint256 indexed noteCommitment,
         uint256 noteIndex, uint256 postNoteRoot, uint8 version);
+    event Withdrawn(uint256 indexed noteNullifier, address indexed recipient, uint64 amount);
 
     error InvalidDependency();
     error InvalidPublicInputs();
@@ -68,11 +71,13 @@ contract NullPool {
     }
 
     constructor(IERC20 asset, IPoseidon3 hasher, NullAuthRegistry registry,
-        IVerifier shieldProofVerifier, IVerifier distributionProofVerifier, IVerifier claimProofVerifier)
+        IVerifier shieldProofVerifier, IVerifier distributionProofVerifier, IVerifier claimProofVerifier,
+        IVerifier withdrawProofVerifier)
     {
         if (address(asset).code.length == 0 || address(hasher).code.length == 0 ||
             address(registry).code.length == 0 || address(shieldProofVerifier).code.length == 0 ||
-            address(distributionProofVerifier).code.length == 0 || address(claimProofVerifier).code.length == 0)
+            address(distributionProofVerifier).code.length == 0 || address(claimProofVerifier).code.length == 0 ||
+            address(withdrawProofVerifier).code.length == 0)
             revert InvalidDependency();
         if (asset.decimals() != 6 || address(registry.HASHER()) != address(hasher)) revert InvalidDependency();
         ASSET = asset;
@@ -81,9 +86,11 @@ contract NullPool {
         shieldVerifier = shieldProofVerifier;
         createDistributionVerifier = distributionProofVerifier;
         claimVerifier = claimProofVerifier;
+        withdrawVerifier = withdrawProofVerifier;
         shieldVerifierCodeHash = address(shieldProofVerifier).codehash;
         createDistributionVerifierCodeHash = address(distributionProofVerifier).codehash;
         claimVerifierCodeHash = address(claimProofVerifier).codehash;
+        withdrawVerifierCodeHash = address(withdrawProofVerifier).codehash;
         notes.initialize(hasher);
         distributions.initialize(hasher);
     }
@@ -149,6 +156,32 @@ contract NullPool {
         spentClaimNullifier[nullifier] = true;
         (uint256 commitment, uint256 index, uint256 root) = _insertNote(uint256(inputs[5]), 1);
         emit AllocationConsumed(nullifier, commitment, index, root, 1);
+    }
+
+    /// @notice Withdraw one whole note; the proof hides which note is spent.
+    /// @dev Destination and amount are public and bound to the proof. Treasury exits
+    /// additionally require the registered organization's hidden ECDSA approval.
+    function withdraw(bytes calldata proof, bytes32[] calldata inputs) external nonReentrant {
+        _context(inputs, 10);
+        _deadline(inputs[9]);
+        if (!notes.known(uint256(inputs[3])) || !AUTH_REGISTRY.isKnownAuthRoot(uint256(inputs[4]))) revert RootStale();
+        uint256 nullifier = uint256(inputs[5]);
+        uint256 destination = uint256(inputs[6]);
+        uint256 amount = uint256(inputs[7]);
+        if (nullifier == 0 || destination == 0 || destination > type(uint160).max ||
+            address(uint160(destination)) == address(this) || amount == 0 || amount > type(uint64).max)
+            revert InvalidPublicInputs();
+        if (spentNoteNullifier[nullifier]) revert NullifierSpent();
+        _verify(withdrawVerifier, withdrawVerifierCodeHash, proof, inputs);
+        address recipient = address(uint160(destination));
+        uint256 poolBefore = ASSET.balanceOf(address(this));
+        uint256 recipientBefore = ASSET.balanceOf(recipient);
+        spentNoteNullifier[nullifier] = true;
+        (bool ok, bytes memory result) = address(ASSET).call(abi.encodeCall(IERC20.transfer, (recipient, amount)));
+        if (!ok || (result.length != 0 && (result.length != 32 || !abi.decode(result, (bool))))) revert TransferFailed();
+        if (ASSET.balanceOf(address(this)) + amount != poolBefore ||
+            ASSET.balanceOf(recipient) != recipientBefore + amount) revert TransferFailed();
+        emit Withdrawn(nullifier, recipient, uint64(amount));
     }
 
     function noteRoot() external view returns (uint256) { return notes.root; }

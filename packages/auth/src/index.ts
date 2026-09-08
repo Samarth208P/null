@@ -1,12 +1,28 @@
 import { recoverAddress, recoverPublicKey, toHex, type Address, type Hex } from 'viem';
 import { publicKeyToAddress } from 'viem/accounts';
-import { distributionIntentDigest, secp256k1, fromHex, sha256, utf8 } from '@null-protocol/sdk';
+import { distributionIntentDigest, withdrawalIntentDigest, secp256k1, fromHex, sha256, utf8 } from '@null-protocol/sdk';
 
-export interface CompiledIntentContext {
+export interface DistributionIntentContext {
   chainId: bigint;
   poolAddress: Address;
   commitment: Hex;
   envelopeRoot: Hex;
+}
+export interface WithdrawalIntentContext { kind: 'withdrawal'; chainId: bigint; poolAddress: Address; recipient: Address; amountAtomic: bigint }
+export type CompiledIntentContext = DistributionIntentContext | WithdrawalIntentContext;
+export function validateWithdrawalIntent(inputs: readonly Hex[], expected: WithdrawalIntentContext, nowSeconds = BigInt(Math.floor(Date.now()/1000))) {
+  if (inputs.length !== 10 || inputs.some(input => !/^0x[0-9a-fA-F]{64}$/.test(input) || BigInt(input) >= FIELD)) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (!/^0x[0-9a-fA-F]{40}$/.test(expected.recipient) || BigInt(expected.recipient) === 0n || BigInt(expected.recipient) === BigInt(expected.poolAddress) || expected.amountAtomic <= 0n || expected.amountAtomic >= 1n << 64n) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (BigInt(inputs[0]) !== 1n || BigInt(inputs[1]) !== expected.chainId || BigInt(inputs[2]) !== BigInt(expected.poolAddress) || BigInt(inputs[6]) !== BigInt(expected.recipient) || BigInt(inputs[7]) !== expected.amountAtomic || !BigInt(inputs[5]) || !BigInt(inputs[8])) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (BigInt(inputs[9]) <= nowSeconds || BigInt(inputs[9]) > nowSeconds + 86_400n) throw new Error('NULL_INTENT_EXPIRED');
+}
+export function validatePaymentIntent(inputs: readonly Hex[], expected: CompiledIntentContext) {
+  if ('kind' in expected && expected.kind === 'withdrawal') validateWithdrawalIntent(inputs, expected);
+  else validateDistributionIntent(inputs, expected as DistributionIntentContext);
+}
+export function paymentIntentDigest(inputs: readonly Hex[], expected: CompiledIntentContext): Hex {
+  validatePaymentIntent(inputs,expected);
+  return 'kind' in expected && expected.kind === 'withdrawal' ? withdrawalIntentDigest(inputs) : distributionIntentDigest(inputs);
 }
 export interface AuthorizationRequest {
   version: 1;
@@ -50,7 +66,7 @@ export async function identifyOrganizationSigner(options: { endpoint: string; ap
 }
 const FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const ORDER = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
-export function validateDistributionIntent(publicInputs: readonly Hex[], expected: CompiledIntentContext, nowSeconds = BigInt(Math.floor(Date.now() / 1000))) {
+export function validateDistributionIntent(publicInputs: readonly Hex[], expected: DistributionIntentContext, nowSeconds = BigInt(Math.floor(Date.now() / 1000))) {
   if (publicInputs.length !== 15 || publicInputs.some(input => !/^0x[0-9a-fA-F]{64}$/.test(input) || BigInt(input) >= FIELD)) throw new Error('NULL_CONTEXT_MISMATCH');
   if (BigInt(publicInputs[0]) !== 1n || BigInt(publicInputs[1]) !== expected.chainId || BigInt(publicInputs[2]) !== BigInt(expected.poolAddress) || BigInt(publicInputs[7]) !== BigInt(expected.commitment)) throw new Error('NULL_CONTEXT_MISMATCH');
   const envelope = (BigInt(publicInputs[8]) << 128n) | BigInt(publicInputs[9]);
@@ -60,15 +76,15 @@ export function validateDistributionIntent(publicInputs: readonly Hex[], expecte
 export async function createPrivyAuthorizationRequest(options: {
   appId: string; walletId: string; publicInputs: readonly Hex[]; expected: CompiledIntentContext; requestExpiryMs?: number;
 }): Promise<AuthorizationRequest> {
-  validateDistributionIntent(options.publicInputs, options.expected);
+  validatePaymentIntent(options.publicInputs, options.expected);
   if (!/^[a-zA-Z0-9_-]+$/.test(options.walletId) || !options.appId) throw new Error('NULL_PRIVY_AUTH_FAILED');
   const now = Date.now();
   const expiry = options.requestExpiryMs ?? now + 120_000;
-  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 300_000 || BigInt(expiry) > BigInt(options.publicInputs[14]) * 1000n) throw new Error('NULL_INTENT_EXPIRED');
+  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 300_000 || BigInt(expiry) > BigInt(options.publicInputs.at(-1)!) * 1000n) throw new Error('NULL_INTENT_EXPIRED');
   return {
     version: 1, method: 'POST', url: `https://api.privy.io/v1/wallets/${options.walletId}/rpc`,
     headers: { 'privy-app-id': options.appId, 'privy-request-expiry': String(expiry) },
-    body: { method: 'secp256k1_sign', params: { hash: await distributionIntentDigest(options.publicInputs) } },
+    body: { method: 'secp256k1_sign', params: { hash: await paymentIntentDigest(options.publicInputs, options.expected) } },
   };
 }
 /** This result is a private circuit witness. Never attach it to relay payloads or logs. */
@@ -99,7 +115,7 @@ export async function authorizeOrganizationDistribution(options: {
   /** Obtain other approvers' signatures over the identical prepared request when quorum > 1. */
   collectAdditionalSignatures?: (request: AuthorizationRequest, approvalsStillNeeded: number) => Promise<readonly string[]>;
 }): Promise<OrganizationAuthorizationResult> {
-  validateDistributionIntent(options.publicInputs, options.expected);
+  validatePaymentIntent(options.publicInputs, options.expected);
   const endpoint = new URL(options.endpoint);
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || (endpoint.protocol !== 'https:' && !(['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname) && endpoint.protocol === 'http:'))) throw new Error('NULL_ORGANIZATION_CONFIG_REQUIRED');
   const base = endpoint.href.replace(/\/$/, '');
@@ -111,11 +127,11 @@ export async function authorizeOrganizationDistribution(options: {
     if (!response.ok) throw new Error(typeof data.code === 'string' && /^NULL_[A-Z_]+$/.test(data.code) ? data.code : 'NULL_ORGANIZATION_UNAVAILABLE');
     return data;
   };
-  const prepared = await post('/api/organization/prepare', { publicInputs: options.publicInputs, expected: { chainId: options.expected.chainId.toString(), poolAddress: options.expected.poolAddress, commitment: options.expected.commitment, envelopeRoot: options.expected.envelopeRoot } });
+  const prepared = await post('/api/organization/prepare', { publicInputs: options.publicInputs, expected: { ...options.expected, chainId: options.expected.chainId.toString(), ...('kind' in options.expected ? { amountAtomic: options.expected.amountAtomic.toString() } : {}) } });
   const request = prepared.authorizationRequest as AuthorizationRequest;
-  const digest = await distributionIntentDigest(options.publicInputs);
+  const digest = await paymentIntentDigest(options.publicInputs, options.expected);
   const expiry = Number(request?.headers?.['privy-request-expiry']);
-  if (typeof prepared.ticket !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(prepared.ticket) || typeof prepared.walletAddress !== 'string' || prepared.walletAddress.toLowerCase() !== options.expectedSigner.toLowerCase() || !Number.isSafeInteger(prepared.minimumApprovals) || Number(prepared.minimumApprovals) < 1 || Number(prepared.minimumApprovals) > 20 || request?.version !== 1 || request?.method !== 'POST' || !/^https:\/\/api\.privy\.io\/v1\/wallets\/[a-zA-Z0-9_-]+\/rpc$/.test(request.url) || request.headers?.['privy-app-id'] !== options.appId || request.body?.method !== 'secp256k1_sign' || request.body.params?.hash !== digest || !Number.isSafeInteger(expiry) || String(expiry) !== request.headers['privy-request-expiry'] || expiry <= Date.now() || expiry > Date.now() + 300_000 || BigInt(expiry) > BigInt(options.publicInputs[14]) * 1000n) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (typeof prepared.ticket !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(prepared.ticket) || typeof prepared.walletAddress !== 'string' || prepared.walletAddress.toLowerCase() !== options.expectedSigner.toLowerCase() || !Number.isSafeInteger(prepared.minimumApprovals) || Number(prepared.minimumApprovals) < 1 || Number(prepared.minimumApprovals) > 20 || request?.version !== 1 || request?.method !== 'POST' || !/^https:\/\/api\.privy\.io\/v1\/wallets\/[a-zA-Z0-9_-]+\/rpc$/.test(request.url) || request.headers?.['privy-app-id'] !== options.appId || request.body?.method !== 'secp256k1_sign' || request.body.params?.hash !== digest || !Number.isSafeInteger(expiry) || String(expiry) !== request.headers['privy-request-expiry'] || expiry <= Date.now() || expiry > Date.now() + 300_000 || BigInt(expiry) > BigInt(options.publicInputs.at(-1)!) * 1000n) throw new Error('NULL_CONTEXT_MISMATCH');
   // Prevent injected fields from obtaining approval for a broader/different Privy operation.
   if (Object.keys(request).some(key => !['version', 'method', 'url', 'headers', 'body'].includes(key)) || Object.keys(request.headers).some(key => !['privy-app-id', 'privy-request-expiry'].includes(key)) || Object.keys(request.body).some(key => !['method', 'params'].includes(key)) || Object.keys(request.body.params).some(key => key !== 'hash')) throw new Error('NULL_CONTEXT_MISMATCH');
   if (Number(prepared.minimumApprovals) > 1 && !options.collectAdditionalSignatures) throw new Error('NULL_PRIVY_APPROVALS_REQUIRED');

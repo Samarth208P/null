@@ -1,0 +1,163 @@
+{
+  "verifiedAt": "2026-09-08T07:33:14.745Z",
+  "chainId": 11155111,
+  "pool": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "realProofs": true,
+  "completed": true,
+  "amounts": {
+    "depositedTestUsdc": "0.1",
+    "recipientWithdrawnTestUsdc": "0.06",
+    "treasuryRefundedTestUsdc": "0.04",
+    "remainingPoolTestUsdc": "0"
+  },
+  "costs": {
+    "deploymentWei": "30505532516294055",
+    "rehearsalWei": "30458429967239064",
+    "combinedWei": "60963962483533119",
+    "authorizedCombinedCapWei": "65000000000000000"
+  },
+  "transactions": [
+    {
+      "hash": "0x5dce9cbabfa3f9fef513be1761375cbac2316fbfdf7ceb780ccb885ef122a5d8",
+      "purpose": "shield"
+    },
+    {
+      "hash": "0xe783fbbf3107cea7678a844b5907dd6de0273c6fdfdae30655a25bd5e9ad44e8",
+      "purpose": "createDistribution"
+    },
+    {
+      "hash": "0xba10690d55b04d238ef106db15a39f5a8ffe01c33283c36216e0f5d89f14f20b",
+      "purpose": "claim"
+    },
+    {
+      "hash": "0x10698633ed2069160d291d8388099f07cbbb8a356a4f4750aa3b8d3106f90fc4",
+      "purpose": "withdraw"
+    },
+    {
+      "hash": "0xf9d39b1c1ab5e8b8ae0ebc75e4e9e93263ab9cd5a1031fd6ceb5460b22e80369",
+      "purpose": "withdraw"
+    }
+  ],
+  "receipts": [
+    {
+      "hash": "0x4f3f35828afb37eb9221193252d666619e44635862fa2c526c3430013294d796",
+      "blockNumber": 11659601,
+      "gasUsed": "1550280",
+      "effectiveGasPrice": "1155494510"
+    },
+    {
+      "hash": "0x4eb740543c95c517f5ad4e1c2480e9f552c137d54afd7cdace37fc3abe6b477d",
+      "blockNumber": 11659605,
+      "gasUsed": "55437",
+      "effectiveGasPrice": "1172545539"
+    },
+    {
+      "hash": "0x5dce9cbabfa3f9fef513be1761375cbac2316fbfdf7ceb780ccb885ef122a5d8",
+      "blockNumber": 11659639,
+      "gasUsed": "5145667",
+      "effectiveGasPrice": "1090023823"
+    },
+    {
+      "hash": "0xe783fbbf3107cea7678a844b5907dd6de0273c6fdfdae30655a25bd5e9ad44e8",
+      "blockNumber": 11659646,
+      "gasUsed": "6989516",
+      "effectiveGasPrice": "1053485290"
+    },
+    {
+      "hash": "0xba10690d55b04d238ef106db15a39f5a8ffe01c33283c36216e0f5d89f14f20b",
+      "blockNumber": 11659652,
+      "gasUsed": "5142609",
+      "effectiveGasPrice": "1140175225"
+    },
+    {
+      "hash": "0x10698633ed2069160d291d8388099f07cbbb8a356a4f4750aa3b8d3106f90fc4",
+      "blockNumber": 11659659,
+      "gasUsed": "4014051",
+      "effectiveGasPrice": "1216550780"
+    },
+    {
+      "hash": "0xf9d39b1c1ab5e8b8ae0ebc75e4e9e93263ab9cd5a1031fd6ceb5460b22e80369",
+      "blockNumber": 11659687,
+      "gasUsed": "4009215",
+      "effectiveGasPrice": "1217959969"
+    }
+  ],
+  "liveChecks": [
+    "0.1 test USDC deposited",
+    "0.06 privately allocated and claimed",
+    "original recipient keys recover the claimed note",
+    "0.06 withdrawn exactly",
+    "spent note excluded from recovery",
+    "missing transaction hash reconciled from public history",
+    "duplicate withdrawal rejected",
+    "0.04 refunded with treasury signature",
+    "full 0.1 token balance restored; pool empty"
+  ],
+  "localChecks": [
+    "deposit backed exactly by token balance",
+    "organization-approved distribution and exact private change",
+    "stealth discovery and claim with real proof",
+    "recipient recovery from original keys and chain history",
+    "funds backup recovers collected notes without the original Payment ID",
+    "recipient substitution rejected by deployed proof verifier",
+    "failed transfer leaves note unspent and funds recoverable",
+    "independent relayer broadcasts without recipient gas funding",
+    "withdrawal paid exact amount and removed spent balance after recovery",
+    "old funds backup cannot restore a withdrawn balance",
+    "withdrawal reconciles from public history without a returned transaction hash",
+    "double withdrawal rejected by client and contract",
+    "treasury exit cannot bypass organization approval",
+    "approved treasury refund and zero remaining pool liabilities",
+    "full conservation: 1 USDC deposited = 0.6 received + 0.4 refunded"
+  ],
+  "recoveryVerified": true,
+  "privyOwnerApproval": false,
+  "privacyScope": "Functional test using an isolated signer and one funded broadcaster. Public entry and exit are visible; this is not a Privy owner approval or an anonymity claim.",
+  "circuitArtifacts": {
+    "shield": {
+      "url": "/circuits/shield.json",
+      "sha256": "0x8c96ab11442794364f464463ef5e77b827c06607bf4e5382f383938cc9ea4d9d",
+      "verificationKeySha256": "0x9a162f74783ddd90d4843c0dc60cec3ef11a34b8378a38afa7fd01831c3510d2",
+      "verifierSourceSha256": "0xc9285a23a724161b2dab6678d9b1bb98f46150a86e774f2943b4ba0de55c0f0e",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "create_distribution": {
+      "url": "/circuits/create_distribution.json",
+      "sha256": "0xe9b5140c2e50cc3771dbd1af6bafdb9b8638ea28cad685ecbc6e59955f4ecc16",
+      "verificationKeySha256": "0x78d6f7496963fe4a08d53f99f893ec1028e585c3468e786c4358d832039a4852",
+      "verifierSourceSha256": "0xbad1fb420e40e42fc9d5df6f3c259faeb4c0ec49d3b2f24a0e81f11519f3db87",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "claim": {
+      "url": "/circuits/claim.json",
+      "sha256": "0x2c1fa766cb9e64f2fd48e591bc5aad346f50f93f3e87e5e01e529a79447991a9",
+      "verificationKeySha256": "0xa15e3694b4dace0f0b172cebbec6d232ca132dfe534ad5111ebfc22585942a30",
+      "verifierSourceSha256": "0x94c61fc5eda9d0fa634885f5c7e2336bd1bd5b2a11150e7cddbedda3c1e854dc",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "withdraw": {
+      "url": "/circuits/withdraw.json",
+      "sha256": "0x3cd04a082036d6509add317dd52224bb602ff3399bd18133ba74de2e49ab4d10",
+      "verificationKeySha256": "0xfdf11c4ae853cf72a795bed10781aaddf606537de28a8b764ce93877df71d610",
+      "verifierSourceSha256": "0xb49fce8efd35b79570b8c37d79864a2f6a82598155214cdc9f3dd9650e83f402",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    }
+  },
+  "graph": {
+    "url": "https://api.studio.thegraph.com/query/1758859/null-protocol/v0.2.0",
+    "indexedBlock": 11659700,
+    "hasIndexingErrors": false,
+    "notes": 3,
+    "distributions": 1,
+    "claims": 1,
+    "encryptedEnvelopes": 8
+  }
+}

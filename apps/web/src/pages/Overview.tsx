@@ -25,7 +25,7 @@ export function DistributionTable({ items, compact = false }: { items: Distribut
         {!compact && <td className="muted">{date(item.createdAt)}</td>}
         <td><button className="icon-button" aria-label={`Open ${item.name}`} onClick={() => openDistribution(item)}><ChevronRight size={16} /></button></td>
       </tr>)}</tbody>
-    </table></div> : <EmptyState icon={Send} title="Make your first payment" description="Choose who to pay, enter the amounts, and check the details before sending." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />}
+    </table></div> : <EmptyState icon={Send} title="Make your first payment" description="Add recipients and amounts to get started." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />}
     <Modal title={selected?.name || 'Payment'} description={selected?.status === 'Confirmed' ? 'Sent on the test network' : 'Sent in practice · No real money moved'} open={!!selected} onClose={() => setSelected(null)}>
       {selected && <>
         <div className="detail-list">
@@ -48,7 +48,7 @@ export function Overview() {
   const pending = drafts.reduce((total, item) => total + item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), 0n);
 
   return <>
-    <PageHeader title={profile?.organizationName || 'Organization overview'} description="Check your funds and manage payments." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
+    <PageHeader title={profile?.organizationName || 'Organization overview'} action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
     {store.mode === 'testnet' && !store.treasuryReady && <Notice tone="warning">{config.poolAddress ? 'Check your funds before making a payment.' : 'Payments are not set up yet. Check your connection in Settings.'}<button className="text-link" onClick={() => store.navigate(config.poolAddress ? 'treasury' : 'settings')}>{config.poolAddress ? 'Check funds' : 'Open settings'}<ArrowRight size={14} /></button></Notice>}
     <div className="overview-account-grid"><section className="private-balance-panel organization-treasury" aria-label="Available funds">
       <div className="balance-label"><span><ShieldCheck size={17} />Available funds</span><Badge tone="purple">{store.mode === 'sandbox' ? 'Practice money' : store.treasuryReady ? 'Last checked' : 'Not checked yet'}</Badge></div>
@@ -56,12 +56,12 @@ export function Overview() {
       <div className="balance-bottom"><p>{store.mode === 'sandbox' ? 'Practice money only.' : store.treasuryReady ? 'Checked again before you send a payment.' : 'Check your funds to see the balance.'}</p><button className="text-link" onClick={() => store.navigate('treasury')}>Manage funds<ArrowRight size={14} /></button></div>
       <div className="treasury-ledger"><div><span>Total in drafts</span><strong>{store.hideBalances ? '••••••' : money(pending)} <small>USDC</small></strong></div><div><span>Draft payments</span><strong>{drafts.length}</strong></div></div>
     </section>
-    <section className="workspace-next" aria-labelledby="workspace-next-heading"><div className="workspace-next-heading"><h2 id="workspace-next-heading">Pick up where you left off</h2><span>{drafts.length} draft{drafts.length === 1 ? '' : 's'}</span></div>
-      {drafts.length ? <div className="draft-shortcuts">{drafts.slice(0, 3).map(item => <button key={item.id} onClick={() => store.editDistribution(item.id)}><span className="draft-shortcut-icon"><Send size={17} strokeWidth={1.6} /></span><span><strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? '' : 's'} · {paymentStatusLabel(item.status)}</small></span><ChevronRight size={16} /></button>)}</div> : <div className="workspace-next-empty"><p>No unfinished payments. Start a payment when you’re ready.</p><Button variant="secondary" icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button></div>}
-      <p className="workspace-next-note"><LockKeyhole size={13} />Only your workspace can see these details.</p>
+    <section className="workspace-next" aria-labelledby="workspace-next-heading"><div className="workspace-next-heading"><h2 id="workspace-next-heading">Drafts</h2><span>{drafts.length} draft{drafts.length === 1 ? '' : 's'}</span></div>
+      {drafts.length ? <div className="draft-shortcuts">{drafts.slice(0, 3).map(item => <button key={item.id} onClick={() => store.editDistribution(item.id)}><span className="draft-shortcut-icon"><Send size={17} strokeWidth={1.6} /></span><span><strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? '' : 's'} · {paymentStatusLabel(item.status)}</small></span><ChevronRight size={16} /></button>)}</div> : <div className="workspace-next-empty"><p>No drafts yet.</p><Button variant="secondary" icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button></div>}
+
     </section></div>
     <section className="section-block">
-      <SectionTitle title="Recent payments" caption={drafts.length ? `${drafts.length} draft${drafts.length === 1 ? '' : 's'} · ${store.hideBalances ? '••••••' : money(pending)} USDC in drafts` : 'Your latest drafts and sent payments.'} action={store.distributions.length ? <button className="text-link" onClick={() => store.navigate('distributions')}>View all<ArrowRight size={14} /></button> : undefined} />
+      <SectionTitle title="Recent payments" caption={drafts.length ? `${drafts.length} draft${drafts.length === 1 ? '' : 's'} · ${store.hideBalances ? '••••••' : money(pending)} USDC in drafts` : undefined} action={store.distributions.length ? <button className="text-link" onClick={() => store.navigate('distributions')}>View all<ArrowRight size={14} /></button> : undefined} />
       <div className="table-panel"><DistributionTable items={store.distributions.slice(0, 4)} compact /></div>
     </section>
     <details className="progressive-details workspace-activity">
@@ -81,7 +81,7 @@ export function Distributions() {
   const filtered = store.distributions.filter(item => item.name.toLowerCase().includes(search.toLowerCase()) && (filter === 'All payments' || (filter === 'Drafts' ? item.status === 'Draft' : filter === 'Ready to send' ? item.status === 'Prepared' : isPublished(item))));
 
   return <>
-    <PageHeader title="Payments" description="See drafts and payments you have sent." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
+    <PageHeader title="Payments" action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
     {store.distributions.length > 0 && <div className="list-toolbar">
       <div className="tabs" role="group" aria-label="Filter payments">{['All payments', 'Drafts', 'Ready to send', 'Sent'].map(tab => <button key={tab} aria-pressed={tab === filter} className={tab === filter ? 'selected' : ''} onClick={() => setFilter(tab)}>{tab}{tab === 'All payments' && <span>{store.distributions.length}</span>}</button>)}</div>
       <label className="search-field"><Search size={16} /><input aria-label="Search payments" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search payments…" /></label>

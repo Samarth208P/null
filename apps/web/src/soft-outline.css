@@ -1,4 +1,55 @@
 /* Soft Outline: crisp financial layouts with tactile, neumorphic surfaces. */
+.receive-panel { padding: 26px; border-radius: 16px; background: var(--surface); box-shadow: var(--raised); }
+.receive-heading { display: flex; align-items: center; gap: 16px; }
+.receive-label { flex: 1; min-width: 0; }
+.receive-label h2 { margin: 0 0 6px; overflow-wrap: anywhere; }
+.receive-label p { margin: 0; color: var(--secondary); font-size: 13px; }
+.receive-heading > .button { flex-shrink: 0; }
+.receive-tools { display: flex; align-items: center; gap: 12px; padding-top: 22px; margin-top: 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--secondary); }
+.receive-backup { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 22px 0 34px; color: var(--secondary); font-size: 12px; }
+.receive-backup > div { display: flex; flex-shrink: 0; gap: 18px; }
+.payment-name-manager p { color: var(--secondary); margin: 0 0 16px; max-width: 68ch; }
+.payment-name-manager { padding-top: 28px; margin-top: 24px; border-top: 1px solid var(--line); }
+.name-input-row { display: flex; gap: 10px; align-items: stretch; }
+.name-input-row input { min-width: 0; flex: 1; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); box-shadow: var(--inset); }
+.name-input-row input::placeholder { color: var(--muted); opacity: 1; }
+.name-input-row .button { flex-shrink: 0; }
+.name-setup-result { margin-top: 24px; }
+.name-checked { color: var(--success) !important; display: flex; align-items: center; gap: 7px; font-size: 13px; flex-wrap: wrap; overflow-wrap: anywhere; margin: 10px 0 0; }
+.name-checked span { margin-inline-start: auto; color: var(--muted); }
+.name-permissions { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.name-permissions summary, .name-resolution summary { cursor: pointer; color: var(--primary-ink); font-weight: 500; margin-bottom: 12px; }
+.name-permissions .button-row { flex-wrap: wrap; }
+.payment-name-manager .field-hint { margin-top: 12px; margin-bottom: 0; }
+.payment-name-manager .name-status { margin-top: 20px; color: var(--success); }
+.payment-name-manager code, .name-resolution code { overflow-wrap: anywhere; }
+.payment-destination { margin-top: 4px; }
+.payment-destination > .field { display: block; margin-bottom: 8px; }
+.name-resolution { padding: 18px; margin-top: 18px; border-radius: 12px; background: var(--surface-hover); }
+.name-resolution p { margin: 8px 0; color: var(--secondary); overflow-wrap: anywhere; }
+.name-resolution-changed { background: var(--warning-bg); }
+.name-resolution-changed > strong { color: var(--warning); }
+.name-resolution textarea { font-size: 12px; overflow-wrap: anywhere; }
+fieldset.recipient-editor { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.wizard-surface { border: 0; margin: 0; min-width: 0; }
+fieldset.name-wallet-picker { border: 0; padding: 0; margin: 16px 0; min-width: 0; }
+.review-recipients { border-block: 1px solid var(--line); margin: 24px 0; }
+.review-recipients > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; padding: 16px 0; }
+.review-recipients > div + div { border-top: 1px solid var(--line); }
+.review-recipients small { grid-column: 1 / -1; color: var(--secondary); overflow-wrap: anywhere; }
+.review-recipients strong { overflow-wrap: anywhere; }
+.review-recipients span { font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .receive-panel { padding: 20px; }
+  .receive-heading { flex-wrap: wrap; }
+  .receive-heading > .button { width: 100%; }
+  .receive-tools { justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .receive-backup { flex-direction: column; gap: 8px; }
+  .name-input-row { flex-wrap: wrap; }
+  .name-input-row input { width: 100%; flex-basis: 100%; font-size: 16px; }
+  .name-input-row .button { width: 100%; }
+  .payment-name-manager .button-row { align-items: stretch; flex-direction: column; }
+}
 @font-face {
   font-family: "Inter";
   src: url("/fonts/InterVariable.ttf") format("truetype");
@@ -633,4 +684,10 @@ td { padding-block: 20px; }
 @media (prefers-reduced-motion: reduce) {
   .entry-main, .account-menu-panel, .modal[open], .toast { animation: none; transition: none; }
   .button:active:not(:disabled):not(:focus-visible), .entry-continue:hover:not(:disabled) > svg { transform: none; }
+}
+
+.withdraw-address { overflow-wrap: anywhere; word-break: break-all; }
+@media (max-width: 760px) {
+  .heading-action { max-width: 100%; }
+  .heading-action .button-row { flex-wrap: wrap; }
 }

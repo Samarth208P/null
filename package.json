@@ -12,9 +12,12 @@
     "dev:all": "node tools/dev.mjs",
     "build": "pnpm --filter @null-protocol/web build",
     "check": "pnpm -r --if-present typecheck",
-    "test:submission": "node --import tsx --test apps/web/src/lib/account.test.ts apps/web/src/lib/cre.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts",
+    "test:submission": "node --import tsx --test apps/web/src/lib/account.test.ts apps/web/src/lib/cre.test.ts apps/web/src/lib/ens-pending.test.ts packages/ens/src/index.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts",
+    "ens:status": "node --import tsx tools/ens-status.mts",
+    "ens:plan": "node --import tsx tools/ens-sepolia.mts",
+    "ens:verify": "node --import tsx tools/ens-sepolia.mts --broadcast",
     "proofs:check": "node --import tsx tools/check-proofs.mts --prove",
-    "rehearsal:plan": "node --import tsx tools/rehearse-sepolia.mts",
+    "rehearsal:plan": "node --import tsx tools/rehearse-withdrawal-sepolia.mts",
     "preview": "pnpm --filter @null-protocol/web preview",
     "relayer": "pnpm --filter @null-protocol/relayer dev",
     "circuits:build": "node tools/build-circuits.mjs --verifiers",
@@ -37,7 +40,9 @@
     "payroll:serve": "pnpm --filter @null-protocol/cre-workflow payroll:serve",
     "treasury:init": "node --import tsx tools/treasury.mts init",
     "treasury:register": "node --import tsx tools/treasury.mts register",
-    "treasury:sign": "node --import tsx tools/treasury.mts sign"
+    "treasury:sign": "node --import tsx tools/treasury.mts sign",
+    "test:flow": "node --import tsx tools/test-payment-flow.mts",
+    "test:withdrawal": "node --import tsx --test packages/sdk/src/withdrawal.test.ts"
   },
   "devDependencies": {
     "typescript": "5.9.3",

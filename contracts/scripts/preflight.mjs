@@ -2,8 +2,8 @@
  * No transaction is signed or submitted. Earlier deployments supply runtime code
  * only: NULL constructors read their immutable bindings, not mutable storage.
  */
-export async function preflightDeployments({ publicClient, account, steps }) {
-  const blockNumber = await publicClient.getBlockNumber();
+export async function preflightDeployments({ publicClient, account, steps, atBlock }) {
+  const blockNumber = atBlock ?? await publicClient.getBlockNumber();
   const deployed = [];
   const seen = new Set([account.toLowerCase()]);
   for (const step of steps) {
@@ -25,7 +25,7 @@ export async function preflightDeployments({ publicClient, account, steps }) {
       gasEstimate = await publicClient.estimateGas(request);
       runtime = (await publicClient.call(request)).data;
     } catch (error) {
-      const detail = String(error?.shortMessage ?? error?.name ?? 'RPC request failed')
+      const detail = String(error?.details ?? error?.shortMessage ?? error?.name ?? 'RPC request failed')
         .replace(/https?:\/\/\S+/g, '[RPC URL]').slice(0, 240);
       throw new Error(`Constructor preflight failed for ${step.id}: ${detail} ` +
         'No transaction was submitted. Resolve the constructor failure or use an RPC supporting eth_call and eth_estimateGas state overrides.');

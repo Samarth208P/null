@@ -11,14 +11,14 @@ export function SignIn() {
   const loading = !session.ready || session.authenticated && !session.userId;
   useEffect(() => { document.title = 'Sign in · NULL'; }, []);
   return <EntryLayout>
-    <h1>Your payments, in one place.</h1>
-    <p className="entry-description">Sign in to receive payments or send them for your organization.</p>
+    <h1>Private payments.</h1>
+    <p className="entry-description">Receive payments. Pay your team.</p>
     {loading ? <div className="entry-loading" role="status"><span className="skeleton" /><p>Checking your session…</p></div> : session.configured ? <>
-      <Button className="entry-continue" onClick={session.signIn}><span>Sign in or create an account</span><ArrowRight size={17} /></Button>
-      <p className="entry-hint">Continue securely with your email or wallet.</p>
+      <Button className="entry-continue" onClick={session.signIn}><span>Continue with email or wallet</span><ArrowRight size={17} /></Button>
+
     </> : <div className="entry-unavailable" role="status"><strong>Sign-in is not available yet.</strong><p>Contact the person who set up NULL, then try again when sign-in is ready.</p><Button variant="secondary" onClick={() => window.location.reload()}>Try again</Button></div>}
     {session.error && <p className="form-error" role="alert">{session.error}</p>}
-    <div className="entry-security"><LockKeyhole size={18} strokeWidth={1.5} /><div><strong>Keep a backup.</strong><p>Signing in alone does not restore your payments. If you have used NULL before, restore your backup in Settings after signing in.</p></div></div>
+    <div className="entry-security"><LockKeyhole size={18} strokeWidth={1.5} /><div><strong>Keep a backup.</strong><p>Returning? Restore your backup after signing in. Sign-in alone won’t restore payments.</p></div></div>
   </EntryLayout>;
 }
 
@@ -39,13 +39,13 @@ export function ChooseAccount() {
   return <EntryLayout className="account-setup" action={!account.profile && <Button variant="ghost" icon={LogOut} busy={session.signingOut} onClick={() => void session.signOut()}>Sign out</Button>} footer={<>Signed in as <span>{session.label}</span></>}>
       <ol className="setup-progress" aria-label="Account setup"><li className="complete"><Check size={14} />Signed in</li><li aria-current="step"><span>2</span>Choose account type</li></ol>
       <h1 ref={heading} tabIndex={-1}>How will you use NULL?</h1>
-      <p className="entry-description">Choose whether you want to receive or send payments.</p>
+
       <form onSubmit={complete}>
         <fieldset className="account-options"><legend className="sr-only">Account type</legend>
-          <label className={`account-option ${type === 'individual' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="individual" checked={type === 'individual'} onChange={() => { setType('individual'); setError(''); }} /><UserRound size={22} strokeWidth={1.6} /><span><strong>Individual</strong><small>Receive payments and check your balance.</small></span></label>
-          <label className={`account-option ${type === 'organization' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="organization" checked={type === 'organization'} onChange={() => { setType('organization'); setError(''); }} /><Building2 size={22} strokeWidth={1.6} /><span><strong>Organization</strong><small>Send payments and manage your organization’s funds.</small></span></label>
+          <label className={`account-option ${type === 'individual' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="individual" checked={type === 'individual'} onChange={() => { setType('individual'); setError(''); }} /><UserRound size={22} strokeWidth={1.6} /><span><strong>Individual</strong><small>Receive payments</small></span></label>
+          <label className={`account-option ${type === 'organization' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="organization" checked={type === 'organization'} onChange={() => { setType('organization'); setError(''); }} /><Building2 size={22} strokeWidth={1.6} /><span><strong>Organization</strong><small>Pay people and manage funds</small></span></label>
         </fieldset>
-        <div className={`organization-reveal ${type === 'organization' ? 'is-open' : ''}`} inert={type !== 'organization' || undefined} aria-hidden={type !== 'organization'}><div><div className="organization-setup-fields"><label className="field" htmlFor="onboarding-organization">Organization name<input id="onboarding-organization" name="organization" autoComplete="organization" value={organizationName} maxLength={50} required={type === 'organization'} disabled={type !== 'organization'} onChange={event => { setOrganizationName(event.target.value); setError(''); }} placeholder="e.g. Acme Studio" aria-describedby="organization-hint" /></label><p id="organization-hint" className="field-hint">This name is for display. Your organization must approve your access before you can send for it.</p></div></div></div>
+        <div className={`organization-reveal ${type === 'organization' ? 'is-open' : ''}`} inert={type !== 'organization' || undefined} aria-hidden={type !== 'organization'}><div><div className="organization-setup-fields"><label className="field" htmlFor="onboarding-organization">Organization name<input id="onboarding-organization" name="organization" autoComplete="organization" value={organizationName} maxLength={50} required={type === 'organization'} disabled={type !== 'organization'} onChange={event => { setOrganizationName(event.target.value); setError(''); }} placeholder="e.g. Acme Studio" aria-describedby="organization-hint" /></label><p id="organization-hint" className="field-hint">Display name only. Sending requires organization approval.</p></div></div></div>
         {error && <p className="form-error" role="alert">{error}</p>}
         <Button className="entry-continue" type="submit" disabled={!type}><span>Continue</span><ArrowRight size={17} /></Button>
       </form>

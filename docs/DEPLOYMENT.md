@@ -146,5 +146,5 @@ The separate local compiler command in that guide is explicitly labeled `local-f
 
 Retain actual deployment manifests, build/source checksums, transaction receipts, and local service configuration status. Record Graph, Privy, or CRE execution evidence separately if those integrations are later enabled. Avoid inserting credentials or private witnesses into public evidence files. [Implementation status](IMPLEMENTATION_STATUS.md) and [sponsor compliance](SPONSOR_COMPLIANCE.md) distinguish recorded results from remaining work.
 
-The MVP has no withdrawal implementation, no security audit, and no executed test suite. Deployment should not be interpreted as permission to use real-value assets or as proof that the privacy and recovery guarantees are validated.
+The v0.2 deployment includes a withdrawal verifier. Full local flow and withdrawal tests have executed; see WITHDRAWAL_VERIFICATION.md. There is no independent security audit. Deployment should not be interpreted as permission to use real-value assets or as proof that the privacy and recovery guarantees are validated.
 

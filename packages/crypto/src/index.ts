@@ -9,6 +9,7 @@ import { poseidon4 } from 'poseidon-lite/poseidon4';
 import { poseidon5 } from 'poseidon-lite/poseidon5';
 import { poseidon8 } from 'poseidon-lite/poseidon8';
 import { poseidon9 } from 'poseidon-lite/poseidon9';
+import { poseidon11 } from 'poseidon-lite/poseidon11';
 import { poseidon16 } from 'poseidon-lite/poseidon16';
 
 export { secp256k1, sha256, keccak_256, hkdf, hmac };
@@ -67,7 +68,7 @@ export function split128(value: Uint8Array): [bigint, bigint] {
 export const DOMAIN_LABELS = [
   'null.v1.pk', 'null.v1.merkle', 'null.v1.treasury-note', 'null.v1.private-note',
   'null.v1.final-note', 'null.v1.note-nullifier', 'null.v1.allocation', 'null.v1.distribution',
-  'null.v1.claim-nullifier', 'null.v1.auth-policy', 'null.v1.auth-intent', 'null.v1.note-owner', 'null.v1.note-secret', 'null.v1.phantom-nullifier', 'null.v1.claim-intent',
+  'null.v1.claim-nullifier', 'null.v1.auth-policy', 'null.v1.auth-intent', 'null.v1.note-owner', 'null.v1.note-secret', 'null.v1.phantom-nullifier', 'null.v1.claim-intent', 'null.v1.withdraw-intent',
 ] as const;
 export type DomainLabel = typeof DOMAIN_LABELS[number];
 const domainFields = new Map<DomainLabel, bigint>(DOMAIN_LABELS.map(label => [label, bytesToBigInt(sha256(utf8(label)).slice(0, 31))]));
@@ -76,7 +77,7 @@ export function domainField(label: DomainLabel): bigint {
   if (value === undefined) throw new NullError('NULL_DOMAIN_INVALID', 'Unknown protocol hash domain.');
   return value;
 }
-const poseidonByArity: Record<number, (inputs: bigint[]) => bigint> = { 2: poseidon2, 3: poseidon3, 4: poseidon4, 5: poseidon5, 8: poseidon8, 9: poseidon9, 16: poseidon16 };
+const poseidonByArity: Record<number, (inputs: bigint[]) => bigint> = { 2: poseidon2, 3: poseidon3, 4: poseidon4, 5: poseidon5, 8: poseidon8, 9: poseidon9, 11: poseidon11, 16: poseidon16 };
 export function hashFields(domain: DomainLabel, values: bigint[]): bigint {
   const inputs = [domainField(domain), ...values.map(assertField)];
   const hash = poseidonByArity[inputs.length];

@@ -136,3 +136,41 @@ export function buildClaimWitness(options: { allocation: DiscoveredAllocation; d
     },
   };
 }
+export interface WithdrawWitnessOptions {
+  context: ChainContext; note: TreasuryNoteOpening; recipient: Hex; authRoot: Hex;
+  authPolicy?: AuthPolicyOpening; policyPath?: MerklePath; nonce: bigint; validUntil: bigint;
+}
+export function withdrawalIntentDigest(inputs: readonly Hex[]): Hex {
+  if (inputs.length !== 10) throw new NullError('NULL_INTENT_INVALID', 'Withdrawal requires ten public fields.');
+  return fieldHex(hashFields('null.v1.withdraw-intent', inputs.map(fieldFromHex)));
+}
+/** Full-note withdrawal avoids lost change and requires the original note opening. */
+export function prepareWithdrawalIntent(options: WithdrawWitnessOptions): PreparedWitness & { digest: Hex; bodyCommitment: Hex } {
+  validateDeadline(options.nonce, options.validUntil);
+  const { note, authPolicy } = options;
+  nonzeroField(note.ownerNullifierKey); nonzeroField(note.noteSecret); assertAmount(note.amountAtomic);
+  const recipient = bytesToBigInt(fromHex(options.recipient, 20));
+  if (!recipient || recipient === BigInt(options.context.poolAddress)) throw new NullError('NULL_DESTINATION_INVALID', 'Choose a receiving wallet other than the pool.');
+  const policy = authPolicy ? authPolicyCommitment(authPolicy) : undefined;
+  if (policy) {
+    if (!options.policyPath || options.policyPath.root !== options.authRoot) throw new NullError('NULL_PATH_INVALID', 'Organization authorization history is required.');
+    assertPath(options.policyPath, policy);
+  }
+  const bodyCommitment = policy ? treasuryNoteBody(note.ownerNullifierKey, policy, note.amountAtomic, note.noteSecret) : privateNoteBody(note.ownerNullifierKey, note.amountAtomic, note.noteSecret);
+  const commitment = finalNoteCommitment(bodyCommitment, note.path.index); assertPath(note.path, commitment);
+  const publicInputs = [...contextFields(options.context), fieldFromHex(note.path.root), fieldFromHex(options.authRoot), fieldFromHex(noteNullifier(commitment, note.ownerNullifierKey)), recipient, note.amountAtomic, options.nonce, options.validUntil].map(fieldHex);
+  const key = authPolicy ? keyCoordinates(authPolicy.signerPublicKey) : { x: Array(32).fill(0), y: Array(32).fill(0) };
+  return { publicInputs, digest: withdrawalIntentDigest(publicInputs), bodyCommitment, witness: {
+    inputs: publicInputs, is_treasury: !!authPolicy, owner_nullifier_key: note.ownerNullifierKey.toString(), note_secret: note.noteSecret.toString(), leaf_index: note.path.index, note_siblings: note.path.siblings,
+    signer_public_key_x: key.x, signer_public_key_y: key.y, policy_metadata: authPolicy?.policyMetadata.toString() ?? '0', registration_blinder: authPolicy?.registrationBlinder.toString() ?? '0',
+    policy_index: options.policyPath?.index ?? 0, policy_siblings: options.policyPath?.siblings ?? Array(20).fill('0'), signer_signature: Array(64).fill(0),
+  } };
+}
+export function buildWithdrawalWitness(options: WithdrawWitnessOptions & { signerSignature?: Hex }): ReturnType<typeof prepareWithdrawalIntent> {
+  const built = prepareWithdrawalIntent(options);
+  if (!options.authPolicy) return built;
+  if (!options.signerSignature) throw new NullError('NULL_PRIVY_AUTH_FAILED', 'Organization approval is required to withdraw treasury funds.');
+  const signature = fromHex(options.signerSignature, 64);
+  if (!secp256k1.verify(signature, fromHex(built.digest), fromHex(options.authPolicy.signerPublicKey), {lowS:true,prehash:false})) throw new NullError('NULL_PRIVY_AUTH_FAILED', 'The organization did not authorize this withdrawal.');
+  return {...built,witness:{...built.witness,signer_signature:[...signature]}};
+}
