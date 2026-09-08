@@ -108,6 +108,7 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
     if (!(await wallet.getAddresses()).some(value => value.toLowerCase() === account.toLowerCase()) || await wallet.getChainId() !== ENS_CHAIN_ID) throw new PaymentNameError('changed', 'The connected wallet changed. Check the name again.');
     setStatus('Confirm the record update in your wallet…');
     const request = simulation.request;
+    // Narrow the request union so viem preserves each function's ABI/argument types.
     const data = request.functionName === 'setText' ? encodeFunctionData(request) : encodeFunctionData(request);
     const transaction = await wallet.sendTransaction({ to: request.address, data, account, chain: sepolia });
     const update: PendingNameUpdate = { version: 1, hash: transaction, data, name: checked.name, resolver: checked.resolver, account, kind, ...(kind === 'profile' ? {} : {editor: getAddress(editor.trim())}), fingerprint: profileFingerprint(store.identity.profile.stealthMetaAddress) };

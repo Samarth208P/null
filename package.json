@@ -8,6 +8,7 @@
     "node": ">=22.16.0"
   },
   "scripts": {
+    "test:domains": "node --import tsx --test packages/crypto/src/domains.test.ts",
     "dev": "pnpm --filter @null-protocol/web dev",
     "dev:all": "node tools/dev.mjs",
     "build": "pnpm --filter @null-protocol/web build",

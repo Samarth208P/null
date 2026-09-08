@@ -1,5 +1,6 @@
 use null_lib::{context, treasury_body, private_body, finalize_note, note_nullifier, merkle_root, auth_policy};
 use poseidon::poseidon::bn254;
+use null_lib::domains::WITHDRAW_INTENT;
 
 // Full-note exit: [version,chain,pool,noteRoot,authRoot,nullifier,recipient,amount,nonce,validUntil].
 // Neither the spent commitment, note index, owner key nor treasury/private type is public.
@@ -33,7 +34,7 @@ fn main(
         assert(merkle_root(policy, policy_index, policy_siblings) == inputs[4]);
         // Domain-separated approval binds ALL ten public fields, including destination and amount.
         let mut intent = [0; 11];
-        intent[0] = 130525281846869432450899341789745535586475128559513537600521579419799020402;
+        intent[0] = WITHDRAW_INTENT;
         for i in 0..10 { intent[i + 1] = inputs[i]; }
         assert(std::ecdsa_secp256k1::verify_signature(signer_public_key_x, signer_public_key_y,
             signer_signature, bn254::hash_11(intent).to_be_bytes::<32>()));
