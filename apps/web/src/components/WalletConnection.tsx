@@ -1,9 +1,8 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, Download, LogOut, Settings2, UserRound, UsersRound } from 'lucide-react';
+import { ChevronDown, Download, LogOut, Settings2, UserRound } from 'lucide-react';
 import { config } from '../lib/config';
 import { Button, Modal, Notice } from './ui';
 import { Recovery } from './Recovery';
-import { useAccount } from '../lib/account';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
 import { EntryLayout } from './EntryLayout';
@@ -16,7 +15,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 }
 export function WalletConnection() {
   const session = useSession();
-  const account = useAccount();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [recovery, setRecovery] = useState(false);
@@ -36,7 +34,6 @@ export function WalletConnection() {
       {open && <div className="account-menu-panel" id={id}>
         <div className="account-menu-identity"><small>Signed in as</small><strong>{session.label}</strong></div>
         <button onClick={() => { setOpen(false); window.location.hash = '/settings'; }}><Settings2 size={16} />Account settings</button>
-        <button onClick={() => { setOpen(false); account.changeAccountType(); }}><UsersRound size={16} />Change account type</button>
         <button onClick={() => { setOpen(false); setRecovery(true); }}><Download size={16} />Save Payment ID backup</button>
         <button className="account-sign-out" onClick={() => { setOpen(false); setLeaving(true); }}><LogOut size={16} />Sign out</button>
       </div>}

@@ -357,7 +357,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
 
   const title = operation.kind === 'shield' ? 'Add funds' : operation.kind === 'claim' ? 'Collect payment' : operation.kind === 'withdraw' ? 'Withdraw funds' : 'Send payment';
   return <Modal title={title} description="Review the details before you confirm." open={open} onClose={close} wide>
-    <div className="claim-amount">{money(amountAtomic, true)}<span>USDC</span></div>
+    {operation.kind === 'withdraw' && !withdrawalNote ? <p className="field-hint">Your withdrawal amount will appear after you unlock your funds and choose a note.</p> : <div className="claim-amount">{money(amountAtomic, true)}<span>USDC</span></div>}
     {manifestError ? <Notice tone="warning">{manifestError}<p>Nothing has been sent.</p></Notice>
       : !manifest ? <p className="processing-status" role="status">Checking the connection…</p>
       : <>
@@ -365,7 +365,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
         {operation.kind === 'shield' && <Notice tone="warning">Your wallet and the amount you add are public. Adding funds close to payment time may help others link them. Use test funds only.</Notice>}
         {operation.kind !== 'shield' && <Notice>Test USDC only. Your network provider can see when you connect.</Notice>}
         {!client ? <>
-          <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>Enter your existing password, or choose one if this is your first payment. It stays on this device.</small></label>
+          <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>Use the password for your encrypted funds backup. Your password is not saved; only encrypted backup data is stored in this browser.</small></label>
           <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
           {!prepared && <>

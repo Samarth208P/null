@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeftRight, Eye, EyeOff, HelpCircle, Inbox, LayoutDashboard, LockKeyhole, Menu, Send, Settings2, Wallet, X, type LucideIcon } from 'lucide-react';
+import { Eye, EyeOff, HelpCircle, Inbox, LayoutDashboard, LockKeyhole, Menu, Send, Settings2, Wallet, X, type LucideIcon } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { StoreProvider, useStore, type Route } from './lib/store';
 import { useSession } from './lib/session';
@@ -29,7 +29,7 @@ function AccountFlow() {
   return !account.profile || account.choosingType ? <ChooseAccount /> : <WorkspaceApp />;
 }
 function WorkspaceApp() {
-  const { profile, storageWarning, changeAccountType } = useAccount(); const store = useStore();
+  const { profile, storageWarning } = useAccount(); const store = useStore();
   const [hash, setHash] = useState(window.location.hash); const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileViewport, setMobileViewport] = useState(() => !window.matchMedia('(min-width: 761px)').matches);
   const menuButton = useRef<HTMLButtonElement>(null); const sidebar = useRef<HTMLElement>(null);
@@ -74,7 +74,6 @@ function WorkspaceApp() {
     {mobileOpen && <button className="nav-backdrop" onClick={() => { setMobileOpen(false); menuButton.current?.focus(); }} aria-label="Close navigation" />}
     <aside ref={sidebar} className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`} inert={mobileViewport && !mobileOpen || undefined} aria-label="Main navigation" id="workspace-navigation">
       <div className="sidebar-brand-row"><a className="brand" href={`#/${home}`} aria-label="NULL home"><Logo size={28} className="brand-logo" /><span>NULL</span></a><button className="icon-button mobile-menu" onClick={() => { setMobileOpen(false); menuButton.current?.focus(); }} aria-label="Close navigation"><X size={20} /></button></div>
-      <button className="organization-switch" onClick={changeAccountType} aria-label="Change account type" title="Change account type"><span className="org-avatar">{type === 'organization' ? store.organization.slice(0, 1).toUpperCase() : <LockKeyhole size={15} />}</span><span><strong>{type === 'organization' ? store.organization : 'My workspace'}</strong><small>{type === 'organization' ? 'Organization' : 'Individual'} · Change type</small></span><ArrowLeftRight size={14} /></button>
       <nav className="primary-navigation">{navigation.map(item => <a key={item.route} href={`#/${item.route}`} className={`nav-item ${route === item.route || route === 'new' && item.route === 'distributions' ? 'active' : ''}`} aria-current={route === item.route || route === 'new' && item.route === 'distributions' ? 'page' : undefined}><item.icon size={18} strokeWidth={1.7} /><span>{item.label}</span></a>)}</nav>
       <div className="sidebar-bottom"><a href="#/settings" className={`nav-item ${route === 'settings' ? 'active' : ''}`} aria-current={route === 'settings' ? 'page' : undefined}><Settings2 size={18} strokeWidth={1.7} /><span>Settings</span></a><a href="#/about" className={`nav-item ${['about', 'inspector', 'protocol'].includes(route) ? 'active' : ''}`} aria-current={route === 'about' ? 'page' : undefined}><HelpCircle size={18} strokeWidth={1.7} /><span>Help</span></a><div className="sidebar-footer"><LockKeyhole size={12} /><span>Private payments</span></div></div>
     </aside>
