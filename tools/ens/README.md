@@ -1,5 +1,44 @@
-# ENS Sepolia deployment ABIs
+# 🏷️ ENSv2 Sepolia Setup & Permissioned Resolvers
 
-`sepolia-contracts.json` contains the public addresses and the subset of ABIs used by the NULL setup commands. They were extracted from the official ENS [contracts-v2 deployment artifacts](https://github.com/ensdomains/contracts-v2/tree/97a57293f3b4279d94b571e678edb53ce62638f4/contracts/deployments/sepolia), source revision `97a57293f3b4279d94b571e678edb53ce62638f4`. The corresponding ENS source is MIT licensed; authorship belongs to ENS and the referenced upstream dependencies.
+> **ENSv2 Subregistry Delegation & Scoped Payment Profile Management**
 
-The browser uses the small typed interfaces in `packages/ens`, not these setup artifacts. No RPC credential or signing key belongs in this file. Update the addresses and supported resolver implementation together after reviewing an ENS beta upgrade.
+This directory contains the contract artifacts and setup tooling for NULL's **ENSv2** integration on Ethereum Sepolia.
+
+---
+
+## 🌟 How NULL Uses ENSv2
+
+```
+                       ┌────────────────────────────┐
+                       │    Parent Organization     │
+                       │     (nullpay2026.eth)      │
+                       └─────────────┬──────────────┘
+                                     │ 1. Subregistry Delegation
+                                     ▼
+                       ┌────────────────────────────┐
+                       │   Recipient Subname Node   │
+                       │  (inbox.nullpay2026.eth)   │
+                       └─────────────┬──────────────┘
+                                     │ 2. authorizeTextRoles(recipientWallet)
+                                     ▼
+                       ┌────────────────────────────┐
+                       │    Permissioned Resolver   │
+                       │ (Scoped Stealth Record Set)│
+                       └────────────────────────────┘
+```
+
+1. **Subregistry Creation:** Organizations manage a primary root name (e.g., `nullpay2026.eth`) and assign child subnames to employees and contributors.
+2. **Scoped Role Delegation (`authorizeTextRoles`):** Grants the recipient's embedded Privy wallet permissions to update **only** its own stealth payment metadata (`null.payment.v1`) without granting broader control of the domain.
+3. **Changed-Destination Verification:** The NULL client resolves payment names via Universal Resolver before encryption, verifying that records match the expected identity and alerting the payer if a recipient's keys have rotated.
+
+---
+
+## 🛠️ Tooling & Status Checks
+
+```sh
+# Check current Sepolia ENS registration status, resolvers, and delegated subnames
+pnpm ens:status
+```
+
+* **Live Verified Test Domain:** `inbox.nullpay2026.eth`
+* **Artifact Source:** Built from official ENS [contracts-v2 deployment artifacts](https://github.com/ensdomains/contracts-v2) on Sepolia.

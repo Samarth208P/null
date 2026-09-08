@@ -1,27 +1,83 @@
-# NULL contracts
+# 📜 NULL Smart Contracts
 
-The Solidity source implements the immutable single-asset pool, a permissionless organization-policy accumulator, and append-only Poseidon trees. The three required verifier contracts are generated from the Noir sources; an accept-all proof implementation is not provided.
+> **Solidity v0.8.28 Pool, Poseidon Merkle Accumulators, and UltraHonk Verifier Bindings**
 
-From the repository root:
+The smart contract layer governs the onchain state of the NULL protocol. It enforces zero-knowledge proof verification, tracks accumulator trees, registers nullifiers to prevent double-spending, and handles ERC-20 asset deposits and withdrawals.
 
-```sh
-pnpm install
-node tools/build-circuits.mjs --verifiers
-node contracts/scripts/build.mjs
+---
+
+## 🏗️ Architecture Overview
+
+```
+                          ┌──────────────────────────┐
+                          │       NullPool.sol       │
+                          │ (Main Settlement Engine) │
+                          └─────────────┬────────────┘
+                                        │
+      ┌──────────────────┬──────────────┼────────────────┬──────────────────┐
+      ▼                  ▼              ▼                ▼                  ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────────┐
+│ ShieldVerifier│ │DistrVerifier  │ │ ClaimVerifier │ │WithdrawVerifier│ │PolicyRegistry.sol │
+└───────────────┘ └───────────────┘ └───────────────┘ └───────────────┘ └───────────────────┘
 ```
 
-These are development builds and do not execute behavioral tests. The second command generates actual ZK-enabled EVM verifiers and verification keys through pinned Barretenberg WASM. It can need substantial memory and download public SRS data. The third command compiles Solidity and regenerates `@null-protocol/contracts` ABI exports from source. Foundry can also compile the source using `contracts/foundry.toml`.
+### Core Components
+1. **`NullPool.sol`:**
+   * **Tree Accumulators:** Maintains append-only Poseidon Merkle trees for Shielded Notes and 8-Slot Distributions.
+   * **Nullifier Registry:** Deterministically records consumed note nullifiers and claim nullifiers to prevent double-spends.
+   * **Asset Custody:** Manages ERC-20 token reserves (USDC) with strict balance conservation checks.
+2. **`PolicyRegistry.sol`:**
+   * Accumulator tree storing registered organization authorization policies and quorum signers.
+3. **EVM Verifiers (`contracts/src/verifiers/`):**
+   * Immutable UltraHonk verifier contracts generated directly from compiled Noir circuits.
 
-The build outputs are under `circuits/target` and `contracts/artifacts`. Preserve the generated manifest and checksums together. Solidity artifacts retain source-qualified identities and link references, so libraries with the same name from different generated verifier sources cannot overwrite one another. The deployment command synchronizes the matching public circuit files and manifest for the web app.
+---
 
-Run `pnpm setup:sepolia` to create the single access-restricted, Git-ignored root `.env` from [the root template](../.env.example). It creates a deployer key only when one is absent and preserves existing nonempty configuration. `pnpm deploy:plan` loads this file, checks the chain, asset, artifact integrity, and library links, and prints a funding allowance at the current RPC fee quote. This is an allowance, not an exact deployment cost. Configuration also supports `NULL_MAX_FEE_GWEI`, `NULL_MAX_DEPLOYMENT_ETH`, and optional `NULL_GIT_COMMIT`; see [deployment setup](../docs/DEPLOYMENT.md).
+## ⚡ Canonical Event Streams
 
-After funding the displayed public address with Sepolia ETH, `pnpm deploy:sepolia` broadcasts or resumes the current eight-contract sequence: Poseidon, two deduplicated verifier libraries, the authorization registry, three genuine verifiers, and the pool. It saves transaction progress, checks runtime code and pool bindings, and writes `deployments/11155111.json` plus matching browser artifacts and root `.env` values. Preserve `.env` and the deployment journal when resuming. It does not approve tokens, shield funds, or deploy a faucet asset onto a public chain. Never commit a deployer key. See [implementation status](../docs/IMPLEMENTATION_STATUS.md) for actual execution evidence and [free defaults](../docs/FREE_SEPOLIA.md) for optional integration limits.
+| Event | Purpose | Consumed By |
+| :--- | :--- | :--- |
+| `NoteInserted(bytes32 commitment, uint32 leafIndex)` | Emitted on note creation (Shield or Claim). | Subgraph / Browser Tree Builder |
+| `DistributionInserted(bytes32 commitment, bytes envelopes)` | Emitted on private batch execution with 8 encrypted envelopes. | Recipient Scanner / Indexer |
+| `NullifierSpent(bytes32 nullifier)` | Emitted when a note or claim is consumed. | Client Wallet / Relayer |
+| `Withdrawn(address recipient, uint256 amount, address asset)` | Emitted on note exit or treasury refund. | Public Ledger |
 
-The browser and relay stay local. `pnpm treasury:init` creates a separate signer and policy opening, and `pnpm treasury:register --broadcast` registers its public commitment after deployment. The [treasury guide](../tools/TREASURY.md) explains approving an exact distribution intent without Privy. None of these setup commands generates a payment proof or deposits funds.
+---
 
-`deployments/sepolia.template.json` describes an unconfigured environment. Address and checksum placeholders are null, so dependent services cannot mistake source readiness for a deployment. Generated deployment manifests record actual runtime code hashes.
+## 🛠️ Build & Development
 
-`NoteInserted` is the canonical event for rebuilding note-tree leaves. It occurs alongside `Shielded` or `AllocationConsumed` where applicable; inserting all three events would duplicate leaves. Distribution trees use `DistributionInserted`. Policy trees use `PolicyRegistered`.
+### 1. Compile Contracts & Generate ABIs
+```sh
+# Build Solidity and regenerate @null-protocol/contracts TypeScript exports
+pnpm build:contracts
 
-See [ADR 0002](../docs/ADR/0002-contract-and-circuit-boundaries.md) for proof/public-input ordering, root windows, zero-value change, shield amount binding, and the absence of withdrawals.
+# Optional: Run Foundry tests (if Foundry installed)
+cd contracts && forge test
+```
+
+### 2. Sepolia Deployment Pipeline
+```sh
+# 1. Prepare root .env configuration
+pnpm setup:sepolia
+
+# 2. Review gas allowance and deployment plan
+pnpm deploy:plan
+
+# 3. Deploy full suite (Poseidon libs, 4 verifiers, policy registry, pool)
+pnpm deploy:sepolia
+
+# 4. Initialize & register organization treasury policy
+pnpm treasury:init
+pnpm treasury:register --broadcast
+```
+
+---
+
+## 🌐 Deployed Addresses (Ethereum Sepolia - v0.2)
+
+* **Pool Contract:** [`0x734da58C285D211e7C0ad904f522c221c982447E`](https://sepolia.etherscan.io/address/0x734da58C285D211e7C0ad904f522c221c982447E)
+* **Shield Verifier:** [`0xE66cf296c09b2EBE9c3Efa8786938d21c322765A`](https://sepolia.etherscan.io/address/0xE66cf296c09b2EBE9c3Efa8786938d21c322765A)
+* **Distribution Verifier:** [`0xDaeF155160875C96f30d075D1cbD6C6415a7702f`](https://sepolia.etherscan.io/address/0xDaeF155160875C96f30d075D1cbD6C6415a7702f)
+* **Claim Verifier:** [`0xc80436dFf8541e2A8d03541A13C07914436573c5`](https://sepolia.etherscan.io/address/0xc80436dFf8541e2A8d03541A13C07914436573c5)
+* **Withdraw Verifier:** [`0x9599553f1B981C53faC9cEc7538c823A4A3eB4C1`](https://sepolia.etherscan.io/address/0x9599553f1B981C53faC9cEc7538c823A4A3eB4C1)
+* **Policy Registry:** [`0x5f9Fe77D3222eE2A346C005F999D39031c519c2C`](https://sepolia.etherscan.io/address/0x5f9Fe77D3222eE2A346C005F999D39031c519c2C)

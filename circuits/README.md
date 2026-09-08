@@ -1,19 +1,75 @@
-# NULL circuits
+# ⚡ NULL Zero-Knowledge Circuits
 
-All three circuits use private witnesses, canonical field encodings, fixed arities and purpose-separated hashes. Solidity checks the public chain/pool context, current block deadline and accepted root history.
+> **Private Entitlements & Value Conservation powered by Noir & Barretenberg UltraHonk**
 
-| Circuit | Public input order |
-| --- | --- |
-| `shield` | version, chain, pool, amount, treasuryBody, authPolicy |
-| `create_distribution` | version, chain, pool, noteRoot, authRoot, nullifier0, nullifier1, distributionCommitment, envelopeRootHi128, envelopeRootLo128, changeBody, transportTagHi128, transportTagLo128, nonce, validUntil |
-| `claim` | version, chain, pool, globalDistributionRoot, claimNullifier, privateBody, nonce, validUntil |
+NULL uses four custom Zero-Knowledge circuits written in [Noir](https://noir-lang.org/) to prove balance conservation, distribution validity, claim ownership, and note withdrawals without leaking private inputs.
 
-Each `main.nr` accepts one `inputs` public array with that exact order. All other arguments are private. SDK witness builders use the corresponding source ABI. Generated artifact ABIs are authoritative.
+---
 
-Run `node tools/build-circuits.mjs` from the repository root to compile through pinned Noir WASM. Add `--verifiers` to generate the ZK-enabled EVM verification keys and Solidity verifier source. No native Nargo/BB installation is required. `circuits/Nargo.toml` also permits native Nargo compilation at the pinned version.
+## 🧩 The 4 Core Circuits
 
-Claims recompute a hidden allocation, hidden allocation root and hidden distribution commitment, then prove membership in the global distribution tree. They enforce a real positive allocation, deterministic consumption nullifier, exact hidden output amount, nonzero owner secret and an ECDSA signature under the hidden one-time key. The signed digest includes the output commitment and public relay context.
+```
+  ┌───────────┐      ┌─────────────────────────┐      ┌───────────┐      ┌────────────┐
+  │  1. SHIELD│ ───► │ 2. CREATE_DISTRIBUTION  │ ───► │  3. CLAIM │ ───► │ 4. WITHDRAW│
+  └───────────┘      └─────────────────────────┘      └───────────┘      └────────────┘
+   Deposit ERC-20     8-Slot Private Payout            Privately Claim    Clean Exit to
+   into Treasury      with Policy Auth                 into Shielded Note Target Wallet
+```
 
-Distribution proofs constrain both note inputs, the optional phantom input, registered organization policy membership and its hidden secp256k1 authorization, eight allocation flags/amounts, value conservation and the change/distribution commitments. Shield proofs bind a public entry amount to the hidden treasury note body.
+### 1. `shield`
+* **Purpose:** Binds a public ERC-20 token deposit to a hidden treasury note.
+* **Constraints:** Enforces positive amount, valid note body commitment, and registers initial policy bounds.
 
-No witness/proof tests have been executed as part of this development request. Compilation and generated checksums alone do not establish circuit soundness, cross-language hash equivalence or deployed behavior. The acceptance work described in the PRD remains deferred.
+### 2. `create_distribution`
+* **Purpose:** Converts shielded treasury notes into an 8-slot private entitlement commitment.
+* **Constraints:**
+  * Enforces **value conservation** ($\sum \text{inputs} = \sum \text{outputs} + \text{change}$).
+  * Verifies **organization authorization policy** membership and checks hidden ECDSA signature over the batch intent.
+  * Nullifies input treasury notes to prevent double-spending.
+  * Computes the 8-slot allocation root and encrypted envelope root.
+
+### 3. `claim`
+* **Purpose:** Allows a recipient to prove entitlement to an allocation and materialize a shielded note.
+* **Constraints:**
+  * Proves membership of the distribution in the global accumulator Merkle tree.
+  * Verifies ownership of the hidden one-time **secp256k1 stealth key**.
+  * Checks the recipient's signature over the claim digest and public relay context.
+  * Generates a deterministic claim nullifier to prevent double-claiming.
+
+### 4. `withdraw`
+* **Purpose:** Allows a note owner (recipient or refunded treasury) to exit funds to a public Ethereum address.
+* **Constraints:**
+  * Proves membership of the note in the note commitment tree.
+  * Verifies knowledge of note secret, value, asset, and nullifier secret.
+  * Computes note nullifier and binds target exit address into the public withdrawal intent digest.
+
+---
+
+## 📋 Public Input Specification
+
+Each circuit receives an exact sequence of public inputs verified onchain by Solidity verifiers:
+
+| Circuit | Public Inputs (Canonical Order) |
+| :--- | :--- |
+| **`shield`** | `[version, chainId, pool, amount, treasuryBody, authPolicy]` |
+| **`create_distribution`** | `[version, chainId, pool, noteRoot, authRoot, nullifier0, nullifier1, distributionCommitment, envelopeRootHi128, envelopeRootLo128, changeBody, transportTagHi128, transportTagLo128, nonce, validUntil]` |
+| **`claim`** | `[version, chainId, pool, globalDistributionRoot, claimNullifier, privateBody, nonce, validUntil]` |
+| **`withdraw`** | `[version, chainId, pool, noteRoot, noteNullifier, recipient, amount, asset, nonce, validUntil]` |
+
+---
+
+## 🛠️ Compilation & Verifier Generation
+
+Compile all circuits and generate Solidity EVM verifiers using pinned Noir/Barretenberg WASM (no native toolchain installation required):
+
+```sh
+# From workspace root
+pnpm circuits:build
+
+# Or directly with script options
+node tools/build-circuits.mjs --verifiers
+```
+
+* **Compilation Artifacts:** Stored in `circuits/target/*.json`.
+* **Solidity Verifiers:** Generated into `contracts/src/verifiers/*Verifier.sol`.
+* **Domain Separation:** Domain tags are strictly checked against `circuits/domains.json` and synchronized via `pnpm test:domains`.

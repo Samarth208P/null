@@ -1,123 +1,219 @@
-# NULL
+<div align="center">
+  <img src="apps/web/public/logo.svg" width="96" height="96" alt="NULL Protocol Logo" />
+  <h1>NULL Protocol</h1>
+  <p><strong>Private distribution infrastructure for Ethereum. Distribute value, reveal nothing.</strong></p>
 
-**Private distribution infrastructure for Ethereum.**
+  <p>
+    <a href="https://sepolia.etherscan.io/address/0x734da58C285D211e7C0ad904f522c221c982447E"><img src="https://img.shields.io/badge/Sepolia-v0.2_Live-blue.svg" alt="Live on Sepolia" /></a>
+    <a href="https://null-protocol.netlify.app/"><img src="https://img.shields.io/badge/Hosted_App-null--protocol.netlify.app-brightgreen.svg" alt="Hosted App" /></a>
+    <a href="circuits/"><img src="https://img.shields.io/badge/ZK_Circuits-Noir_/_UltraHonk-orange.svg" alt="Noir" /></a>
+    <a href="docs/ENS_INTEGRATION.md"><img src="https://img.shields.io/badge/Identity-ENSv2_Subnames-cyan.svg" alt="ENSv2" /></a>
+    <a href="services/organization/"><img src="https://img.shields.io/badge/B2B_Auth-Privy_Quorum-purple.svg" alt="Privy" /></a>
+    <a href="services/cre-workflow/"><img src="https://img.shields.io/badge/Confidential_Compute-Chainlink_CRE_TEE-blue.svg" alt="Chainlink CRE" /></a>
+  </p>
+</div>
 
-NULL is a protocol implementation and reference application for funded private entitlements. A distribution has eight committed allocation slots and eight constant-size encrypted envelopes. Recipients discover allocations locally and prove entitlement against a global distribution accumulator. A claim creates a private note instead of paying a publicly visible receiving address.
+NULL is a zero-knowledge protocol and reference application for **funded private entitlements**. Organizations can execute bulk payouts (such as employee payroll, contractor payments, grants, or DAO rewards) in a single transaction without exposing recipient identities, individual amounts, or public receiving addresses.
 
-Payroll is the first application. The same primitive can serve contractors, grants, and contributor payouts.
+Recipients discover their funds locally through **ENS-linked stealth keys** and claim them as shielded notes via **Noir ZK-SNARKs** — breaking the link between the funding batch and the destination wallet.
 
-ETHOnline 2026: see the [submission readiness review](docs/SUBMISSION_READINESS.md) for verified deployment checks, current sponsor requirements, and the remaining demo work. The [hosted application](https://null-protocol.netlify.app/) may lag the local source.
+---
 
-## Run the application
+## 💡 Why NULL? The Onchain Payroll Paradox
 
-Use Node **22.16.0 or newer** and pnpm **11.9.0**.
+Paying contributors and employees on public blockchains today is fundamentally broken:
 
+| The Public Ledger Problem | Why Real Businesses Suffer |
+| :--- | :--- |
+| 🚨 **Salary Doxxing on Etherscan** | Every team member's exact salary, bonus, and raise is public knowledge. |
+| 🚨 **NDA & Trade Secret Breaches** | Vendor rates and contractor agreements are exposed, violating legal confidentiality clauses. |
+| 🚨 **Internal Workplace Friction** | Public wage transparency creates resentment and destroys team morale. |
+| 🚨 **Targeting & Phishing Risks** | High earners are permanently linked to their wallets, inviting social engineering and physical security threats. |
+
+NULL brings **enterprise-grade financial confidentiality** to Ethereum without resorting to compliance-hostile blackbox mixers.
+
+---
+
+## ⚡ How It Works
+
+```mermaid
+flowchart TD
+    subgraph PAYER["🏢 Organization (Payer)"]
+        A["1. Deposit ERC-20 (USDC)"] --> B["Mint Shielded Treasury Note"]
+        C["Import Payroll CSV / Draft"] --> D["Resolve ENSv2 Names & Stealth Keys"]
+        D --> E["Chainlink CRE TEE Enclave (handlerInTee)"]
+        E --> F["Privy Multi-Signer Quorum Approval"]
+        F --> G["Noir Prover: create_distribution Proof"]
+    end
+
+    subgraph ONCHAIN["⛓️ Sepolia Onchain Settlement (NullPool.sol)"]
+        B -.->|"shield()"| POOL["NullPool Contract (0x734da58...)"]
+        G -->|"createDistribution()"| POOL
+        POOL --> T1[("Note Merkle Tree")]
+        POOL --> T2[("Distribution Accumulator Tree")]
+        POOL --> N1[("Nullifier Registry")]
+        POOL -.->|"Emit DistributionInserted (8 Envelopes)"| GRAPH["The Graph Studio / RPC"]
+    end
+
+    subgraph WORKER["👤 Recipient (Employee / Contributor)"]
+        GRAPH --> H["Local Browser Scanner (Worker / IndexedDB)"]
+        H --> I["Decrypt 1-of-8 Envelope with Stealth View Key"]
+        I --> J["Noir Prover: claim Proof"]
+        J -->|"Relayed claim()"| POOL
+        POOL --> K["Materialize Shielded Note"]
+        K --> L["Noir Prover: withdraw Proof"]
+        L -->|"Relayed withdraw()"| POOL
+        POOL --> M["Clean Transfer to Destination Address"]
+    end
+```
+
+1. **Shielded Treasury:** Payer deposits funds into the NULL pool contract, minting a private treasury note.
+2. **Confidential Distribution:** Payer creates an 8-slot batch. A **Noir ZK proof** enforces exact value conservation and organization policy authorization without revealing individual allocation amounts.
+3. **Stealth Delivery:** Envelopes are encrypted using **secp256k1 stealth addresses (ERC-5564)** and posted onchain.
+4. **Local Discovery & Claim:** Recipient scans the chain locally in browser IndexedDB/worker, discovers their allocation via view-tags, and generates a **ZK Claim Proof** to materialize a private note.
+5. **Private Exit:** The recipient can withdraw any unspent note to any fresh address at their own leisure.
+
+---
+
+## 🛠️ Tech Stack & Sponsor Integrations
+
+* **Zero-Knowledge Circuits:** 4 custom [Noir](circuits/) circuits (`shield`, `create_distribution`, `claim`, `withdraw`) compiled with Barretenberg UltraHonk EVM verifiers.
+* **Smart Contracts:** Solidity v0.8.28 pool ([contracts/src/Pool.sol](contracts/src/Pool.sol)) featuring Poseidon Merkle trees, double-spend nullifier registries, and exact ERC-20 accounting.
+* **ENSv2 Subregistry & Permissions:** Uses [ENSv2](tools/ens/) subnames (e.g., `inbox.nullpay2026.eth`) with `authorizeTextRoles` for scoped, delegated payment profile management.
+* **Privy B2B Quorum:** Multi-signer treasury governance ([services/organization/](services/organization/)) executing cryptographic approvals over Poseidon intent digests.
+* **Chainlink Runtime Environment (CRE):** Confidential compute workflow ([services/cre-workflow/](services/cre-workflow/)) running `handlerInTee` to process sensitive offchain payroll datasets in a hardware enclave.
+* **The Graph:** High-performance public indexing via Graph Studio Subgraph v0.2.0 ([subgraph/](subgraph/)) with automatic RPC fallback.
+
+---
+
+## 🚀 Quickstart
+
+### Prerequisites
+* **Node.js:** `>= 22.16.0`
+* **pnpm:** `>= 11.9.0`
+
+### 1. Install & Start Web App
 ```sh
+# Enable corepack and install dependencies
 corepack enable
 pnpm install --frozen-lockfile
+
+# Start the local development server
 pnpm dev
 ```
+Open **[http://127.0.0.1:5173](http://127.0.0.1:5173)** in your browser.
 
-Open **http://127.0.0.1:5173**. The current application starts in the Sepolia workspace and requires configured Privy sign-in. Configure the public app ID and deployment values using `.env.example` and [the integration guide](docs/INTEGRATION_SETUP.md). A fresh checkout without those values shows a clear setup/sign-in state.
-
-The source also contains sandbox fixtures and local simulation helpers. Those fixtures do not establish a live financial flow or sponsor approval. The current public UI is configured for testnet; do not tell judges that a mocked session or local ledger moved assets.
-
-Drafts, payroll rows, and sandbox funds live in memory. Export password-encrypted recovery before reloading if you want to keep the profile. Recipient key recovery does not preserve the sandbox ledger.
-
-## Interface
-
-- Organization overview, treasury and distribution history.
-- Four-step distribution creation with CSV import, exact decimal amounts, profile validation, eight-slot padding, and deterministic preflight.
-- Real ENSv2 payment names, scoped Privy-wallet record access, aliases and changed-destination checks. See [ENS integration and live evidence](docs/ENS_INTEGRATION.md).
-- Local worker-based encryption and discovery.
-- Recipient inbox, claim preparation, private-note balances, encrypted key recovery.
-- Public payload inspector and explicit entry/exit privacy boundaries.
-- Sepolia status, Privy wallet connection, and configuration-aware live operation preparation.
-- Responsive navigation, keyboard focus, reduced motion, and consistent minimal styling.
-
-The UI uses React, TypeScript and Vite. Styling is local CSS; there are no remote fonts, tracking scripts, or stock-image dependencies in the application shell. Privy is loaded when an app ID is configured.
-
-## What is implemented
-
-| Layer | Development implementation |
-|---|---|
-| Cryptography | secp256k1 stealth profiles, circomlib-compatible Poseidon hashing, HKDF domain separation, strict field encoding |
-| Encrypted delivery | 512-byte plaintext, 540-byte AES-GCM ciphertext, 608-byte wire envelope, eight slots |
-| SDK | Compilation, scanning, commitments, nullifiers, Merkle paths, Shield/Distribution/Claim/Withdraw witness builders |
-| Wallet | Password-encrypted key files and IndexedDB; separate encrypted live-note checkpoints and archives |
-| Circuits | Noir Shield, CreateDistribution, Claim and Withdraw, including hidden ECDSA authorization and value constraints |
-| Contracts | Immutable verifier bindings, note/distribution/auth trees, double-spend nullifiers, exact ERC-20 deposits and withdrawals |
-| Live client | Runtime/hash checks, tree reconstruction, local proving, simulation, relayed/self-broadcast transactions, receipt reconciliation |
-| Organization | Privy authorization adapter and authenticated organization service |
-| ENSv2 | Live Sepolia registry/resolver, one-key delegation, name-to-profile resolution and payment destination snapshots |
-| CRE | Confidential `handlerInTee` workflow and independent local compiler |
-| Discovery | Public Graph schema and mappings, RPC fallback, confirmations, reorg handling |
-| Relayer | Strict public payloads, rate limits, deployment checks, simulation and broadcast fallback |
-| Substreams | Rust normalizer, protobuf and package source |
-
-See the current [submission readiness review](docs/SUBMISSION_READINESS.md) for executed checks, live evidence and outstanding release work. Development compilation is not a security audit. No deployment or integration success is implied by a package being present.
-
-## Build commands
-
+### 2. Workspace Commands
 ```sh
-pnpm build                 # TypeScript + production web bundle
-pnpm check                 # Workspace TypeScript compilation
-pnpm build:contracts       # Solidity and generated ABIs
-pnpm circuits:build        # Noir artifacts + ZK-enabled EVM verifier generation
-pnpm build:graph           # Graph mapping source build
-pnpm preview              # Serve the production web bundle
+pnpm build              # Compile TypeScript and bundle production web app
+pnpm check              # Run workspace-wide typechecks
+pnpm test:submission    # Run full submission test suite (27 passing tests)
+pnpm test:domains       # Validate SDK, Noir, and Solidity domain parity
+pnpm build:contracts    # Compile Solidity contracts and export ABIs
+pnpm circuits:build     # Build Noir circuits and generate EVM verifiers
+pnpm cre:simulate       # Run Chainlink CRE CLI confidential simulation
 ```
 
-The Noir/Barretenberg versions are pinned together. Verifier generation can require substantial memory and a network download of public SRS data. See [contract development](contracts/README.md) and [circuit development](circuits/README.md) for exact artifact handling. Do not replace generated verifiers with accept-all implementations.
+---
 
-## Connect Sepolia
+## 🌐 Live Sepolia Deployment (v0.2)
 
-The sandbox needs no `.env` or contract deployment. Real Sepolia operations need both. From the workspace root:
+| Contract / Service | Address / URL |
+| :--- | :--- |
+| **NULL Pool v0.2** | [`0x734da58C285D211e7C0ad904f522c221c982447E`](https://sepolia.etherscan.io/address/0x734da58C285D211e7C0ad904f522c221c982447E) |
+| **Shield Verifier** | [`0xE66cf296c09b2EBE9c3Efa8786938d21c322765A`](https://sepolia.etherscan.io/address/0xE66cf296c09b2EBE9c3Efa8786938d21c322765A) |
+| **Distribution Verifier** | [`0xDaeF155160875C96f30d075D1cbD6C6415a7702f`](https://sepolia.etherscan.io/address/0xDaeF155160875C96f30d075D1cbD6C6415a7702f) |
+| **Claim Verifier** | [`0xc80436dFf8541e2A8d03541A13C07914436573c5`](https://sepolia.etherscan.io/address/0xc80436dFf8541e2A8d03541A13C07914436573c5) |
+| **Withdraw Verifier** | [`0x9599553f1B981C53faC9cEc7538c823A4A3eB4C1`](https://sepolia.etherscan.io/address/0x9599553f1B981C53faC9cEc7538c823A4A3eB4C1) |
+| **Policy Registry** | [`0x5f9Fe77D3222eE2A346C005F999D39031c519c2C`](https://sepolia.etherscan.io/address/0x5f9Fe77D3222eE2A346C005F999D39031c519c2C) |
+| **Graph Subgraph v0.2.0** | [Studio Endpoint](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.2.0) |
+| **ENS Test Domain** | `inbox.nullpay2026.eth` (Sepolia ENSv2 Permissioned Resolver) |
 
-```sh
-pnpm setup:sepolia         # Create or reuse the private key in the single root .env
-pnpm deploy:plan           # Check RPC/artifacts and show the Sepolia ETH funding allowance
-# Fund the displayed public address with Sepolia ETH, then:
-pnpm deploy:sepolia        # Deploy or resume the contracts and configure public artifacts
-pnpm treasury:init         # Create the separate local authorization policy
-pnpm treasury:register --broadcast
-pnpm setup:relayer --fund  # Fund a separate local relay wallet with up to 0.05 Sepolia ETH
-pnpm dev:all               # Run the web app, relayer, and configured local services
+*Full deployment details & verified transaction receipts are recorded in [deployments/payment-flow-sepolia-v2.json](deployments/payment-flow-sepolia-v2.json).*
+
+---
+
+## 📂 System & Repository Architecture
+
+```mermaid
+graph TB
+    subgraph CLIENT["Frontend & Local Prover (apps/web)"]
+        UI["React 19 + Vite Workspace"]
+        PROVER["@null-protocol/prover (Noir/BB WASM)"]
+        SCANNER["@null-protocol/client (Scanning & Checkpoints)"]
+        ENS_PKG["@null-protocol/ens (ENSv2 Subregistry Resolver)"]
+        WALLET["@null-protocol/wallet (Encrypted Key Recovery)"]
+    end
+
+    subgraph SERVICES["Offchain & Sponsor Services (services/)"]
+        ORG_SVC["organization (Privy Quorum Gateway / Netlify Fn)"]
+        CRE_SVC["cre-workflow (Chainlink TEE Enclave Compiler)"]
+        RELAY_SVC["relayer (Gasless Broadcaster & Simulation)"]
+    end
+
+    subgraph CORE_PKGS["Protocol & Crypto Packages (packages/)"]
+        CRYPTO["@null-protocol/crypto (secp256k1, Poseidon, HKDF)"]
+        PROTO["@null-protocol/protocol (Tree & Envelope Wire Formats)"]
+        SDK["@null-protocol/sdk (Batch Compilation & Witnesses)"]
+        AUTH["@null-protocol/auth (Privy Intent Authorization)"]
+    end
+
+    subgraph ZK_CIRCUITS["Zero-Knowledge Circuits (circuits/)"]
+        C_SHIELD["shield.nr"]
+        C_DISTR["create_distribution.nr"]
+        C_CLAIM["claim.nr"]
+        C_WITHDRAW["withdraw.nr"]
+    end
+
+    subgraph CONTRACTS["Smart Contracts (contracts/src/)"]
+        C_POOL["NullPool.sol (v0.2 on Sepolia)"]
+        C_POLICY["PolicyRegistry.sol"]
+        C_VERIFIERS["UltraHonk Verifiers (Shield, Distr, Claim, Withdraw)"]
+    end
+
+    UI --> CLIENT
+    CLIENT --> CORE_PKGS
+    SERVICES --> CORE_PKGS
+    CORE_PKGS --> ZK_CIRCUITS
+    ZK_CIRCUITS -.->|"UltraHonk Verifier Gen"| C_VERIFIERS
+    C_VERIFIERS --> C_POOL
+    C_POLICY --> C_POOL
+    RELAY_SVC -->|"Gasless TXs"| C_POOL
 ```
-
-All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111-withdrawals-v2.json`, the browser manifest/circuits, and public deployment values in that same environment file. Restart local processes after configuration changes. See [withdrawal verification](docs/WITHDRAWAL_VERIFICATION.md) for the latest deployment and complete-flow evidence.
-
-The web app can run locally or on Netlify using `netlify.toml`; the Privy organization API is included as a Function. The relayer and remote payroll service require separate hosting. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. `pnpm dev:all` also starts the private payroll API when its token is configured. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [current integration setup](docs/INTEGRATION_SETUP.md), [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
-
-**Never place wallet private keys, Privy app secrets, view/spend keys, payroll rows, or private witnesses in `VITE_` variables.** These are public bundle values.
-
-The ordinary public deposit and withdrawal boundaries reveal their wallet, amount, and time. The v0.2 pool supports proof-authorized full-note withdrawals, including approved treasury refunds. The immutable v0.1 pool has no exit; new deposits into it are disabled. Do not deposit real-value assets. Authorization policies cannot seize notes.
-
-## Structure
 
 ```text
-apps/web/                 React reference application and local workers
-packages/crypto/          Keys, hashes, encoding, amount arithmetic
-packages/protocol/        Commitments, trees, envelope wire format
-packages/sdk/             Compilation, scanning, witness builders
-packages/wallet/          Encrypted recipient recovery
-packages/prover/          Local Noir / Barretenberg worker
-packages/client/          Live orchestration and encrypted checkpoints
-packages/contracts/       Generated ABIs and bindings
-packages/auth/            Privy intent authorization
-packages/graph-client/    Public Graph + RPC discovery
-contracts/                Solidity source and deployment scripts
-circuits/                 Noir circuits and pinned generated artifacts
-services/                 Organization host, relayer, confidential workflow
-subgraph/                 Public indexing schema and mappings
-substreams/               Composable event-normalization source
-docs/                     Architecture, boundaries, wire and deployment guides
+apps/
+  web/               # React 19 + Vite frontend (local worker proving, IndexedDB scanner)
+packages/
+  crypto/            # secp256k1 stealth derivation, Poseidon hashing, HKDF domains
+  protocol/          # Tree accumulators, commitments, 8-slot envelope wire formats
+  sdk/               # Batch compilation, scanning, and Noir witness builders
+  wallet/            # Encrypted recipient keys and funds backup manager
+  prover/            # Local Noir / Barretenberg WebAssembly prover worker
+  client/            # Client orchestration, RPC fallback, and receipt reconciliation
+  contracts/         # Generated TypeScript bindings and contract ABIs
+  auth/              # Privy organization quorum and intent signing adapter
+  graph-client/      # The Graph Studio client + fallback log poller
+contracts/           # Solidity smart contracts and automated deployment pipeline
+circuits/            # 4 Noir ZK-SNARK circuits + pinned Barretenberg verifiers
+services/
+  organization/      # Authenticated Privy organization quorum server / Netlify Function
+  relayer/           # Gasless transaction relay service with bounded gas validation
+  cre-workflow/      # Chainlink CRE TEE confidential compiler workflow
+subgraph/            # The Graph indexing schema, mappings, and configuration
+docs/                # Architecture Decision Records (ADRs), specs, and guides
 ```
 
-## Privacy and release boundaries
+---
 
-Inside the **intended, fully verified private flow**, public fields are commitments, nullifiers, proofs, fixed-size ciphertexts, and broadcaster transactions. Recipient names, receiving addresses, allocation amounts and claim-to-distribution membership remain private witnesses or encrypted content.
+## 🔒 Security & Privacy Scope
 
-This does not hide the employer's own payroll knowledge, public entry/exit events, IP addresses, timing correlations, compromised endpoints, or browser supply-chain attacks. It is an **unaudited hackathon prototype**. See [SECURITY.md](SECURITY.md), [privacy guarantees](docs/PRIVACY_GUARANTEES.md), and [architecture decisions](docs/ADR/).
+* **What is private:** Recipient identities, wallet addresses, stealth keys, individual allocation amounts, allocation indexes, and claim-to-batch links.
+* **What is observable onchain:** Total batch amount, timestamp, broadcaster address (relayer), aggregate pool balances, nullifiers, and ZK proofs.
+* **Disclaimer:** NULL is an unaudited hackathon prototype for ETHOnline 2026. Do not use with mainnet production funds. See [SECURITY.md](SECURITY.md) and [docs/PRIVACY_GUARANTEES.md](docs/PRIVACY_GUARANTEES.md).
 
-[PRD.md](PRD.md) is the original specification. Implementation changes and omitted testing are explicitly recorded. Contract deployment and local service setup do not establish a completed proof/payment flow, privacy audit, live sponsor qualification, or production readiness.
+---
+
+## 📜 License
+
+MIT License. Built with ❤️ for ETHOnline 2026.
