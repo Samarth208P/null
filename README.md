@@ -15,7 +15,14 @@
 
 NULL is a zero-knowledge protocol and reference application for **funded private entitlements**. Organizations can execute bulk payouts (such as employee payroll, contractor payments, grants, or DAO rewards) in a single transaction without exposing recipient identities, individual amounts, or public receiving addresses.
 
-Recipients discover their funds locally through **ENS-linked stealth keys** and claim them as shielded notes via **Noir ZK-SNARKs** — breaking the link between the funding batch and the destination wallet.
+Recipients discover their funds locally through **ENS-linked stealth keys** and claim them as shielded notes via **Noir ZK-SNARKs** — breaking the cryptographic link between the funding batch and the destination wallet.
+
+### 🤝 Powered By Our Partners
+* **[ENSv2](docs/ENS_INTEGRATION.md):** Scoped subregistry delegation (`authorizeTextRoles`) enables workers to link stealth payment profiles under human-readable names (e.g., `inbox.nullpay2026.eth`) without exposing destination addresses.
+* **[Privy](services/organization/):** Enforces enterprise B2B governance via multi-signer owner quorum policies over distribution intents, paired with frictionless embedded recipient wallet onboarding.
+* **[Chainlink CRE](services/cre-workflow/):** Executes confidential offchain payroll computation and 8-slot encrypted envelope derivation inside a hardware-enforced TEE enclave (`handlerInTee`).
+* **[Noir ZK-SNARKs](circuits/):** 4 custom UltraHonk circuits prove balance conservation, policy compliance, stealth entitlement, and private note withdrawals with zero leakage.
+* **[The Graph](subgraph/):** Indexes public privacy events and ciphertext envelopes via Graph Studio v0.2.0, powering fast in-browser scanning with automatic RPC fallback.
 
 ---
 
