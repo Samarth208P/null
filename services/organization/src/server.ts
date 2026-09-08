@@ -1,4 +1,5 @@
-import { createServer } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { memoryIntents, type IntentStore, type StoredIntent } from './intents.js';
 import { randomUUID } from 'node:crypto';
 import { PrivyClient } from '@privy-io/node';
 import { createPrivyOrganizationAuthorizer, type PrivyOrganizationConfig } from '@null-protocol/auth/server';
@@ -24,7 +25,8 @@ try {
   }
   config = {
     appId: required('PRIVY_APP_ID'), appSecret: required('PRIVY_APP_SECRET'), walletId: required('PRIVY_ORGANIZATION_WALLET_ID'), walletAddress: address(required('PRIVY_ORGANIZATION_WALLET_ADDRESS')),
-    ownerQuorumId: required('PRIVY_ORGANIZATION_OWNER_QUORUM_ID'), organizationEntityId: required('PRIVY_ORGANIZATION_ENTITY_ID'), requiredPolicyIds: list('PRIVY_ORGANIZATION_POLICY_IDS'),
+    ownerQuorumId: required('PRIVY_ORGANIZATION_OWNER_QUORUM_ID'), organizationEntityId: required('PRIVY_ORGANIZATION_ENTITY_ID'), requiredPolicyIds: process.env.PRIVY_ORGANIZATION_CONTROL_MODE === 'owner-quorum' ? [] : list('PRIVY_ORGANIZATION_POLICY_IDS'),
+    controlMode: process.env.PRIVY_ORGANIZATION_CONTROL_MODE === 'owner-quorum' ? 'owner-quorum' : 'policies-and-quorum', expectedOwnerUserIds: [...members],
     minimumApprovals: Number(required('PRIVY_ORGANIZATION_MINIMUM_APPROVALS')), chainId: BigInt(required('NULL_CHAIN_ID')), poolAddress: address(required('NULL_POOL_ADDRESS')),
   };
   if (config.chainId !== 11155111n) throw new OrganizationError('NULL_CONTEXT_MISMATCH', 503);
@@ -32,8 +34,9 @@ try {
   authorizer = createPrivyOrganizationAuthorizer(config);
 } catch { config = undefined; privy = undefined; authorizer = undefined; }
 
-interface PendingIntent { userId: string; sessionId: string; publicInputs: Hex[]; expected: CompiledIntentContext; expiresAt: number }
-const intents = new Map<string, PendingIntent>();
+interface PendingIntent extends StoredIntent { publicInputs: Hex[]; expected: CompiledIntentContext }
+let intents: IntentStore = memoryIntents();
+export function useIntentStore(store: IntentStore) { intents = store; }
 const limits = new Map<string, { count: number; reset: number }>();
 function admit(key: string, maximum: number) {
   const now = Date.now();
@@ -43,7 +46,6 @@ function admit(key: string, maximum: number) {
   if (!current || current.reset <= now) { limits.set(key, { count: 1, reset: now + 60_000 }); return true; }
   return ++current.count <= maximum;
 }
-function clearExpired() { for (const [ticket, intent] of intents) if (intent.expiresAt <= Date.now()) intents.delete(ticket); }
 function parseIntent(value: unknown) {
   exact(value, ['publicInputs', 'expected']);
   exact(value.expected, ['chainId', 'poolAddress', 'commitment', 'envelopeRoot']);
@@ -59,7 +61,7 @@ const safeErrors: Record<string, number> = {
   NULL_PRIVY_AUTH_FAILED: 403, NULL_PRIVY_CONTROL_MISMATCH: 409, NULL_PRIVY_APPROVALS_REQUIRED: 409,
   NULL_CONTEXT_MISMATCH: 409, NULL_CRE_COMPILE_MISMATCH: 409, NULL_INTENT_EXPIRED: 409,
 };
-const server = createServer(async (request, response) => {
+export async function organizationHandler(request: IncomingMessage, response: ServerResponse) {
   response.setHeader('content-type', 'application/json'); response.setHeader('cache-control', 'no-store');
   response.setHeader('x-content-type-options', 'nosniff'); response.setHeader('referrer-policy', 'no-referrer');
   response.setHeader('x-request-id', randomUUID());
@@ -71,7 +73,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'OPTIONS') { response.setHeader('access-control-allow-methods', 'POST, GET'); response.setHeader('access-control-allow-headers', 'authorization, content-type'); response.writeHead(204); response.end(); return; }
   if (request.method === 'GET' && request.url === '/health') { reply(authorizer ? 200 : 503, { status: authorizer ? 'configured' : 'unavailable', approvalExecuted: false }); return; }
-  if (!['/api/organization/config', '/api/organization/prepare', '/api/organization/authorize'].includes(request.url ?? '') || !((request.url === '/api/organization/config' && request.method === 'GET') || (request.url !== '/api/organization/config' && request.method === 'POST'))) { reply(404, { code: 'NULL_NOT_FOUND' }); request.resume(); return; }
+  if (!['/api/organization/config', '/api/organization/prepare', '/api/organization/authorize', '/api/organization/prepare-identity', '/api/organization/identify'].includes(request.url ?? '') || !((request.url === '/api/organization/config' && request.method === 'GET') || (request.url !== '/api/organization/config' && request.method === 'POST'))) { reply(404, { code: 'NULL_NOT_FOUND' }); request.resume(); return; }
   try {
     if (!config || !privy || !authorizer) throw new OrganizationError('NULL_ORGANIZATION_CONFIG_REQUIRED', 503);
     if (!admit(`ip:${request.socket.remoteAddress ?? 'unknown'}`, 30)) throw new OrganizationError('NULL_RATE_LIMITED', 429);
@@ -91,23 +93,40 @@ const server = createServer(async (request, response) => {
     const chunks: Buffer[] = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > 32_768) throw new OrganizationError('NULL_PAYLOAD_TOO_LARGE', 413); chunks.push(Buffer.from(chunk)); }
     let body: unknown; try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new OrganizationError('NULL_REQUEST_REJECTED'); }
-    clearExpired();
+    if (request.url === '/api/organization/prepare-identity') {
+      exact(body, []);
+      if (config.minimumApprovals !== 1) throw new OrganizationError('NULL_PRIVY_APPROVALS_REQUIRED', 409);
+      const authorizationRequest = await authorizer.prepareIdentity();
+      const ticket = randomUUID();
+      await intents.put(`identity/${ticket}`, { userId: session.user_id, sessionId: session.session_id, expiresAt: Number(authorizationRequest.headers['privy-request-expiry']) });
+      reply(200, { ticket, authorizationRequest, walletAddress: config.walletAddress, minimumApprovals: config.minimumApprovals }); return;
+    }
+    if (request.url === '/api/organization/identify') {
+      exact(body, ['ticket', 'signatures']);
+      if (typeof body.ticket !== 'string' || !Array.isArray(body.signatures) || body.signatures.length !== 1 || body.signatures.some(value => typeof value !== 'string')) throw new OrganizationError('NULL_REQUEST_REJECTED');
+      if (!/^[a-f0-9-]{36}$/.test(body.ticket)) throw new OrganizationError('NULL_REQUEST_REJECTED');
+      const prepared = await intents.get(`identity/${body.ticket}`);
+      if (!prepared || prepared.expiresAt <= Date.now()) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
+      if (prepared.userId !== session.user_id || prepared.sessionId !== session.session_id) throw new OrganizationError('NULL_ORGANIZATION_FORBIDDEN', 403);
+      if (!await intents.consume(`identity/${body.ticket}`)) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
+      const result = await authorizer.identify(prepared.expiresAt, body.signatures as string[]);
+      reply(200, { digest: result.digest, signer: result.signer, publicKey: result.publicKey }); return;
+    }
     if (request.url === '/api/organization/prepare') {
-      if (intents.size >= 500) throw new OrganizationError('NULL_ORGANIZATION_BUSY', 503);
       const intent = parseIntent(body);
       const authorizationRequest = await authorizer.prepare(intent.publicInputs, intent.expected);
       const ticket = randomUUID();
       const expiresAt = Number(authorizationRequest.headers['privy-request-expiry']);
-      intents.set(ticket, { ...intent, userId: session.user_id, sessionId: session.session_id, expiresAt });
+      await intents.put(`distribution/${ticket}`, { ...intent, userId: session.user_id, sessionId: session.session_id, expiresAt });
       reply(200, { ticket, authorizationRequest, walletAddress: config.walletAddress, minimumApprovals: config.minimumApprovals }); return;
     }
     exact(body, ['ticket', 'signatures']);
     if (typeof body.ticket !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(body.ticket) || !Array.isArray(body.signatures) || body.signatures.length < config.minimumApprovals || body.signatures.length > 20 || body.signatures.some(value => typeof value !== 'string')) throw new OrganizationError('NULL_REQUEST_REJECTED');
-    const prepared = intents.get(body.ticket);
+    const prepared = await intents.get(`distribution/${body.ticket}`) as PendingIntent | undefined;
     if (!prepared || prepared.expiresAt <= Date.now()) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
     if (prepared.userId !== session.user_id || prepared.sessionId !== session.session_id) throw new OrganizationError('NULL_ORGANIZATION_FORBIDDEN', 403);
     // Consume before signing so concurrent requests cannot repurpose or duplicate a prepared approval.
-    intents.delete(body.ticket);
+    if (!await intents.consume(`distribution/${body.ticket}`)) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
     const result = await authorizer.authorize({ publicInputs: prepared.publicInputs, expected: prepared.expected, requestExpiryMs: prepared.expiresAt, signatures: body.signatures as string[] });
     reply(200, result);
   } catch (error) {
@@ -116,7 +135,4 @@ const server = createServer(async (request, response) => {
     else reply(503, { code: 'NULL_ORGANIZATION_UNAVAILABLE' });
     request.resume();
   }
-});
-server.requestTimeout = 30_000; server.headersTimeout = 10_000;
-const port = Number(process.env.ORGANIZATION_PORT ?? '8788');
-server.listen(port, '127.0.0.1', () => console.info(`NULL organization API listening on port ${port}; ${authorizer ? 'configured' : 'configuration required'}`));
+}

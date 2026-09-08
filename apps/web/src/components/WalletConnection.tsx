@@ -6,12 +6,13 @@ import { Recovery } from './Recovery';
 import { useAccount } from '../lib/account';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
+import { EntryLayout } from './EntryLayout';
 
 const PrivyRuntime = lazy(() => import('./PrivyRuntime').then(module => ({ default: module.PrivyRuntime })));
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   if (!config.privyAppId) return children;
-  return <Suspense fallback={<div className="fatal-error"><span className="wordmark">NULL</span><p role="status">Opening your secure workspace…</p></div>}><PrivyRuntime>{children}</PrivyRuntime></Suspense>;
+  return <Suspense fallback={<EntryLayout><h1>Opening your workspace</h1><div className="entry-loading" role="status"><span className="skeleton" aria-hidden="true" /><p>Opening your secure workspace…</p></div></EntryLayout>}><PrivyRuntime>{children}</PrivyRuntime></Suspense>;
 }
 export function WalletConnection() {
   const session = useSession();

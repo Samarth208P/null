@@ -48,9 +48,8 @@ export function Overview() {
   const pending = drafts.reduce((total, item) => total + item.recipients.reduce((sum, row) => sum + amount(row.amount), 0n), 0n);
 
   return <>
-    <PageHeader title={profile?.organizationName || 'Organization overview'} description="Check your funds and manage payments." action={store.distributions.length ? <Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button> : undefined} />
+    <PageHeader title={profile?.organizationName || 'Organization overview'} description="Check your funds and manage payments." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
     {store.mode === 'testnet' && !store.treasuryReady && <Notice tone="warning">{config.poolAddress ? 'Check your funds before making a payment.' : 'Payments are not set up yet. Check your connection in Settings.'}<button className="text-link" onClick={() => store.navigate(config.poolAddress ? 'treasury' : 'settings')}>{config.poolAddress ? 'Check funds' : 'Open settings'}<ArrowRight size={14} /></button></Notice>}
-    <div className="overview-actions"><Button variant="secondary" icon={ArrowDownLeft} onClick={() => store.navigate('treasury')}>Manage funds</Button><Button variant="secondary" icon={Send} onClick={() => store.navigate('distributions')}>View payments</Button><Button variant="ghost" icon={ShieldCheck} onClick={() => store.navigate('about')}>Help</Button></div>
     <div className="overview-account-grid"><section className="private-balance-panel organization-treasury" aria-label="Available funds">
       <div className="balance-label"><span><ShieldCheck size={17} />Available funds</span><Badge tone="purple">{store.mode === 'sandbox' ? 'Practice money' : store.treasuryReady ? 'Last checked' : 'Not checked yet'}</Badge></div>
       <div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div>
@@ -82,9 +81,9 @@ export function Distributions() {
   const filtered = store.distributions.filter(item => item.name.toLowerCase().includes(search.toLowerCase()) && (filter === 'All payments' || (filter === 'Drafts' ? item.status === 'Draft' : filter === 'Ready to send' ? item.status === 'Prepared' : isPublished(item))));
 
   return <>
-    <PageHeader title="Payments" description="See drafts and payments you have sent." action={store.distributions.length ? <Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button> : undefined} />
+    <PageHeader title="Payments" description="See drafts and payments you have sent." action={<Button icon={Plus} onClick={() => store.editDistribution(null)}>New payment</Button>} />
     {store.distributions.length > 0 && <div className="list-toolbar">
-      <div className="tabs">{['All payments', 'Drafts', 'Ready to send', 'Sent'].map(tab => <button key={tab} className={tab === filter ? 'selected' : ''} onClick={() => setFilter(tab)}>{tab}{tab === 'All payments' && <span>{store.distributions.length}</span>}</button>)}</div>
+      <div className="tabs" role="group" aria-label="Filter payments">{['All payments', 'Drafts', 'Ready to send', 'Sent'].map(tab => <button key={tab} aria-pressed={tab === filter} className={tab === filter ? 'selected' : ''} onClick={() => setFilter(tab)}>{tab}{tab === 'All payments' && <span>{store.distributions.length}</span>}</button>)}</div>
       <label className="search-field"><Search size={16} /><input aria-label="Search payments" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search payments…" /></label>
     </div>}
     <div className="table-panel">

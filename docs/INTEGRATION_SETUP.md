@@ -2,7 +2,13 @@
 
 All runtime credentials belong in the ignored root `.env`. `pnpm dev:all` starts the local web app on `127.0.0.1:5173` and relayer on `127.0.0.1:8787`. It also starts the authenticated payroll API on `127.0.0.1:8789` when its token is configured, and the organization service only when all its settings and browser URL are configured. Only `VITE_` values are public browser configuration. Restart or reload the web app after environment changes; a sequence of Vite environment restarts can leave an old browser tab disconnected until it is reloaded.
 
-## Verified on 2026-09-06
+## Current update — 2026-09-07
+
+The dedicated owner-quorum wallet is now provisioned and its live controls were verified. The default setup:privy command explicitly reuses this configuration. The new identity-only approval obtains its public key before NULL policy registration. For current local and Netlify setup, follow [the deployment guide](NETLIFY_SUBMISSION.md).
+
+The event subgraph is deployed. Substreams now builds and passes tests, but Studio rejects SPS hosting and standalone execution requires a provider credential. The browser now exports a payment to the real CRE simulator and imports its checked result. [Current readiness](SUBMISSION_READINESS.md) supersedes the historical limitations and setup advice below.
+
+## Historical verification on 2026-09-06
 
 - Privy app credentials were accepted by the live API, and the owner completed email login in the local app.
 - A single-user owner quorum and a Privy organization were created and their IDs saved in root `.env`. `pnpm setup:privy` reuses them and checks their ownership. It does not create a new organization on each run.

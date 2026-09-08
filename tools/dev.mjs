@@ -19,9 +19,9 @@ if (env.NULL_PAYROLL_API_TOKEN) {
 }
 const organizationSettings = ['VITE_ORGANIZATION_URL', 'PRIVY_APP_ID', 'PRIVY_APP_SECRET',
   'PRIVY_ORGANIZATION_MEMBER_IDS', 'PRIVY_ORGANIZATION_WALLET_ID', 'PRIVY_ORGANIZATION_WALLET_ADDRESS',
-  'PRIVY_ORGANIZATION_OWNER_QUORUM_ID', 'PRIVY_ORGANIZATION_ENTITY_ID', 'PRIVY_ORGANIZATION_POLICY_IDS'];
-if (organizationSettings.every(name => env[name])) {
-  children.push(spawn(process.execPath, [`--env-file=${envPath}`, '--import', 'tsx', 'services/organization/src/server.ts'],
+  'PRIVY_ORGANIZATION_OWNER_QUORUM_ID', 'PRIVY_ORGANIZATION_ENTITY_ID'];
+if (organizationSettings.every(name => env[name]) && (env.PRIVY_ORGANIZATION_CONTROL_MODE === 'owner-quorum' || env.PRIVY_ORGANIZATION_POLICY_IDS)) {
+  children.push(spawn(process.execPath, [`--env-file=${envPath}`, '--import', 'tsx', 'services/organization/src/local.ts'],
     { cwd: rootPath, stdio: 'inherit', windowsHide: true }));
 }
 let stopping = false;

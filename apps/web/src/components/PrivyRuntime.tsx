@@ -6,7 +6,7 @@ import { short } from '../lib/format';
 import { SessionContext } from '../lib/session';
 
 export function PrivyRuntime({ children }: { children: ReactNode }) {
-  return <PrivyProvider appId={config.privyAppId!} config={{ loginMethods: ['email', 'wallet'], defaultChain: sepolia, supportedChains: [sepolia], embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } }, appearance: { theme: 'dark', accentColor: '#a7b2ff' } }}><SessionBridge>{children}</SessionBridge></PrivyProvider>;
+  return <PrivyProvider appId={config.privyAppId!} config={{ loginMethods: ['email', 'wallet'], defaultChain: sepolia, supportedChains: [sepolia], embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } }, appearance: { theme: 'light', accentColor: '#20252b', logo: '/logo.svg' } }}><SessionBridge>{children}</SessionBridge></PrivyProvider>;
 }
 function SessionBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, logout } = usePrivy();

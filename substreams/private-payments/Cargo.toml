@@ -8,12 +8,14 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies]
-substreams = "=0.7.0"
-substreams-ethereum = "=0.11.1"
+# Keep the runtime aligned with entity-change 2.0 to avoid duplicate WASM alloc exports.
+substreams = "=0.6.4"
+substreams-ethereum = "=0.10.6"
 prost = "=0.13.5"
 ethabi = "=17.2.0"
 hex = "=0.4.3"
 anyhow = "=1.0.99"
+substreams-entity-change = "=2.0.0"
 
 [profile.release]
 lto = true

@@ -6,6 +6,8 @@ NULL is a protocol implementation and reference application for funded private e
 
 Payroll is the first application. The same primitive can serve contractors, grants, and contributor payouts.
 
+ETHOnline 2026: see the [submission readiness review](docs/SUBMISSION_READINESS.md) for verified deployment checks, current sponsor requirements, and the remaining demo work. The [hosted application](https://null-protocol.netlify.app/) may lag the local source.
+
 ## Run the application
 
 Use Node **22.16.0 or newer** and pnpm **11.9.0**.
@@ -16,9 +18,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open **http://127.0.0.1:5173**. A fresh checkout starts in the local sandbox without credentials. After Sepolia setup, `VITE_DEFAULT_ENVIRONMENT=testnet` in the single root `.env` opens the Sepolia workspace; the sandbox remains selectable.
+Open **http://127.0.0.1:5173**. The current application starts in the Sepolia workspace and requires configured Privy sign-in. Configure the public app ID and deployment values using `.env.example` and [the integration guide](docs/INTEGRATION_SETUP.md). A fresh checkout without those values shows a clear setup/sign-in state.
 
-The sandbox includes sample profiles, three editable distribution drafts, and 100,000 sample USDC. Open a draft, prepare the encrypted payload, publish locally, then scan the private inbox. The current profile is the first sample recipient. Local claims produce real note commitments, but **do not generate a ZK proof, move assets, submit transactions, or perform sponsor approvals**.
+The source also contains sandbox fixtures and local simulation helpers. Those fixtures do not establish a live financial flow or sponsor approval. The current public UI is configured for testnet; do not tell judges that a mocked session or local ledger moved assets.
 
 Drafts, payroll rows, and sandbox funds live in memory. Export password-encrypted recovery before reloading if you want to keep the profile. Recipient key recovery does not preserve the sandbox ledger.
 
@@ -83,7 +85,7 @@ pnpm dev:all               # Run the web app, relayer, and configured local serv
 
 All configuration lives in one Git-ignored, access-restricted root `.env`; [.env.example](.env.example) is the only template. Setup preserves existing keys and nonempty settings. Deployment checks the pinned artifacts and contract-library links, then writes `deployments/11155111.json`, the browser manifest/circuits, and public deployment values in that same file. Restart the local processes after configuration changes. Confirmed deployment and setup evidence is recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md).
 
-The web app and relayer run on your computer; no website hosting is configured or required. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. `pnpm dev:all` also starts the private payroll API when its token is configured. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [current integration setup](docs/INTEGRATION_SETUP.md), [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
+The web app can run locally or on Netlify using `netlify.toml`; the Privy organization API is included as a Function. The relayer and remote payroll service require separate hosting. Use the injected wallet, public RPC discovery, and [local treasury approval CLI](tools/TREASURY.md) for the free path. `pnpm dev` starts only the web app; `pnpm relayer` starts only the relay. `pnpm dev:all` also starts the private payroll API when its token is configured. Privy, Graph, and CRE are optional integrations with separate access and usage limits. See [current integration setup](docs/INTEGRATION_SETUP.md), [the free Sepolia guide](docs/FREE_SEPOLIA.md), [deployment details](docs/DEPLOYMENT.md), and [service configuration](docs/SERVICE_CONFIGURATION.md). The live client checks runtime bytecode before preparing funds or proofs and encrypts recovery checkpoints locally before submission.
 
 **Never place wallet private keys, Privy app secrets, view/spend keys, payroll rows, or private witnesses in `VITE_` variables.** These are public bundle values.
 

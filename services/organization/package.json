@@ -1,1 +1,18 @@
-{ "name": "@null-protocol/organization", "version": "0.1.0", "private": true, "type": "module", "scripts": { "dev": "node --env-file-if-exists=../../.env --import tsx src/server.ts", "typecheck": "tsc --noEmit" }, "dependencies": { "@null-protocol/auth": "workspace:*", "@privy-io/node": "0.34.0", "viem": "2.37.3" } }
+{
+  "name": "@null-protocol/organization",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env --import tsx src/local.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.0.3",
+    "@netlify/functions": "^6.0.0",
+    "@null-protocol/auth": "workspace:*",
+    "@privy-io/node": "0.34.0",
+    "serverless-http": "^4.0.0",
+    "viem": "2.37.3"
+  }
+}

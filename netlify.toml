@@ -6,6 +6,16 @@
   NODE_VERSION = "22.16.0"
   PNPM_VERSION = "11.9.0"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/organization/*"
+  to = "/.netlify/functions/organization/api/organization/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

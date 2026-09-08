@@ -4,15 +4,13 @@ import { useSession } from '../lib/session';
 import { useAccount, type AccountType } from '../lib/account';
 import { useStore } from '../lib/store';
 import { Button } from './ui';
-import { Logo } from './Logo';
-
-function Brand() { return <div className="brand entry-brand"><Logo size={26} animated className="brand-logo" /><span>NULL</span></div>; }
+import { EntryLayout } from './EntryLayout';
 
 export function SignIn() {
   const session = useSession();
   const loading = !session.ready || session.authenticated && !session.userId;
   useEffect(() => { document.title = 'Sign in · NULL'; }, []);
-  return <div className="entry-page"><header className="entry-header"><Brand /></header><main className="entry-main" id="main-content">
+  return <EntryLayout>
     <h1>Your payments, in one place.</h1>
     <p className="entry-description">Sign in to receive payments or send them for your organization.</p>
     {loading ? <div className="entry-loading" role="status"><span className="skeleton" /><p>Checking your session…</p></div> : session.configured ? <>
@@ -21,7 +19,7 @@ export function SignIn() {
     </> : <div className="entry-unavailable" role="status"><strong>Sign-in is not available yet.</strong><p>Contact the person who set up NULL, then try again when sign-in is ready.</p><Button variant="secondary" onClick={() => window.location.reload()}>Try again</Button></div>}
     {session.error && <p className="form-error" role="alert">{session.error}</p>}
     <div className="entry-security"><LockKeyhole size={18} strokeWidth={1.5} /><div><strong>Keep a backup.</strong><p>Signing in alone does not restore your payments. If you have used NULL before, restore your backup in Settings after signing in.</p></div></div>
-  </main><footer className="entry-footer">NULL · Private payments</footer></div>;
+  </EntryLayout>;
 }
 
 export function ChooseAccount() {
@@ -38,8 +36,7 @@ export function ChooseAccount() {
     if (type === 'organization') store.setOrganization(organizationName.trim());
     store.navigate(type === 'organization' ? 'overview' : 'inbox');
   }
-  return <div className="entry-page"><header className="entry-header"><Brand />{!account.profile && <Button variant="ghost" icon={LogOut} busy={session.signingOut} onClick={() => void session.signOut()}>Sign out</Button>}</header>
-    <main className="entry-main account-setup" id="main-content">
+  return <EntryLayout className="account-setup" action={!account.profile && <Button variant="ghost" icon={LogOut} busy={session.signingOut} onClick={() => void session.signOut()}>Sign out</Button>} footer={<>Signed in as <span>{session.label}</span></>}>
       <ol className="setup-progress" aria-label="Account setup"><li className="complete"><Check size={14} />Signed in</li><li aria-current="step"><span>2</span>Choose account type</li></ol>
       <h1 ref={heading} tabIndex={-1}>How will you use NULL?</h1>
       <p className="entry-description">Choose whether you want to receive or send payments.</p>
@@ -55,5 +52,5 @@ export function ChooseAccount() {
       <p className="entry-hint">You can change your account type in Settings.</p>
       {account.profile && <Button variant="ghost" icon={ArrowLeft} onClick={account.cancelChange}>Back to account</Button>}
       {session.error && <p className="form-error" role="alert">{session.error}</p>}
-    </main><footer className="entry-footer">Signed in as <span>{session.label}</span></footer></div>;
+    </EntryLayout>;
 }

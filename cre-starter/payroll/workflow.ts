@@ -2,7 +2,8 @@ import { cre, type HTTPPayload, type TeeRuntime } from '@chainlink/cre-sdk'
 import { z } from 'zod'
 import { compilePayroll, parsePayroll } from '../../services/cre-workflow/src/compiler'
 
-// This starter accepts only the local synthetic fixture. Remote payroll remains separate.
+// Local simulation accepts a synthetic fixture or an explicitly exported private draft.
+// Remote payroll remains separate; this is never claimed as enclave attestation.
 export const configSchema = z.object({
   simulationOnly: z.literal(true),
   chainId: z.literal('11155111'),

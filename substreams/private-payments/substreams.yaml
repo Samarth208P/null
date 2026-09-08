@@ -6,6 +6,7 @@ package:
 protobuf:
   files:
     - private_payments.proto
+    - entity.proto
   importPaths:
     - ./proto
 binaries:
@@ -15,9 +16,19 @@ binaries:
 modules:
   - name: map_private_payments
     kind: map
+    initialBlock: 11645265
     inputs:
       - params: string
       - source: sf.ethereum.type.v2.Block
     output:
       type: proto:null.payments.v1.PaymentEvents
+  - name: graph_out
+    kind: map
+    initialBlock: 11645265
+    inputs:
+      - map: map_private_payments
+    output:
+      type: proto:sf.substreams.sink.entity.v1.EntityChanges
+params:
+  map_private_payments: chain_id=11155111;null_pool=0x5d67Ff96D115127645437C0E3a71c61d37465E71
 network: sepolia

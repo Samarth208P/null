@@ -1,0 +1,17 @@
+specVersion: 1.3.0
+description: NULL public transport, composed from the reusable Substreams decoder and Graph entity sink.
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: never
+dataSources:
+  - kind: substreams
+    name: NullPrivatePayments
+    network: sepolia
+    source:
+      package:
+        moduleName: graph_out
+        file: ./null-private-payments.spkg
+    mapping:
+      kind: substreams/graph-entities
+      apiVersion: 0.0.7

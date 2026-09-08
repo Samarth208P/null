@@ -1,39 +1,31 @@
 ---
 name: NULL
-description: A quiet financial workspace for private payments, adapted from Mercury.
+description: Soft Outline, a quiet financial workspace with tactile light surfaces.
 colors:
-  primary: "#5266eb"
-  primary-hover: "#465bdb"
-  primary-soft: "#282d49"
-  primary-ink: "#b4bfff"
-  canvas: "#171721"
-  sidebar: "#111119"
-  surface: "#1e1e2a"
-  surface-hover: "#272735"
-  ink: "#ededf3"
-  secondary: "#c3c3cc"
-  muted: "#aaaab9"
-  line: "#32323f"
-  line-strong: "#555565"
-  focus: "#a7b2ff"
-  success: "#97d6b3"
-  success-bg: "#22382f"
-  warning: "#e6c18c"
-  warning-bg: "#3b3229"
-  danger: "#ffacae"
-  danger-bg: "#44292f"
-  entry-canvas: "#171721"
-  entry-panel: "#1e1e2a"
-  entry-ink: "#ededf3"
-  entry-secondary: "#c3c3cc"
-  entry-muted: "#aaaab9"
-  entry-line: "#32323f"
-  entry-primary: "#5266eb"
+  primary: "#20252b"
+  primary-hover: "#343e48"
+  primary-soft: "#dfe5eb"
+  primary-ink: "#303c49"
+  canvas: "#edf0f3"
+  surface: "#edf0f3"
+  surface-hover: "#e3e8ed"
+  ink: "#20252b"
+  secondary: "#49545f"
+  muted: "#58636e"
+  line: "#ccd3da"
+  line-strong: "#7d8995"
+  focus: "#365976"
+  success: "#236047"
+  success-bg: "#e0eee6"
+  warning: "#795119"
+  warning-bg: "#f3ebdb"
+  danger: "#a1303e"
+  danger-bg: "#f5e3e6"
 typography:
   headline:
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "28px"
-    fontWeight: 400
+    fontSize: "30px"
+    fontWeight: 550
     lineHeight: 1.3
     letterSpacing: "-.03em"
   body:
@@ -44,46 +36,47 @@ typography:
   label:
     fontSize: "12px"
   balance:
-    fontSize: "38px"
-    fontWeight: 400
+    fontSize: "40px"
+    fontWeight: 500
     lineHeight: 1.2
     letterSpacing: "-.03em"
 rounded:
   badge: "5px"
-  navigation: "6px"
-  input: "8px"
-  panel: "12px"
-  pill: "999px"
+  tab: "8px"
+  control: "10px"
+  inset-panel: "12px"
+  panel: "16px"
+  modal: "18px"
 spacing:
   control-gap: "8px"
   compact: "12px"
   section-gap: "24px"
-  panel-inset: "28px"
+  panel-inset: "30px"
   desktop-gutter: "40px"
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "#fff"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.control}"
     padding: "8px 17px"
   button-primary-hover:
     backgroundColor: "{colors.primary-hover}"
   button-secondary:
-    backgroundColor: "{colors.surface-hover}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.control}"
     padding: "8px 17px"
   input:
-    backgroundColor: "{colors.canvas}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.input}"
-    padding: "10px 12px"
+    rounded: "{rounded.control}"
+    padding: "12px 14px"
   panel:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.panel}"
   badge-private:
-    backgroundColor: "{colors.primary-soft}"
-    textColor: "{colors.primary-ink}"
+    backgroundColor: "transparent"
+    textColor: "{colors.secondary}"
     rounded: "{rounded.badge}"
     padding: "3px 8px"
 ---
@@ -92,66 +85,77 @@ components:
 
 ## Overview
 
-**Creative North Star: "A quiet financial workspace"**
+**Creative North Star: "Soft Outline"**
 
-NULL adopts the inspected Mercury dashboard's dark canvas, graphite surfaces, compact navigation, ivory text, and cobalt pill actions. Entry screens and Privy authentication use the same dark graphite palette with restrained periwinkle accents. This replaces the former white workspace direction.
+NULL combines crisp Outline structure with the stronger neumorphic treatment approved by the user: pale gray material, charcoal type, raised surfaces, and inset controls. Financial information stays compact and legible, with generous gutters and clear next actions. Authentication, inbox, funds, dialogs, and settings share this light visual system.
 
-The reference is a visual adaptation: NULL retains its name, slashed-circle mark, product content, existing transaction functions, and Privy email/wallet authentication. Locally hosted Inter substitutes for Mercury's custom Arcadia fonts. It is not a pixel-identical copy. The Operate surface contract and review evidence live in [the Mercury reference brief](docs/DESIGN_REFERENCE.md); durable product commitments live in [PRODUCT.md](PRODUCT.md).
+The current authority is `apps/web/src/soft-outline.css`, imported after the structural and responsive `styles.css` by `main.tsx`. The outgoing Mercury stylesheet is replaced. `docs/DESIGN_REFERENCE.md` is a historical reference, not current design authority. Durable product commitments remain in `PRODUCT.md`.
 
 **Key Characteristics:**
 
-- Flat, restrained surfaces with thin boundaries and generous content gutters.
-- Regular-weight headings, compact labels, and tabular financial values.
-- A dark, focused entry sequence consistent with the workspace.
-- Clear next actions and progressive disclosure of technical details.
+- One pale material with a consistent upper-left light source.
+- Charcoal actions, clear field outlines, and readable semantic status labels.
+- Raised task panels and controls alongside flat financial tables.
+- The supplied six-blade aperture logo and restrained Inter typography.
 
 ## Colors
 
-The workspace uses cool graphite neutrals with cobalt as its action accent. The frontmatter records current values from `apps/web/src/mercury.css`, which is imported after `styles.css` in `main.tsx` and overrides the earlier light palette.
+Pale gray canvas and surface share the same material; charcoal anchors text, primary actions, and the logo. Secondary and muted text remain distinct from low-contrast borders. Strong outlines use `line-strong`, and keyboard focus uses the blue-gray `focus` token.
 
-- **Primary:** cobalt fills primary actions; pale periwinkle identifies links and private-state details. Soft indigo backs private-state badges.
-- **Neutral:** the darkest rail separates navigation from the canvas. Graphite panels and slightly lighter hover fills establish grouping; ivory, secondary gray, and muted gray establish text hierarchy.
-- **Semantic:** green, amber, and rose pair status text with tinted backgrounds. Keep visible status labels alongside color.
-- **Entry:** entry and account setup inherit the dark workspace tokens. Privy uses its dark theme and a periwinkle accent.
+Green, amber, and red status treatments pair color with visible labels. Private-state badges are neutral outlined labels. Entry screens inherit the workspace palette; Privy uses its light theme with the charcoal primary accent.
 
 ## Typography
 
-Use the locally hosted variable Inter family with the system fallbacks recorded above. Body copy is compact; table content and actions commonly use 13px, while supporting labels use the label role. Main headings use the headline role without heavy display styling. Entry headings use weight 450; section headings use restrained weights around 450–500.
+Use locally hosted variable Inter with the frontmatter fallbacks. Main headings use 30px/550; mobile headings use 28px. Entry headings use 28px/550, reducing to 27px on small screens. Section headings are typically 18px with restrained 450–500 weights; body text is 14px, table text and actions 13px, and supporting labels 12px. Badges use 11px/500.
 
-Financial values use tabular numerals. The primary balance role reduces to 36px on mobile and 33px below 480px. Addresses and code retain the existing `SFMono-Regular`, Consolas, `Liberation Mono`, monospace stack. Keep the NULL wordmark and its slashed-circle geometry identifiable.
+Financial values use tabular numerals. The main balance uses 40px/500, reducing to 36px at mobile and 34px below 480px. Addresses and code retain `SFMono-Regular`, Consolas, `Liberation Mono`, monospace. The NULL wordmark uses 21px Inter at weight 650.
 
 ## Layout
 
-The desktop shell has a fixed 224px sidebar, a 60px utility bar, and a main content region capped at 1560px with 35px top padding. Use the desktop gutter token for both the utility bar and content. Panels typically use 24–30px insets. The organization overview pairs treasury and draft-continuation panels, followed by recent distributions; its details belong to the surface brief.
+The desktop shell has a 224px sidebar, a 72px utility bar, and content capped at 1480px with 38px top padding and 40px horizontal gutters. At 1200px gutters reduce to 30px. The overview treasury spans the content width, with balance information on the left and a divided ledger on the right; compact draft continuation follows below. At 1080px the ledger stacks below the balance and the distribution wizard becomes one column.
 
-At 1200px, content gutters reduce to 30px. At 1080px, the overview and distribution wizard collapse to one column. At 760px, navigation becomes a 260px dismissible drawer, the utility bar becomes 64px tall, and content uses 20px gutters. Below 480px, content gutters reduce to 18px. Tables retain local horizontal scrolling.
+At 760px navigation becomes a 260px dismissible drawer, the utility bar is 68px tall, and content uses 28px top padding and 20px gutters. Below 480px gutters reduce to 18px. Panels generally use 24–32px insets, reducing to 22px for treasury, draft, and wizard panels on small screens. Tables and filter tabs scroll locally where needed.
 
-Entry screens use balanced outer grid rows so the panel centers vertically when space allows and scrolls on short screens. The sign-in panel is at most 464px wide; account setup is at most 512px wide. Panel content is left aligned, with the NULL brand at the upper left of the page. Mobile panels reduce their width and padding.
+Entry panels center vertically when space permits and scroll on short screens. Sign-in is at most 480px wide; account setup is at most 512px. Left-aligned content uses 44px desktop padding, 32px on mobile, and 30px 24px below 480px. The brand remains at the upper left.
 
 ## Elevation & Depth
 
-Workspace panels are flat: background tone and one-pixel boundaries provide separation. The native modal uses a dark translucent backdrop and a slightly lighter panel. A dark toast with a diffuse shadow provides temporary feedback. Avoid adding decorative shadows to resting financial panels.
+The user's explicit Outline plus stronger Neumorphism direction is a deliberate exception to generic no-shadow defaults. Resting task panels and secondary controls are raised; fields and selected account options are inset. Keep one light source and the shared pale material. Shadows supplement visible text, outlines, and selected-state semantics.
 
-Motion remains brief and functional: controls respond over 160ms, entry content appears over 220ms, and organization fields and the mobile drawer transition over 200ms. Keyboard focus removes entry transitions; reduced motion removes transition delays and spatial effects. Exact extensions are recorded in `.impeccable/design.json`.
+- `--raised`: `9px 9px 22px #cdd4dc, -9px -9px 22px #ffffff`; principal task panels. At 760px: `6px 6px 16px #cdd4dc, -6px -6px 16px #fff`.
+- `--raised-small`: `4px 4px 9px #cbd3dc, -4px -4px 9px #ffffff`; controls, active navigation, and compact supporting surfaces.
+- `--inset`: `inset 3px 3px 7px #cdd5de, inset -3px -3px 7px #ffffff`; fields, pressed secondary actions, and inset content.
+- `--primary-shadow`: `4px 5px 10px #c4ccd5, -3px -3px 8px #ffffff`; charcoal and danger actions.
+
+Tables remain flat with dividers. Dialogs use a separate diffuse shadow and translucent charcoal backdrop; toasts use charcoal with white text. Keep short functional motion and preserve the existing reduced-motion and keyboard-focus safeguards. Exact overlay and motion values are in `.impeccable/design.json`.
 
 ## Shapes
 
-Use pill buttons, circular icon controls, gently rounded panels, and smaller input, navigation, and badge corners from the frontmatter. Thin borders define inputs and financial containers. Line icons support visible labels; the custom slashed-circle mark remains the brand's distinctive geometry.
+Controls and active navigation use 10px corners, raised panels 16px, inset content and account options 12px, and dialogs 18px. Badges retain 5px corners and a visible border. Use line icons with labels.
+
+Preserve the exact supplied six-blade aperture geometry. The UI mark inherits `currentColor`; the original black `public/logo.svg` remains intact. Keep it static without gradients, glow, or rotation.
 
 ## Components
 
-- **Buttons:** primary actions use cobalt with white labels; secondary actions use graphite fills; ghost actions remain quiet. Desktop buttons have a 38px minimum height, while compact utility controls are smaller. Mobile utility and form actions expand to at least 44px. Press feedback applies only when it does not interfere with keyboard focus or reduced motion.
-- **Fields:** dark inset fields use a strong border, visible labels, inline errors, and a two-pixel focus outline. The minimum desktop height is 43px; mobile editable fields use 16px text and at least 44px height. Read-only fields use the hover surface tone.
-- **Navigation:** compact rows have a filled active state and `aria-current`. The mobile drawer traps focus, makes the workspace inert, closes on Escape, and returns focus to its opener. Preserve the skip link and focus movement on route changes.
-- **Panels and tables:** use the shared surface and panel radius. Tables use subdued headers, row dividers, hover feedback, and tabular amounts. Missing or unrecovered balances display an unavailable state, not a fabricated zero; balance masking also covers related totals.
-- **Entry and account selection:** show the real Privy sign-in action, then full-label individual/organization radio options. Reveal organization naming only when selected. Keep the separate encrypted recovery explanation visible; selecting a workspace type does not grant organization authorization.
-- **Status and disclosure:** identify Ethereum Sepolia in connection settings, local-versus-confirmed publication wording, semantic badges, and expandable technical and recovery details. Public privacy boundaries retain their existing confirmations.
+- **Buttons:** charcoal primary and red danger actions have white labels and the primary shadow. Secondary actions are pale raised controls that become inset when pressed. Disabled actions lose their shadow and retain readable muted text. Standard buttons are at least 42px tall; desktop utility actions are 38px, mobile actions 44px, and entry continuation 48px.
+- **Fields:** 46px minimum height, strong one-pixel outline, inset shadow, 10px corners, and visible labels. Mobile editable text is 16px. Keyboard focus has a two-pixel outline. Read-only and disabled fields omit the inset shadow.
+- **Navigation and filters:** active routes and selected tabs are raised, with semantic selected states. The mobile drawer retains its focus trap, inert background, Escape dismissal, and focus return. Preserve the skip link and route-change focus.
+- **Panels and tables:** shared raised surfaces group treasury, drafts, wizard, inbox, funds, and entry tasks. Flat tables use dividers, hover feedback, and tabular amounts. Unavailable balances remain explicit, and masking covers related totals.
+- **Entry and accounts:** real Privy authentication leads to labeled individual/organization options. Selected options use charcoal outlines and inset depth. Organization naming is progressively revealed. Preserve the encrypted recovery explanation and authorization boundaries.
+- **Dialogs and settings:** use shared fields, semantic status text, inset recovery content, and raised actions. Keep Ethereum Sepolia identification, local-versus-confirmed publication wording, and technical disclosure accurate.
 
 ## Do's and Don'ts
 
-- **Do** extend the current dark palette across the workspace, entry screens, and authentication.
-- **Do** preserve NULL branding, real data, authentication, recovery, financial actions, visible focus, and reduced-motion behavior.
-- **Do** keep amounts legible, masked consistently when requested, and paired with accurate recovery or transaction status.
-- **Don't** restore the old white workspace or square off the current pill actions.
-- **Don't** import Mercury banking copy, password forms, invented performance history, or unsupported product claims.
-- **Don't** describe the adaptation as pixel-identical or treat a visual review as a complete accessibility or transaction audit.
+- **Do** extend Soft Outline consistently across all routes and authentication.
+- **Do** use the shared raised and inset tokens; retain flat financial tables.
+- **Do** preserve the exact logo, real data, authentication, recovery, focus, reduced motion, and financial behavior.
+- **Don't** restore the dark Mercury palette or cobalt pill actions.
+- **Don't** rely on soft shadows alone to communicate controls, focus, or status.
+- **Don't** invent balances, history, banking copy, or unsupported privacy claims.
+- **Don't** equate visual checks with live authentication or transaction verification.
+
+Validation for this revamp: build, typecheck, and eight account tests passed. Fifty route/viewport captures at 1440, 768, 390, and 320px using simulated sessions showed no page overflow or page errors; draft, filter, and modal checks ran at 1440 and 390px. Live authentication and transactions were not verified.
+
+### Quiet interaction feedback
+
+Controls change color and depth over 140ms; primary actions press down by 1px. Navigation and filter selections use the same timing. Inputs transition their outline color without moving. The account menu enters over 180ms with a 3px offset; dialogs and feedback toasts use 180ms and a 4px offset. Entry content has only a slight opacity transition, with no blur. The logo, financial values, panels, and page content remain still. Reduced-motion settings remove these transitions and positional effects while preserving immediate state feedback. No motion dependency is added.

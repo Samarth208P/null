@@ -1,6 +1,6 @@
 import { recoverAddress, recoverPublicKey, toHex, type Address, type Hex } from 'viem';
 import { publicKeyToAddress } from 'viem/accounts';
-import { distributionIntentDigest, secp256k1, fromHex } from '@null-protocol/sdk';
+import { distributionIntentDigest, secp256k1, fromHex, sha256, utf8 } from '@null-protocol/sdk';
 
 export interface CompiledIntentContext {
   chainId: bigint;
@@ -14,6 +14,39 @@ export interface AuthorizationRequest {
   url: string;
   headers: { 'privy-app-id': string; 'privy-request-expiry': string };
   body: { method: 'secp256k1_sign'; params: { hash: Hex } };
+}
+export function organizationIdentityRequest(options: { appId: string; walletId: string; chainId: bigint; poolAddress: Address; requestExpiryMs?: number }): AuthorizationRequest {
+  if (![options.appId, options.walletId].every(id => /^[a-zA-Z0-9_-]+$/.test(id)) || options.chainId !== 11155111n || !/^0x[0-9a-fA-F]{40}$/.test(options.poolAddress)) throw new Error('NULL_PRIVY_CONFIG_REQUIRED');
+  const expiry = options.requestExpiryMs ?? Date.now() + 120_000;
+  if (!Number.isSafeInteger(expiry) || expiry <= Date.now() || expiry > Date.now() + 300_000) throw new Error('NULL_INTENT_EXPIRED');
+  const hash = toHex(sha256(utf8(JSON.stringify(['NULL organization identity only v1', options.appId, options.walletId, options.chainId.toString(), options.poolAddress.toLowerCase()]))));
+  return { version: 1, method: 'POST', url: `https://api.privy.io/v1/wallets/${options.walletId}/rpc`, headers: { 'privy-app-id': options.appId, 'privy-request-expiry': String(expiry) }, body: { method: 'secp256k1_sign', params: { hash } } };
+}
+
+/** One owner-approved identity challenge obtains the public key without exporting wallet secrets. */
+export async function identifyOrganizationSigner(options: { endpoint: string; appId: string; chainId: bigint; poolAddress: Address; walletAddress: Address; getAccessToken: () => Promise<string | null>; generateAuthorizationSignature: (request: AuthorizationRequest) => Promise<string | { signature: string }> }): Promise<Hex> {
+  const endpoint = new URL(options.endpoint);
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(endpoint.hostname)))) throw new Error('NULL_PRIVY_CONFIG_REQUIRED');
+  const post = async (route: string, body: unknown) => {
+    const token = await options.getAccessToken(); if (!token) throw new Error('NULL_SESSION_REQUIRED');
+    const response = await fetch(`${endpoint.href.replace(/\/$/, '')}/api/organization/${route}`, { method: 'POST', credentials: 'omit', redirect: 'error', headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error('NULL_PRIVY_AUTH_FAILED');
+    return response.json();
+  };
+  const prepared = await post('prepare-identity', {});
+  const request = prepared.authorizationRequest as AuthorizationRequest;
+  const walletId = request?.url?.match(/^https:\/\/api\.privy\.io\/v1\/wallets\/([a-zA-Z0-9_-]+)\/rpc$/)?.[1];
+  if (!walletId || prepared.walletAddress?.toLowerCase() !== options.walletAddress.toLowerCase() || prepared.minimumApprovals !== 1 || !/^[a-f0-9-]{36}$/.test(prepared.ticket)) throw new Error('NULL_CONTEXT_MISMATCH');
+  const canonical = organizationIdentityRequest({ ...options, walletId, requestExpiryMs: Number(request.headers?.['privy-request-expiry']) });
+  // Exact shape checks prevent approval of extra or substituted RPC parameters.
+  const normalize = (value: unknown): string => value && typeof value === 'object' ? (Array.isArray(value) ? `[${value.map(normalize).join(',')}]` : `{${Object.keys(value).sort().map(key => `${key}:${normalize((value as Record<string, unknown>)[key])}`).join(',')}}`) : JSON.stringify(value);
+  if (normalize(request) !== normalize(canonical)) throw new Error('NULL_CONTEXT_MISMATCH');
+  const generated = await options.generateAuthorizationSignature(canonical);
+  const result = await post('identify', { ticket: prepared.ticket, signatures: [typeof generated === 'string' ? generated : generated.signature] });
+  if (result.digest !== canonical.body.params.hash || result.signer?.toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
+  // The adapter already recovers the key from the raw signature; independently bind it here.
+  if (typeof result.publicKey !== 'string' || publicKeyToAddress(result.publicKey).toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
+  return result.publicKey;
 }
 const FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const ORDER = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;

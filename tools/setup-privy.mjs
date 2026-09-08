@@ -75,7 +75,7 @@ async function resource(stage, endpoint, body, variable) {
 }
 
 async function main() {
-  if (!['status', 'provision'].includes(command) || process.argv.length > 3) fail('Usage: node tools/setup-privy.mjs [status|provision]');
+  if (!['status', 'provision', 'provision-quorum'].includes(command) || process.argv.length > 3) fail('Usage: node tools/setup-privy.mjs [status|provision|provision-quorum]');
   if (!saved.PRIVY_APP_ID || !saved.PRIVY_APP_SECRET || saved.VITE_PRIVY_APP_ID !== saved.PRIVY_APP_ID)
     fail('Set matching PRIVY_APP_ID / VITE_PRIVY_APP_ID and the server-only PRIVY_APP_SECRET in root .env.');
   if (journal.appId !== saved.PRIVY_APP_ID) fail('The provisioning journal belongs to another Privy app.');
@@ -85,7 +85,7 @@ async function main() {
     print({ credentialsAccepted: true, users: users.data?.map(user => ({ id: user.id })),
       organizationConfigured: Boolean(saved.PRIVY_ORGANIZATION_ENTITY_ID),
       walletConfigured: Boolean(saved.PRIVY_ORGANIZATION_WALLET_ID),
-      policyConfigured: Boolean(saved.PRIVY_ORGANIZATION_POLICY_IDS), approvalExecuted: false });
+      policyConfigured: Boolean(saved.PRIVY_ORGANIZATION_POLICY_IDS), controlMode: saved.PRIVY_ORGANIZATION_CONTROL_MODE || 'policies-and-quorum', approvalExecuted: false });
     return;
   }
   const members = (saved.PRIVY_ORGANIZATION_MEMBER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean);
@@ -101,6 +101,18 @@ async function main() {
     display_name: 'NULL Sepolia workspace', default_key_quorum_id: quorum.id,
   }, 'PRIVY_ORGANIZATION_ENTITY_ID');
   if (organization.default_key_quorum_id !== quorum.id) fail('The organization has a different owner quorum.');
+  if (command === 'provision-quorum') {
+    // A new dedicated approval signer: no treasury assets, bypass keys, or policy removal.
+    if (saved.PRIVY_ORGANIZATION_POLICY_IDS) fail('An existing policy-controlled configuration must not be downgraded.');
+    const wallet = await resource('owner-quorum-wallet', 'wallets', {
+      chain_type: 'ethereum', owner_id: quorum.id, entity: { type: 'organization', id: organization.id },
+      policy_ids: [], additional_signers: [],
+    }, 'PRIVY_ORGANIZATION_WALLET_ID');
+    if (wallet.chain_type !== 'ethereum' || wallet.owner_id !== quorum.id || wallet.entity?.id !== organization.id || wallet.entity?.type !== 'organization' || wallet.additional_signers?.length || wallet.policy_ids?.length || wallet.archived_at != null || !/^0x[0-9a-fA-F]{40}$/.test(wallet.address)) fail('The approval wallet does not match the owner-only configuration.');
+    updateRootEnv({ PRIVY_ORGANIZATION_WALLET_ADDRESS: wallet.address, PRIVY_ORGANIZATION_CONTROL_MODE: 'owner-quorum', VITE_ORGANIZATION_URL: 'http://127.0.0.1:8788' });
+    print({ status: 'owner-quorum-wallet-configured', walletAddress: wallet.address, control: 'Privy owner quorum', approvalExecuted: false, next: 'Start the organization service, sign in as its owner, and approve the reviewed payment.' });
+    return;
+  }
   // A live check on 2026-09-06 returned HTTP 400 / invalid_enum_value for
   // rules.0.method = secp256k1_sign. Do not retry a known unsupported policy,
   // substitute another signed digest, or create a wallet without its controls.

@@ -1,4 +1,5 @@
 mod pb;
+mod graph;
 
 use anyhow::{anyhow, bail, Result};
 use ethabi::{Contract, RawLog, Token};
@@ -72,4 +73,10 @@ pub fn map_private_payments(params: String, block: Block) -> Result<PaymentEvent
         }
     }
     Ok(PaymentEvents { events })
+}
+
+/// Compose the reusable transport decoder with The Graph's entity sink.
+#[substreams::handlers::map]
+pub fn graph_out(events: PaymentEvents) -> Result<substreams_entity_change::pb::entity::EntityChanges> {
+    graph::entities(events)
 }

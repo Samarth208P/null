@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,12 +11,12 @@ import { parsePublicBundle } from '../../packages/sdk/src/index.ts';
 // Host-side simulation helper only. This file is never compiled into the workflow.
 const projectDir = fileURLToPath(new URL('../', import.meta.url));
 const repositoryDir = resolve(projectDir, '..');
-const artifactsDir = resolve(projectDir, '.artifacts');
+let artifactsDir = resolve(projectDir, '.artifacts');
 const port = 8791;
-const batchId = 'null-cre-synthetic-payroll-v1';
+let batchId = 'null-cre-synthetic-payroll-v1';
 const workflowLog = 'NULL payroll simulation: validated batch and compiled 8 encrypted envelopes.';
 const maximumOutputBytes = 2 * 1024 * 1024;
-const receiptPath = resolve(artifactsDir, 'simulation-receipt.json');
+let receiptPath = resolve(artifactsDir, 'simulation-receipt.json');
 let runStartedAt: string | undefined;
 
 function canonical(value: unknown): string {
@@ -75,7 +75,18 @@ function simulationResult(output: string): Record<string, unknown> {
 }
 
 async function main(): Promise<void> {
-  if (process.argv.slice(2).some(argument => argument !== '--prepare')) throw new Error('Supported option: --prepare');
+  const args = process.argv.slice(2).filter(argument => argument !== '--');
+  const inputFile = args[0] === '--input' && args.length === 2 ? resolve(args[1]) : undefined;
+  if (!inputFile && args.length && !(args.length === 1 && args[0] === '--prepare')) throw new Error('Use --prepare or --input PATH_TO_PRIVATE_INPUT.json');
+  let importedBatch;
+  if (inputFile) {
+    if ((await stat(inputFile)).size > 65_536) throw new Error('Private input exceeds 64 KB.');
+    try { importedBatch = parsePayroll(JSON.parse(await readFile(inputFile, 'utf8'))); }
+    catch { throw new Error('The private input is not a valid payroll export.'); }
+    batchId = importedBatch.batchId;
+    artifactsDir = resolve(projectDir, '.artifacts', `payment-${batchId}`);
+    receiptPath = resolve(artifactsDir, 'simulation-receipt.json');
+  }
   if (!process.argv.includes('--prepare')) {
     await mkdir(artifactsDir, { recursive: true });
     runStartedAt = new Date().toISOString();
@@ -86,7 +97,7 @@ async function main(): Promise<void> {
     throw new Error('The public Sepolia deployment manifest is missing its deployed pool.');
   }
   const context = { chainId: String(manifest.chainId), poolAddress: manifest.contracts.nullPool as `0x${string}` };
-  const batch = parsePayroll({
+  const batch = importedBatch ?? parsePayroll({
     batchId,
     batchEntropyHex: toHex(sha256(utf8('NULL CRE SYNTHETIC FIXTURE ONLY - NEVER FUND OR REUSE'))),
     recipients: [
@@ -137,7 +148,7 @@ async function main(): Promise<void> {
       server.listen(port, '127.0.0.1', () => { server.off('error', reject); accept(); });
     });
     const args = ['workflow', 'simulate', 'payroll', '--target', 'staging-settings', '--non-interactive', '--trigger-index', '0', '--http-payload', inputPath, '--env', resolve(repositoryDir, '.env')];
-    console.log('Running CRE simulation with an authenticated loopback synthetic payroll fixture.');
+    console.log(`Running CRE simulation with an authenticated loopback ${inputFile ? 'exported payment' : 'synthetic payroll fixture'}.`);
     const captured = await new Promise<{ code: number | null; output: string }>((accept, reject) => {
       const child = spawn('cre', args, { cwd: projectDir, env: { ...process.env, NULL_CRE_SIMULATION_TOKEN: token, NO_COLOR: '1' }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
       const chunks: Buffer[] = [];
@@ -161,12 +172,12 @@ async function main(): Promise<void> {
       });
     });
     const output = captured.output.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '');
-    if (output.includes(token) || /batchEntropyHex|employeeRef|amountAtomic|stealthMetaAddress/.test(output)) {
+    if (output.includes(token) || output.includes(batch.batchEntropyHex) || batch.recipients.some(recipient => output.includes(recipient.stealthMetaAddress)) || /batchEntropyHex|employeeRef|amountAtomic|stealthMetaAddress/.test(output)) {
       throw new Error('CRE output contained confidential-input markers; output was withheld and no log was saved.');
     }
     await writeFile(resolve(artifactsDir, 'simulation.log'), output);
     if (captured.code !== 0) {
-      console.error(output);
+      if (!inputFile) console.error(output);
       throw new Error(`CRE simulation exited with code ${captured.code}; inspect .artifacts/simulation.log.`);
     }
     const result = simulationResult(output);
@@ -174,11 +185,12 @@ async function main(): Promise<void> {
     parsePublicBundle(JSON.stringify(result.publicBundle));
     if (canonical(result.publicBundle) !== canonical(expected)) throw new Error('CRE output differs from the independent local public compilation.');
     if (!output.includes(workflowLog) || authorizedFetches < 1) throw new Error('CRE did not log completion or fetch the authenticated synthetic fixture.');
-    const receipt = { verified: true, status: 'passed', startedAt: runStartedAt, finishedAt: new Date().toISOString(), syntheticOnly: true, localSimulation: true, remoteExecutionVerified: false, attestationVerified: false, ...context, batchId, commitment: expected.commitment, envelopeRoot: expected.envelopeRoot, encryptedEnvelopes: expected.envelopes.length, authenticatedFixtureFetches: authorizedFetches };
+    const receipt = { verified: true, status: 'passed', startedAt: runStartedAt, finishedAt: new Date().toISOString(), syntheticOnly: !inputFile, localSimulation: true, remoteExecutionVerified: false, attestationVerified: false, ...context, batchId, commitment: expected.commitment, envelopeRoot: expected.envelopeRoot, encryptedEnvelopes: expected.envelopes.length, authenticatedFixtureFetches: authorizedFetches };
     await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+    await writeFile(resolve(artifactsDir, 'payment-result.json'), `${JSON.stringify({ version: 1, mode: 'cre-local-simulation', batchId, publicBundle: result.publicBundle }, null, 2)}\n`);
     for (const line of output.split(/\r?\n/).filter(line => line.includes('[SIMULATION]') || line.includes('[USER LOG]') || line.includes('Workflow compiled'))) console.log(line);
     console.log(`Workflow Simulation Result: ${JSON.stringify(receipt)}`);
-    console.log('Full public CLI output: cre-starter/.artifacts/simulation.log');
+    console.log(`Result directory: ${artifactsDir}`);
   } finally {
     if (server.listening) await new Promise<void>((accept, reject) => server.close(error => error ? reject(error) : accept()));
     body.fill(0);

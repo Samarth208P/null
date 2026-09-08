@@ -8,6 +8,7 @@ target/
 .npm-cache/
 .pnpm-store/
 .artifacts/
+.netlify/
 *.log
 contracts/out/
 contracts/cache/

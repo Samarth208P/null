@@ -8,9 +8,9 @@ import {
   validateDeploymentManifest, type ConfirmedOperation, type DeploymentManifest, type DistributionOptions,
   type OperationStage, type OwnedTreasuryNote, type PreparedOperation,
 } from '@null-protocol/client';
-import { authorizeOrganizationDistribution, type AuthorizationRequest } from '@null-protocol/auth';
+import { authorizeOrganizationDistribution, identifyOrganizationSigner, type AuthorizationRequest } from '@null-protocol/auth';
 import {
-  NullError, authPolicyCommitment, fromHex, secp256k1, toHex,
+  NullError, authPolicyCommitment, fromHex, secp256k1, toHex, deriveField, randomBytes, utf8,
   type AuthPolicyOpening, type CompiledDistribution, type DiscoveredAllocation,
 } from '@null-protocol/sdk';
 import { config } from '../lib/config';
@@ -31,6 +31,7 @@ type SecretStore = ReturnType<typeof createEncryptedCheckpointStore>;
 type WalletBridge = {
   connect: (chainId: number) => Promise<WalletClient>;
   authorize?: (intent: Intent, policy: AuthPolicyOpening) => Promise<Hex>;
+  organizationKey?: () => Promise<Hex>;
 };
 const stageCopy: Record<OperationStage, string> = {
   deployment: 'Checking the connection…', history: 'Checking your balance and payment history…',
@@ -41,7 +42,9 @@ const stageCopy: Record<OperationStage, string> = {
   submitting: 'Sending your request…', confirming: 'Waiting for confirmation…',
   confirmed: 'Confirmed on the test network.',
 };
-const organizationUrl = import.meta.env.VITE_ORGANIZATION_URL as string | undefined;
+const configuredOrganizationUrl = import.meta.env.VITE_ORGANIZATION_URL as string | undefined;
+// Production uses the colocated Netlify API when a local development URL is saved.
+const organizationUrl = import.meta.env.PROD && (!configuredOrganizationUrl || /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(configuredOrganizationUrl)) ? window.location.origin : configuredOrganizationUrl;
 
 function chainDefinition(id: number) {
   return { id, name: id === 11155111 ? 'Sepolia' : 'Local development', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [config.rpcUrl] } } };
@@ -81,7 +84,20 @@ function PrivyOperation(props: LiveOperationProps) {
     });
     return result.compactSignature;
   }, [ready, authenticated, login, getAccessToken, generateAuthorizationSignature]);
-  return <LiveOperationBody {...props} bridge={{ connect, ...(organizationUrl ? { authorize } : {}) }} />;
+  const organizationKey = useCallback(async (): Promise<Hex> => {
+    if (!organizationUrl || !authenticated) throw new NullError('NULL_SESSION_REQUIRED', 'Sign in as your organization’s approver to continue.');
+    const token = await getAccessToken();
+    if (!token) throw new NullError('NULL_SESSION_REQUIRED', 'Sign in again to continue.');
+    const response = await fetch(`${organizationUrl.replace(/\/$/, '')}/api/organization/config`, { headers: { Authorization: `Bearer ${token}` }, credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new NullError('NULL_ORGANIZATION_UNAVAILABLE', 'Your organization setup could not be loaded. Check your membership and try again.');
+    const data = await response.json();
+    if (data.chainId !== config.chainId.toString() || data.poolAddress?.toLowerCase() !== config.poolAddress?.toLowerCase() || !/^0x[0-9a-fA-F]{40}$/.test(data.walletAddress)) throw new NullError('NULL_CONTEXT_MISMATCH', 'The organization setup does not match this network.');
+    const publicKey = typeof data.signerPublicKey === 'string' ? data.signerPublicKey : await identifyOrganizationSigner({ endpoint: organizationUrl, appId: config.privyAppId!, chainId: config.chainId, poolAddress: config.poolAddress!, walletAddress: data.walletAddress, getAccessToken, generateAuthorizationSignature: request => generateAuthorizationSignature(request) });
+    const point = secp256k1.ProjectivePoint.fromHex(fromHex(publicKey));
+    if (publicKeyToAddress(toHex(point.toRawBytes(false))).toLowerCase() !== data.walletAddress?.toLowerCase()) throw new NullError('NULL_CONTEXT_MISMATCH', 'The organization signer could not be verified.');
+    return toHex(point.toRawBytes(true));
+  }, [authenticated, getAccessToken, generateAuthorizationSignature]);
+  return <LiveOperationBody {...props} bridge={{ connect, ...(organizationUrl ? { authorize, organizationKey } : {}) }} />;
 }
 
 export function LiveOperation(props: LiveOperationProps) {
@@ -228,6 +244,17 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     await vault.persistLocalPolicy(opening);
     const values = (await vault.load()).policies; setPolicies(values); setSelectedPolicy(authPolicyCommitment(opening));
   }
+  async function useOrganization() {
+    if (!vault || !bridge.organizationKey) return;
+    const signerPublicKey = await bridge.organizationKey();
+    const saved = (await vault.load()).policies.find(item => item.signerPublicKey.toLowerCase() === signerPublicKey.toLowerCase());
+    const seed = randomBytes(32);
+    try {
+      const opening = saved ?? { signerPublicKey, policyMetadata: deriveField(seed, utf8('null.privy.policy')), registrationBlinder: deriveField(seed, utf8('null.privy.registration')) };
+      await vault.persistLocalPolicy(opening);
+      setPolicies((await vault.load()).policies); setSelectedPolicy(authPolicyCommitment(opening)); setSelectedNotes([]);
+    } finally { seed.fill(0); }
+  }
   async function importRecovery(file?: File) {
     if (!file || !vault || !client) return;
     if (file.size > 2_000_000) throw new NullError('NULL_RECOVERY_INVALID', 'Choose an encrypted funds backup file under 2 MB.');
@@ -331,7 +358,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
               <summary>Advanced setup</summary>
               <p className="field-hint">Use the setup file from your organization’s administrator. It controls who can approve payments and is encrypted on this device.</p>
               {policies.length > 0 && <label className="field">Organization setup<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); }}>{policies.map((item, index) => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>Setup {index + 1} · {short(commitment, 5)}</option>; })}</select></label>}
-              <div className="button-row"><Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import setup file</Button><Button variant="ghost" disabled={busy || !policy} onClick={() => void work(registerPolicy)}>Activate organization setup</Button></div>
+              {bridge.organizationKey && <p className="field-hint">Privy asks your organization owner to approve an identity-only signature. This identifies the signer and moves no funds.</p>}<div className="button-row">{bridge.organizationKey && <Button variant="secondary" disabled={busy} icon={ShieldCheck} onClick={() => void work(useOrganization)}>Use Privy organization</Button>}<Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import setup file</Button><Button variant="ghost" disabled={busy || !policy} onClick={() => void work(registerPolicy)}>Activate organization setup</Button></div>
               <input ref={policyFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importPolicy(file)); }} />
               {operation.kind === 'create_distribution' && <>
                 <p className="field-hint">Choose one or two available balances to cover this payment. Any money left over stays in your funds.</p>
