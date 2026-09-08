@@ -4,7 +4,7 @@
 
 ### Withdrawal release values
 
-Use these public values for this release. The user is configuring Netlify manually; local `.env` changes do not update Netlify.
+These production values were applied to the existing `null-protocol` site through the authenticated Netlify CLI API on 2026-09-08. Local `.env` changes do not automatically update Netlify.
 
 ```text
 VITE_POOL_ADDRESS=0x734da58C285D211e7C0ad904f522c221c982447E
@@ -15,11 +15,11 @@ NULL_POOL_ADDRESS=0x734da58C285D211e7C0ad904f522c221c982447E
 NULL_CHAIN_ID=11155111
 ```
 
-The `VITE_*` entries belong in Builds; the two `NULL_*` entries belong in Functions. Include the new public `deployment.json` and all four circuit artifacts through the normal build. Preserve the archived v0.1 manifest for existing history. See [withdrawal verification](WITHDRAWAL_VERIFICATION.md).
+The site's current plan does not support separate variable scopes. Production values use its default scopes; only explicitly public values have the `VITE_` prefix. Privy credentials retain server-only names and are never included in browser source. Deployer keys, recovery keys and private payroll settings were not transferred. Include the new public `deployment.json` and all four circuit artifacts through the normal build. See [withdrawal verification](WITHDRAWAL_VERIFICATION.md).
 
 Commit all reviewed source files, including the new `packages/ens` workspace package, app components, lockfile and public deployment manifests. Push to the existing Netlify site's configured production branch. The root `netlify.toml` builds `apps/web/dist` and bundles the organization Function. Keep private inputs, backups, credentials and `.artifacts` out of the commit.
 
-The frontend production build passes locally. **A Git deployment does not copy your local environment into Netlify.** As of 2026-09-08, the hosted organization API returns HTTP 503 `NULL_ORGANIZATION_CONFIG_REQUIRED`. Configure the server variables below in Netlify's Functions scope and redeploy before expecting organization approval to work. Keep the existing public `VITE_*` values in the Builds scope.
+The frontend production build passes locally. **A Git deployment does not copy your local environment into Netlify.** The required production server and public settings have now been copied and verified without logging their values. The earlier hosted organization API returned HTTP 503 because those server settings were missing; the release must return JSON 401 for an unauthenticated request after deployment. Real owner approval is a separate check.
 
 ## Optional CLI deployment
 
@@ -59,4 +59,4 @@ Verify after deployment:
 - Back up the local policy opening before registering it. Registration is a separate Sepolia transaction. The prior local signer policy does not authorize the new Privy wallet.
 - Complete a real owner-approved payment and save its transaction hashes. Neither the unsigned-request rejection test nor successful function bundling counts as a completed Privy workflow.
 
-The Netlify CLI was not logged in during preparation. Function bundling passed locally; deployed storage and owner approval remain unverified until these steps run.
+The Netlify CLI is authenticated and linked to the existing site, which tracks `Samarth208P/null` on `main`. Function bundling passed locally. An authenticated owner approval still needs to exercise deployed storage and the actual Privy signature flow.

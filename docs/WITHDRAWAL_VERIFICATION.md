@@ -38,4 +38,4 @@ Withdraw one full note at a time. The proof binds the destination, amount, chain
 
 The source note's membership and ownership are private proof inputs. Public withdrawals still expose the receiving address, amount and timing. Wallet reuse, gas funding, network metadata and a small anonymity set can correlate activity. Neither stealth addressing nor a relayer guarantees untraceability or zero risk. Use test funds only.
 
-Netlify remains user-managed. Its public pool, deployment block and Graph settings must match this release. The organization Function also requires server-only Privy settings and the new pool address. A real owner-approved financial flow remains a separate required submission check; see [Netlify instructions](NETLIFY_SUBMISSION.md).
+The Netlify release uses the verified pool, deployment block and Graph settings, with the required production Privy settings copied through its authenticated API. Only public configuration uses `VITE_`; local wallet and recovery keys were not transferred. A real owner-approved financial flow remains a separate required submission check; see [Netlify instructions](NETLIFY_SUBMISSION.md).

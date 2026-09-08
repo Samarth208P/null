@@ -6,7 +6,7 @@ Updated September 8, 2026. ENS, browser/CRE integration, build and deployment re
 
 Recommended three prize applications: **ENSv2, Privy and Chainlink**. The Graph remains the real discovery integration; using it does not require selecting its prize. **Do not yet claim a completed Privy-approved financial flow.** The ENS integration is live on Sepolia, while its latest UI source needs deployment. The complete Sepolia payment and withdrawal rehearsal passed with an isolated signer. Actual Privy-owner payment approval remains outstanding. CRE production-access approval is not required for the selected simulation-based category.
 
-The hosted site now serves the light design and the organization Function route. The Function returns **503 `NULL_ORGANIZATION_CONFIG_REQUIRED`**: it needs its server configuration. The local Netlify CLI is not logged in. A working function route is not evidence of working Privy approvals.
+The hosted site serves the light design and the organization Function route. Its previously missing server configuration has now been applied and verified through the authenticated Netlify CLI API. The release is linked to GitHub `main`. A configured function route is not evidence of a completed Privy-owner financial approval.
 
 ### Latest frontend and live checks — 2026-09-08
 
@@ -35,7 +35,7 @@ See [withdrawal verification](WITHDRAWAL_VERIFICATION.md), the [new deployment](
 | Proofs and full flow | Four genuine proof circuits; complete funded Sepolia flow including recipient withdrawal and approved treasury refund; all 0.1 test USDC returned | Isolated signer, not Privy owner approval; public entry and exit remain observable |
 | Proof worker | Shield proof through the production worker API's Node adapter accepted by deployed verifier | Supports prepared rehearsal; not a browser-wallet transaction |
 | Privy controls | Dedicated organization wallet and one-owner quorum verified live; unsigned raw-sign request rejected HTTP 401 | Signed owner approval still required |
-| Privy hosting | Function route now responds with JSON; prior bundling, shared approval storage, concurrency, expiry and HTTP routing checks passed | Live endpoint returns configuration-required 503; needs site access and server configuration |
+| Privy hosting | Function route returns JSON; bundling, shared approval storage, concurrency, expiry and HTTP routing checks passed; production settings now configured | Verify the new deployment returns unauthenticated 401; actual owner approval remains pending |
 | TypeScript/web | Workspace typechecks, production web build, 27 submission tests, six withdrawal tests and complete local proof flow | No security-audit claim |
 | Graph event subgraph | Live Studio v0.2.0 indexes the new pool without indexing errors | Client verifies accumulator roots and checks spent notes on chain |
 | Substreams | WASM/package build and two Rust tests pass; common NULL/ERC-5564 model and deterministic EntityChanges | Provider request returned Unauthenticated; Studio rejects SPS deployments as unsupported |
