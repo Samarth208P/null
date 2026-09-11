@@ -2,7 +2,7 @@
 
 NULL is an embeddable TypeScript payout toolkit. Your application supplies its interface, wallet connection, organization authorizer, and encrypted local recovery. NULL resolves ENS destinations, compiles encrypted entitlements, orchestrates proofs, discovers recipient allocations, and validates transaction outcomes. The web application is a reference integration, not a required destination for your users.
 
-**Current distribution:** unpublished workspace source packages. **Network:** Ethereum Sepolia v0.2; v0.3 verified locally. **Capacity:** larger logical jobs split into distributions of up to eight recipients. **Security:** unaudited testnet prototype. There is no hosted payout API, published npm release, drop-in React widget, or production SLA in this release.
+**Distribution:** the standalone npm developer preview is named `@samarth208p/null-payouts`; source builds use `pnpm pack:npm`. See [npm packaging and standalone imports](NPM_PACKAGE.md). The examples below use workspace imports; installed consumers replace `@null-protocol/payouts` with `@samarth208p/null-payouts` and use its `/sdk`, `/ens`, `/wallet`, and `/client` subpaths for the corresponding internal packages. **Network:** Ethereum Sepolia v0.2; v0.3 verified locally. **Capacity:** larger logical jobs split into distributions of up to eight recipients. **Security:** unaudited testnet prototype. There is no hosted payout API, drop-in React widget, or production SLA in this release.
 
 ## Run a real preparation
 

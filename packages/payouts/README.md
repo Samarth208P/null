@@ -2,7 +2,7 @@
 
 Embed private payouts in a web application with local keys and your own UI. This package composes the existing cryptographic SDK, ENSv2 integration, and live proof client. The reference app uses it for testnet preparation, approval, submission, and reconciliation.
 
-**Source-only developer preview.** This workspace package is private and has not been published to npm. Clone this repository and use a TypeScript/bundler workspace integration. Do not claim `npm install @null-protocol/payouts` works. Unaudited; Sepolia v0.2 and locally verified v0.3.
+**MIT-licensed developer preview.** Install the standalone registry package with `npm install @samarth208p/null-payouts@preview`. The source workspace keeps the private `@null-protocol/payouts` name; standalone imports use `@samarth208p/null-payouts` and its subpaths. Run `pnpm pack:npm` to build a local tarball containing compiled ESM, declarations and internal NULL modules. See [npm packaging](../../docs/NPM_PACKAGE.md). Unaudited; Sepolia v0.2 and locally verified v0.3.
 
 `./jobs` resolves and sends larger ENS payout lists as consecutive groups of at most eight, retaining confirmed progress and blocking retries while a result is unknown. `./withdrawals` plans an amount across private notes and coordinates whole/partial exits. Partial exits require the new v0.3 pool, which is not yet deployed publicly. Both job types are in-memory, not durable queues.
 

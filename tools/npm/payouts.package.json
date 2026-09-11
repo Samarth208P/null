@@ -1,0 +1,15 @@
+{
+  "name": "@samarth208p/null-payouts",
+  "version": "0.1.0-preview.1",
+  "description": "ENS-based private payout preparation, claims and transaction orchestration for Ethereum applications",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.16.0" },
+  "repository": { "type": "git", "url": "git+https://github.com/Samarth208P/null.git" },
+  "homepage": "https://github.com/Samarth208P/null#readme",
+  "bugs": { "url": "https://github.com/Samarth208P/null/issues" },
+  "keywords": ["ethereum", "ens", "payouts", "privacy", "typescript", "sepolia"],
+  "publishConfig": { "access": "public", "tag": "preview" },
+  "files": ["dist", "README.md", "INTEGRATION.md", "LICENSE"],
+  "sideEffects": ["./dist/prover/src/worker.js"]
+}

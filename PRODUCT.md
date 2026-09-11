@@ -34,7 +34,7 @@ The deployed v0.2 pool supports whole-note withdrawals. The new v0.3 source adds
 
 ## Integration availability
 
-`@null-protocol/payouts` is an unpublished workspace source SDK. It provides preparation, guarded approval/submission, explicit local or CRE compilation, multi-batch jobs and reconciliation. There is no hosted payout API or npm release yet. Wallet approvals and recovery prerequisites remain explicit; one Send action may still trigger multiple wallet prompts and transactions.
+The MIT-licensed npm developer preview is published as `@samarth208p/null-payouts@preview`. The internal workspace retains `@null-protocol/payouts`. It provides preparation, guarded approval/submission, explicit local or CRE compilation, multi-batch jobs and reconciliation. There is no hosted payout API. Wallet approvals and recovery prerequisites remain explicit; one Send action may still trigger multiple wallet prompts and transactions.
 
 The choice personalizes the interface; it does not grant organization membership. Remember the choice per authenticated account in this browser. A type change preserves the current in-memory session. Sign-out or a different authenticated account disposes of private workspace state. Authentication does not restore private profile keys; clearly offer encrypted recovery.
 

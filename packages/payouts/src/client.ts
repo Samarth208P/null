@@ -8,6 +8,7 @@ import { verifyCreResult } from './cre';
 
 export { NullLiveClient, SubmissionUncertainError, createEncryptedCheckpointStore } from '@null-protocol/client';
 export type { LiveClientOptions, DistributionOptions, BroadcastTransport, OperationOptions, ConfirmedOperation, ReconciliationResult } from '@null-protocol/client';
+export type * from '@null-protocol/client';
 
 export interface ApprovePayoutOptions extends Omit<DistributionOptions, 'compiled'> {
   /** Required explicit choice. Local CRE verifies equality, not execution provenance. */

@@ -2,6 +2,16 @@
 
 This is a development implementation, not an audited privacy guarantee. The complete local proof flow and adversarial withdrawal checks have run; see WITHDRAWAL_VERIFICATION.md for the exact evidence and live-test status. Live assertions require the matching deployed contracts, genuine ZK-enabled verifiers and intact client software.
 
+## Product requirement: hide the payer relationship and original payout amount
+
+The privacy target is that public observers cannot determine who paid a particular recipient or the recipient's original payout amount. This is a target, not a guarantee met by the current release. The payer and recipient necessarily know transaction information available to them; this target concerns outside observers.
+
+The encrypted allocation and global-accumulator claim hide the recipient allocation and specific source distribution from plaintext public inputs. An ENS profile contains public receiving keys, not a plaintext history of that person's claims. However, deposits identify a funding wallet and amount, transaction senders remain public, and v0.2 whole-note withdrawals expose the full received note amount. One funding source, matching amounts, prompt withdrawals or known/reused wallets can let an observer infer the relationship.
+
+The v0.3 partial-withdrawal circuit hides the original note amount while revealing the chosen withdrawal amount and a change commitment. It helps avoid an exact match for an individual partial exit, but it cannot eliminate timing, repeated-exit, funding-source or network correlation. It is currently verified locally, not deployed on the public v0.2 pool.
+
+Therefore the supported release description is encrypted allocations and hidden claim-source membership, with public entry/exit and correlation risks. A stronger claim that observers cannot identify the payer or original payout amount requires an explicit threat model, sufficient independent pool activity, analysis of submission/network metadata and withdrawal behavior, and independent privacy review. Padding alone does not create independent participants, and delaying transactions alone is not a privacy proof.
+
 | Data | Private-flow treatment |
 |---|---|
 | Names, email, employee references | Private sender references are absent from the protocol bundle. ENS names and their linked profiles are public; RPC providers can observe name lookups. |

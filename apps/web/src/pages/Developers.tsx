@@ -1,18 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, Code2, Copy } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, Code2 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import integrationGuideUrl from '../../../../docs/SDK_INTEGRATION.md?url';
+import { DeveloperCodeBlock as CodeBlock } from '../components/DeveloperCodeBlock';
+import { DeveloperDocs } from './DeveloperDocs';
+import skillUrl from '../../../../skills/null-payouts/SKILL.md?url';
 import './developers.css';
 
 const repository = 'https://github.com/Samarth208P/null';
-const quickstart = `git clone https://github.com/Samarth208P/null.git
-cd null
-corepack enable
-pnpm install --frozen-lockfile
-pnpm example:payouts`;
+const quickstart = 'npm install @samarth208p/null-payouts@preview';
 const snippet = `import {
   resolvePayoutRecipients, preparePayout,
-} from '@null-protocol/payouts';
+} from '@samarth208p/null-payouts';
 
 // Illustrative name, invoice and amount; use your own recipients.
 const recipients = await resolvePayoutRecipients(ens, [
@@ -29,16 +28,6 @@ function jump(id: string) {
   element?.scrollIntoView({ block: 'start' });
   element?.focus({ preventScroll: true });
 }
-function CodeBlock({ title, value }: { title: string; value: string }) {
-  const [copied, setCopied] = useState(false); const [error, setError] = useState('');
-  useEffect(() => { if (!copied) return; const timer = setTimeout(() => setCopied(false), 2000); return () => clearTimeout(timer); }, [copied]);
-  async function copy() {
-    try { await navigator.clipboard.writeText(value); setCopied(true); setError(''); }
-    catch { setError('Clipboard unavailable. Select and copy the code below.'); }
-  }
-  return <div className="developer-code"><div className="developer-code-heading"><span>{title}</span><button type="button" onClick={() => void copy()} aria-label={`Copy ${title}`}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? 'Copied' : 'Copy'}</button></div><pre tabIndex={0} aria-label={title}><code>{value}</code></pre><span className={error ? 'developer-copy-error' : 'sr-only'} role="status">{error || (copied ? 'Copied to clipboard.' : '')}</span></div>;
-}
-
 function PreparationExample() {
   const [name, setName] = useState('receive.nullpay2026.eth'); const [amount, setAmount] = useState('0.01');
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -71,14 +60,17 @@ function PreparationExample() {
 }
 
 export function Developers() {
-  useEffect(() => { document.title = 'NULL — Private payouts for your app'; }, []);
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => { const change = () => setHash(window.location.hash); window.addEventListener('hashchange', change); return () => window.removeEventListener('hashchange', change); }, []);
+  const route = hash.startsWith('#/developers/') ? hash.split('/')[2] : undefined;
+  useEffect(() => { if (!route) document.title = 'NULL — Private payouts for your app'; }, [route]);
   return <div className="developer-page">
     <a className="skip-link" href="#developer-content" onClick={event => { event.preventDefault(); jump('developer-content'); }}>Skip to content</a>
-    <header className="developer-header"><a className="brand" href="#/developers" aria-label="NULL developer home"><Logo size={30} /><span>NULL</span></a><nav aria-label="Developer navigation"><button onClick={() => jump('start-building')}>Quickstart</button><a href={integrationGuideUrl} download="NULL-integration-guide.md">Integration guide<ArrowDown size={14} /></a><a href="#/demo">Reference app<ArrowRight size={14} /></a></nav></header>
-    <main id="developer-content" tabIndex={-1}>
-      <section className="developer-intro"><div><h1>Private payouts.<br />Inside your app.</h1><p>Give your users a way to send and receive private entitlements. Bring your interface and wallet connection. NULL handles ENS destinations, encrypted batches, and the path to a provable claim.</p><div className="button-row"><button className="button button-primary" onClick={() => jump('start-building')}>Start building<ArrowDown size={16} /></button><button className="button button-secondary" onClick={() => jump('try-sdk')}>Try preparation<Code2 size={16} /></button></div><p className="developer-availability">TypeScript source SDK · Ethereum Sepolia · Unaudited</p></div><CodeBlock title="Prepare a payout · TypeScript" value={snippet} /></section>
+    <header className="developer-header"><a className="brand" href="#/developers" aria-label="NULL developer home"><Logo size={30} /><span>NULL</span></a><nav aria-label="Developer navigation"><a href="#/developers/quickstart">Docs & integrations</a><a href="#/developers/faq">Q&A</a><a href="#/developers/ai">AI skill<ArrowDown size={14} /></a><a href="#/demo">Reference app<ArrowRight size={14} /></a></nav></header>
+    {route ? <DeveloperDocs route={route} /> : <main id="developer-content" tabIndex={-1}>
+      <section className="developer-intro"><div><h1>Private payouts.<br />Inside your app.</h1><p>Give your users a way to send and receive private entitlements. Bring your interface and wallet connection. NULL handles ENS destinations, encrypted batches, and the path to a provable claim.</p><div className="button-row"><a className="button button-primary" href="#/developers/quickstart">Start building<ArrowRight size={16} /></a><button className="button button-secondary" onClick={() => jump('try-sdk')}>Try preparation<Code2 size={16} /></button></div><p className="developer-availability">npm developer preview · MIT · Ethereum Sepolia</p></div><CodeBlock title="Prepare a payout · TypeScript" value={snippet} /></section>
       <section className="developer-contract" aria-label="Integration responsibilities"><div><h2>Your application owns</h2><p>The interface, payer confirmation, wallet authorization, and encrypted local recovery. Sponsor transaction gas through your backend or let organizations pay with their wallets.</p></div><div><h2>NULL provides</h2><p>Required ENSv2 destinations, encrypted batches for larger payout lists, proof orchestration, recipient discovery, and transaction reconciliation. Your users stay in your product.</p></div></section>
-      <section className="developer-start" id="start-building" tabIndex={-1}><div><h2>A working source integration.</h2><p>Clone the workspace and run a read-only preparation against a live ENS name. Then use the typed integration example to connect your own screens.</p><p>Requires Node.js 22.16+ and pnpm 11.9.0. Packages are workspace source packages; this SDK is not published to npm.</p><a className="developer-doc-link" href={`${repository}/tree/main/apps/payout-example`}>Open the integration example<ArrowUpRight size={15} /></a></div><CodeBlock title="Run from a fresh checkout" value={quickstart} /></section>
+      <section className="developer-start" id="start-building" tabIndex={-1}><div><h2>One package. Your application.</h2><p>Install the TypeScript SDK, connect your wallet and recovery flow, and keep users inside your product.</p><p>Start with the browser guide, find an API, or give your coding assistant the integration skill. Node.js 22.16+ for Node use; local proving requires a browser bundler.</p><div className="button-row"><a className="developer-doc-link" href="#/developers/quickstart">Read the integration guide<ArrowRight size={15} /></a><a className="developer-doc-link" href={skillUrl} download="SKILL.md">Download SKILL.md<ArrowDown size={15} /></a></div></div><CodeBlock title="Install from npm" value={quickstart} /></section>
       <PreparationExample />
       <section className="developer-lifecycle" aria-labelledby="lifecycle-heading"><h2 id="lifecycle-heading">Keep every step explicit.</h2><ol>{[
         ['Resolve & confirm', 'ENS names resolve to public payment keys. Show the destination to the payer before preparation.'],
@@ -88,6 +80,6 @@ export function Developers() {
         ['Discover & claim', 'Recipients scan with local keys, claim entitlements, and choose a separate public withdrawal.'],
       ].map(([title, description]) => <li key={title}><h3>{title}</h3><p>{description}</p></li>)}</ol></section>
       <section className="developer-boundaries"><h2>Know the boundaries before integrating.</h2><div><p>Unaudited and testnet-only. Larger lists use consecutive batches of up to eight recipients; they can partially complete. New chosen-amount withdrawals with private change passed a local real-proof test. They require the v0.3 pool, which is not yet deployed publicly.</p><p>ENS profiles, deposits and withdrawals are public. Wallets, exit amounts, timing and network metadata can reveal relationships. CRE evidence is local simulation without remote attestation. A Privy owner-approved financial payment remains an outstanding demonstration.</p></div><div className="button-row"><a className="developer-doc-link" href={`${repository}/blob/main/docs/PRIVACY_GUARANTEES.md`}>Privacy boundaries<ArrowUpRight size={15} /></a><a className="developer-doc-link" href={`${repository}/blob/main/docs/SUBMISSION_READINESS.md`}>Implementation evidence<ArrowUpRight size={15} /></a></div></section>
-    </main><footer className="developer-footer"><span>NULL · Private payout infrastructure</span><a href={repository}>Source on GitHub<ArrowUpRight size={14} /></a><a href="#/demo">Open reference app<ArrowRight size={14} /></a></footer>
+    </main>}<footer className="developer-footer"><span>NULL · Private payout infrastructure</span><a href={integrationGuideUrl} download="NULL-integration-guide.md">Download guide<ArrowDown size={14} /></a><a href={repository}>Source on GitHub<ArrowUpRight size={14} /></a><a href="#/demo">Open reference app<ArrowRight size={14} /></a></footer>
   </div>;
 }

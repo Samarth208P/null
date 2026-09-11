@@ -8,6 +8,9 @@
     "node": ">=22.16.0"
   },
   "scripts": {
+    "build:npm": "node tools/build-npm.mjs",
+    "test:npm": "pnpm build:npm && node tools/test-npm.mjs",
+    "pack:npm": "pnpm build:npm && npm pack ./dist/npm/payouts --pack-destination ./dist/npm",
     "test:payouts": "pnpm --filter @null-protocol/payouts test",
     "test:partial-withdrawal": "node --import tsx --test packages/sdk/src/partial-withdrawal.test.ts",
     "test:flow-v3": "node --import tsx tools/test-payment-flow-v3.mts",

@@ -15,7 +15,7 @@ const ReferenceApp = lazy(() => import('./ReferenceApp'));
 function Root() {
   const [hash, setHash] = useState(window.location.hash);
   useEffect(() => { const onHash = () => setHash(window.location.hash); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash); }, []);
-  if (['', '#/', '#/developers'].includes(hash)) return <Developers />;
+  if (['', '#/'].includes(hash) || hash === '#/developers' || hash.startsWith('#/developers/')) return <Developers />;
   return <Suspense fallback={<EntryLayout><h1>Opening the reference app</h1><p role="status">Loading the payment integration…</p></EntryLayout>}><ReferenceApp /></Suspense>;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><Root /></ErrorBoundary></StrictMode>);
