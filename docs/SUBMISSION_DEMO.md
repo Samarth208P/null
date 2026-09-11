@@ -1,30 +1,50 @@
-# NULL — 3-minute demo plan
+# NULL — human-narrated demo plan
 
-Recommended partner entries: ENSv2, Privy and Chainlink. Record only completed actions. ENS setup/permission transactions and integrated CRE simulation are verified; the live Privy payment remains pending. Keep private payroll inputs, recovery files and credentials off-screen.
+Aim for 3:15, using actual results. Record a 2–4 minute video at 720p or higher with your own spoken narration; do not use AI narration or speed up footage. Confirm the deadline and final upload constraints in the [official event requirements](https://ethglobal.com/events/ethonline2026/info/details). Keep private exports, backup contents, passwords and credentials off-screen.
 
-## 0:00–0:25 — Product
-Show real sign-in, the organization overview and recipient inbox.
-“NULL is a private payment workspace for organizations and recipients. It publishes fixed-size encrypted delivery envelopes; recipients discover and claim their own entitlements locally.”
-State that this deployment uses Sepolia test USDC and supports separate public withdrawals from private notes.
+## 0:00–0:25 — The primitive
 
-## 0:25–1:00 — ENSv2
-Show `inbox.nullpay2026.eth` in the recipient's name settings. Once the user has saved their backup and signed publication, show the name resolving to their Payment ID. In a new organization payment, enter that name and confirm its destination.
-“ENSv2 lets this Privy wallet update one payment record without controlling the entire resolver. NULL checks the name's owner, resolver and profile again before approval, so a changed destination needs review.”
-Use the actual scoped-permission and revocation transactions from `deployments/ens-sepolia.json` as supporting evidence. The `receive`/`pay` verification names are not the user's funded account.
+“Public business payouts expose the payment graph. NULL turns one funded batch into individually claimable private entitlements. Payroll is our demonstration: ENS provides the receiving inbox, Chainlink compiles the encrypted batch, and Privy controls organization approval.”
 
-## 1:00–1:40 — Chainlink
-Prepare a small payment, show its CRE check, export privately, run the displayed CLI command, and import the result. Show review unlocking only for the matching result.
-“This is the real CRE CLI simulator, using our confidential handler and shared payment compiler. We are not claiming remote enclave execution or attestation.”
+Show the real app. State Sepolia test tokens, public deposits and withdrawals, and an unaudited prototype.
 
-## 1:40–2:25 — Privy
-Once the real owner flow works, show Privy authentication, the dedicated organization wallet and owner approval of the exact intent. Show the confirmed Sepolia transaction.
-“Privy enforces our owner quorum before the wallet authorizes this payment. NULL binds approval to its chain, pool and encrypted batch.”
-An identity-only signature obtains the public key; it is not a payment. Never present the isolated rehearsal signer as Privy.
+## 0:25–1:05 — ENS is required
 
-## 2:25–2:45 — Recipient
-Once funded, show live Graph indexing, local recipient discovery, a confirmed claim, then Withdraw from Balance. Show the receiving wallet's token balance increasing by the exact reviewed amount. Explain that names simplify delivery setup while encrypted envelopes keep allocations private, and that withdrawal exposes the destination and amount.
+Show the recipient's saved backup and linked `inbox.nullpay2026.eth` only after the owner has actually published it. Show a new payment refusing a raw Payment ID, then resolve and confirm the recipient's name.
 
-## 2:45–3:00 — Evidence
-Show public source, deployment manifest, transaction links and recovery verification. State testnet-only, public deposit and withdrawal boundaries, local CRE simulation and no production audit.
-Attach a two-to-four-minute video. Link sponsor entries directly to ENS record permissions, workflow code, Privy controls and actual execution evidence. Disclose pre-existing work under the correct hackathon pool. Do not claim completed Privy payments before demonstrating them. Graph continues to support the product without consuming a selected partner-prize slot.
+“Every recipient needs an ENSv2 payment inbox. The resolver maps a public name to public payment keys, so the sender can encrypt an entitlement. A delegated wallet can update one text record on one name. A changed owner, resolver, or profile stops the payment for review.”
 
+Show one scoped permission and its revocation evidence. Explain that revoking editor access stops that editor changing future routing; it does not erase the profile or revoke already-issued funds. Names and linked profiles are public. Do not fund the `receive`/`pay` verification profiles as a substitute for the recipient's account.
+
+## 1:05–1:45 — CRE contributes to this payment
+
+Leave the CRE check enabled. Export the draft privately, show the actual CLI completion, import a mismatched result to demonstrate rejection, then import the matching public result and show review unlocking.
+
+“The confidential handler fetches authenticated payroll and compiles eight encrypted envelopes. This is successful CRE CLI local simulation; we have not deployed or attested a remote enclave.”
+
+Use the exact application export, not just a disconnected hello-world workflow. Prepare prerequisites before recording so the video can show real completed states without sped-up proof generation.
+
+## 1:45–2:30 — Real Privy control
+
+This scene remains blocked until the owner completes it. Show the dedicated organization wallet, exact-intent approval, and confirmed distribution transaction.
+
+“Privy enforces a one-owner, threshold-one quorum. The wallet authorizes this exact chain, pool, and encrypted batch. NULL rechecks ENS destinations before approval and submission.”
+
+Do not call it multi-signer or present the isolated rehearsal signer as Privy. An identity-only challenge is setup, not payment execution. If the actual financial action is still unavailable, say so explicitly and do not claim a complete Privy payment demo.
+
+## 2:30–3:00 — Discover, claim, withdraw
+
+Show live indexed discovery, the recipient's claim, and the confirmed withdrawal with explorer links. Explain that claims prove membership against the global accumulator without naming the source batch, while withdrawals publicly reveal the destination and amount. Existing funds remain accessible with recovery keys even if the ENS name expires.
+
+## 3:00–3:15 — Evidence and close
+
+Show the source repository, canonical deployment manifest, CRE receipt, and actual Privy-approved transaction. Close with: “One funded batch, private entitlements, and recipient-controlled recovery.” Keep testnet, public entry/exit, local simulation and audit boundaries visible.
+
+## Before upload
+
+- Confirm the video is 2–4 minutes with human narration, at least 720p, and no sped-up footage.
+- Use the same actual recipient and payment across sponsor scenes wherever possible.
+- Verify the hosted app includes the ENS flow and the organization API.
+- Link sponsor claims to source and receipts; include the human-reviewed [build provenance disclosure](BUILD_PROVENANCE.md).
+- Ensure new source changes are public. A CLI deploy alone does not push Git.
+- Target ENSv2, Privy B2B, and Chainlink Confidential Workflow. Do not represent prize eligibility, finalist selection, or winnings as guaranteed.

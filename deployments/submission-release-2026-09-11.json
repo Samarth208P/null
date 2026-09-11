@@ -1,0 +1,47 @@
+{
+  "verifiedAt": "2026-09-11T08:59:05.748Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa3c2a2f2baaeb953c29c25",
+  "deployUrl": "https://6aa3c2a2f2baaeb953c29c25--null-protocol.netlify.app",
+  "ready": true,
+  "sourceBaseCommit": "24c3cdd257e34ec4976f3875763968a1c675a35b",
+  "workingTreeDeployment": true,
+  "sourcePushed": false,
+  "checkedAssets": [
+    {
+      "marker": "Set up your ENS inbox",
+      "asset": "index-EqJAhJTR.js",
+      "sha256": "a14dc24b46729b29c0fb98732da2b7e3be645b0ef3c311ab31cb8d3c748cbf25"
+    },
+    {
+      "marker": "ENS payment name",
+      "asset": "index-EqJAhJTR.js",
+      "sha256": "a14dc24b46729b29c0fb98732da2b7e3be645b0ef3c311ab31cb8d3c748cbf25"
+    },
+    {
+      "marker": "Every recipient needs a confirmed ENS payment name",
+      "asset": "index-EqJAhJTR.js",
+      "sha256": "a14dc24b46729b29c0fb98732da2b7e3be645b0ef3c311ab31cb8d3c748cbf25"
+    },
+    {
+      "marker": "Link my Payment ID",
+      "asset": "PaymentNameManager-DD4HFkwD.js",
+      "sha256": "af29deef461fb93910b112da6ff9b2fed6145aae0a833ba8e7974b9a6406cc01"
+    }
+  ],
+  "circuitsVerified": [
+    "shield",
+    "create_distribution",
+    "claim",
+    "withdraw"
+  ],
+  "pool": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "organizationStatus": 401,
+  "organizationCode": "NULL_SESSION_REQUIRED",
+  "functionHealth": {
+    "status": "configured",
+    "approvalExecution": "not-tracked"
+  },
+  "untrustedOriginStatus": 403,
+  "privyOwnerFinancialActionVerified": false
+}

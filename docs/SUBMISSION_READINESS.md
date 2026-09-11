@@ -1,93 +1,60 @@
 # ETHOnline 2026 submission readiness
 
-Updated September 8, 2026. ENS, browser/CRE integration, build and deployment responses were checked today; the earlier proof and sponsor checks below remain separately identified. No commit was made by this integration work. This is a testnet prototype, not an audited production payment system.
+Updated September 11, 2026. This is an unaudited Sepolia prototype. Successful source checks, local simulation, historical transaction receipts, and real owner actions are recorded separately.
 
 ## Current decision
 
-Recommended three prize applications: **ENSv2, Privy and Chainlink**. The Graph remains the real discovery integration; using it does not require selecting its prize. **Do not yet claim a completed Privy-approved financial flow.** The ENS integration is live on Sepolia, while its latest UI source needs deployment. The complete Sepolia payment and withdrawal rehearsal passed with an isolated signer. Actual Privy-owner payment approval remains outstanding. CRE production-access approval is not required for the selected simulation-based category.
+Target **ENS — Best Use of ENSv2**, **Privy — Best B2B financial product**, and **Chainlink — Best Confidential Workflow**. These are submission targets, not a claim of qualification or predicted wins. The Graph remains the discovery integration.
 
-The hosted site serves the light design and the organization Function route. Its previously missing server configuration has now been applied and verified through the authenticated Netlify CLI API. The release is linked to GitHub `main`. A configured function route is not evidence of a completed Privy-owner financial approval.
+The critical ENS bypass is fixed in the live application: each new distribution recipient needs a confirmed Sepolia name and supported ENSv2 Permissioned Resolver. Raw IDs, empty name lists, incomplete name coverage, missing profiles, expired names, and changed owner/resolver/profile states block progression. Rechecks run before preparation, Privy approval, imported approval, and submission. The compiler uses the profiles from the confirmed names.
 
-### Latest frontend and live checks — 2026-09-08
+ENS is an application requirement, not an onchain constraint. The immutable pool and cryptographic SDK remain identity-agnostic. Recovery, claims, and withdrawal do not require an active ENS name. Names are public and their association with public profile keys is public; no name-to-batch roster is sent to the chain or Privy approval API.
 
-- Simplified sign-in, inbox, ENS setup, payment preparation, balances and settings. The inbox uses one receive panel, one backup row and explicit scan status; advanced details stay collapsed. A linked ENS name can be copied directly after a fresh lookup. Public-deposit, public-name, backup and public-withdrawal notices remain at the relevant actions.
-- Removed the sample activity from the testnet workspace and the Help instructions for an unavailable practice-mode switch. New deposits start with an empty amount.
-- Inbox scans ignore and erase stale results after identity changes or unmounting, and prevent overlapping scans.
-- Browser checks covered eleven screens/states at desktop 1440px and mobile 390px, with no page errors or horizontal overflow. Live ENS resolution, publication consent, encrypted preparation, the CRE review gate and Graph-backed inbox scanning passed. These checks use an explicit test-only session provider; they do not sign in as or approve for the Privy owner.
-- The new v0.2 pool completed the funded deposit → distribution → discovery → claim → withdrawal → treasury refund flow on Sepolia with real proofs. All 0.1 test USDC returned; the pool ended at zero. See [public receipts](../deployments/payment-flow-sepolia-v2.json).
-- ENS check at 06:07 UTC: primary and alias resolve; editor access is revoked; the Privy wallet owns `inbox.nullpay2026.eth` and passes the scoped write simulation. Its recipient Payment ID remains unpublished.
+## September 11 evidence
 
-See [Netlify deployment requirements](NETLIFY_SUBMISSION.md). Committing and deploying the frontend does not supply missing Function secrets. No Git commit or Netlify deployment was made. The subsequent explicitly authorized v0.2 contract deployment and rehearsal are recorded below; no additional ENS transaction was sent.
-
-## Withdrawal release — verified
-
-See [withdrawal verification](WITHDRAWAL_VERIFICATION.md), the [new deployment](../deployments/11155111-withdrawals-v2.json) and [confirmed full-flow receipts](../deployments/payment-flow-sepolia-v2.json). Recipient funds can be recovered from either the original Payment ID keys or a saved funds checkpoint. Both routes exclude withdrawn notes. A fresh CRE CLI simulation passed against the new pool after one transient organization-authentication error. Remote TEE deployment and real Privy-owner financial approval remain separate boundaries.
-
-## Evidence
-
-| Component | Verified | Boundary |
+| Check | Result | Boundary |
 | --- | --- | --- |
-| UI | Shared light Soft Outline/neumorphic design, supplied logo, subtle motion; eleven desktop/mobile screen and state checks pass | Test harness uses simulated sessions |
-| ENSv2 | Real namespace, subregistry, Permissioned Resolver, record publishing/rotation, aliases, scoped grants and revocation; 19 confirmed ENS setup/permission transactions including Privy subname assignment | Sepolia beta; verification profile is separate from the user's unpublished profile |
-| ENS + Privy | Existing embedded wallet owns `inbox.nullpay2026.eth`, holds one-name/one-key record permission, and passes a write simulation | User must consent and sign to publish their Payment ID; this is not a completed financial transfer |
-| ENS + CRE | Live browser ENS resolution → exact recipient confirmation → encryption → actual CRE CLI → reject stale result → review | Test-only session provider; live ENS RPC and real CRE simulator; no payment broadcast |
-| CRE product flow | Browser draft export → real CRE CLI simulation → stale-output rejection → exact-output import → review unlocked | Local simulation, no remote TEE execution or attestation |
-| Proofs and full flow | Four genuine proof circuits; complete funded Sepolia flow including recipient withdrawal and approved treasury refund; all 0.1 test USDC returned | Isolated signer, not Privy owner approval; public entry and exit remain observable |
-| Proof worker | Shield proof through the production worker API's Node adapter accepted by deployed verifier | Supports prepared rehearsal; not a browser-wallet transaction |
-| Privy controls | Dedicated organization wallet and one-owner quorum verified live; unsigned raw-sign request rejected HTTP 401 | Signed owner approval still required |
-| Privy hosting | Function route returns JSON; bundling, shared approval storage, concurrency, expiry and HTTP routing checks passed; production settings now configured | Verify the new deployment returns unauthenticated 401; actual owner approval remains pending |
-| TypeScript/web | Workspace typechecks, production web build, 27 submission tests, six withdrawal tests and complete local proof flow | No security-audit claim |
-| Graph event subgraph | Live Studio v0.2.0 indexes the new pool without indexing errors | Client verifies accumulator roots and checks spent notes on chain |
-| Substreams | WASM/package build and two Rust tests pass; common NULL/ERC-5564 model and deterministic EntityChanges | Provider request returned Unauthenticated; Studio rejects SPS deployments as unsupported |
+| Workspace TypeScript | All 15 workspaces passed | Static checks |
+| Submission tests | 29 passed, including mandatory ENS coverage and destination-change rejection | Unit/service tests, not an audit |
+| Withdrawal and domains | Six withdrawal tests and one domain-parity test passed | No new funded transaction |
+| Production web build and hosting | Passed; production release verified at 08:59 UTC | Exact ENS asset hashes and all four circuit checksums match; API returns JSON 401 |
+| ENS live status | Names resolve; editor revoked; Privy wallet owns its inbox name and can simulate a scoped record write | Recipient profile remains unpublished; no ENS transaction sent in this run |
+| Privy live controls | Configured wallet/quorum verified; unsigned raw-sign request rejected HTTP 401 | No actual owner-approved financial action |
+| CRE CLI | Failed credential refresh HTTP 500, then passed after user browser login | [Fresh synthetic receipt](../deployments/cre-simulation-2026-09-11.json); local simulation only |
+| ENS → browser → CRE → review | Actual name resolution, encrypted draft export, CRE CLI, stale-result rejection, exact-result import and review passed | [Browser-run receipt](../deployments/cre-ens-browser-2026-09-11.json); test-only session provider, no Privy signature or payment |
+| Desktop/mobile UI | 1440px and 390px: required inbox setup, publication consent, raw-ID rejection, unconfirmed-name rejection and discovery availability passed; no page errors/overflow | Local test harness; no claim of live owner login |
 
-Public context: Ethereum Sepolia (11155111), pool `0x734da58C285D211e7C0ad904f522c221c982447E`; [event subgraph](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.2.0), [hosted app](https://null-protocol.netlify.app/). The latest ENS frontend source has not been deployed by this work.
+The CLI log's embedded display timestamp differs from the host UTC timestamp; receipt `startedAt`/`finishedAt` fields record host UTC. Do not treat the simulator log prefix as an independent trusted clock.
+
+Historical full-flow evidence remains in [payment-flow-sepolia-v2.json](../deployments/payment-flow-sepolia-v2.json): genuine proofs, deposit → distribution → discovery → claim → withdrawal → treasury refund, with 0.1 test USDC returned. This was an isolated signer rehearsal. It does not establish a Privy-approved payment.
+
+## Hosted release
+
+Production deployment `6aa3c2a2f2baaeb953c29c25` passed verification at **2026-09-11 08:59 UTC**. The [release evidence](../deployments/submission-release-2026-09-11.json) records matching local/hosted ENS assets, all four circuit checksums, the canonical pool manifest, JSON `401 NULL_SESSION_REQUIRED`, JSON function health, and rejected foreign origins. The first asset-only attempt omitted the function because of a relative path; the verified replacement includes it. Use the corrected absolute-path command in [Netlify instructions](NETLIFY_SUBMISSION.md).
+
+This was a working-tree deployment based on commit `24c3cdd`; no commit or Git push was made. Deployment does not publish the modified source to GitHub. Ensure the exact demonstrated source is pushed before submitting.
+
+## Remaining submission gates
+
+1. Sign in as the actual Privy recipient. Restore or save its encrypted NULL backup, explicitly consent, and publish its Payment ID under `inbox.nullpay2026.eth`. That wallet owns the name; its profile is not published yet.
+2. In the organization workspace, use **Use Privy organization** to obtain the signer public key via an identity-only approval. Back up the policy opening, register it, then fund and complete an actual owner-approved payment to the recipient's confirmed ENS name. Record the distribution, claim and withdrawal hashes. The identity signature alone is not a financial action.
+3. Record the final human-narrated demo and add its link. No final video has been verified. Follow [the demo plan](SUBMISSION_DEMO.md).
+4. Review [AI and build provenance](BUILD_PROVENANCE.md), confirm event-period contributions/track, and publish the exact source demonstrated.
+
+The organization service health response is a configuration probe. It now reports `approvalExecution: "not-tracked"` instead of the misleading fixed `approvalExecuted: false`. Use the actual owner signature and confirmed matching transaction as evidence. Do not infer historical approval completion or absence solely from `/health`.
 
 ## Reproduce
 
 ```sh
 pnpm check
 pnpm test:submission
+pnpm test:withdrawal
+pnpm test:domains
 pnpm build
-pnpm proofs:check
-pnpm cre:simulate
-pnpm rehearsal:plan
 pnpm ens:status
+pnpm cre:simulate
 ```
 
-The proof check uses synthetic witnesses and calls deployed verifiers read-only. The rehearsal plan broadcasts nothing. The separate `tools/rehearse-withdrawal-sepolia.mts` completed the authorized 0.1 test USDC round trip. Deployment plus rehearsal cost 0.060963962483533119 test ETH, below the explicitly reallocated 0.065 combined cap. It seals recovery material locally and saves signed transactions before broadcast. Never blindly rerun after uncertainty; preserve the existing journal.
+For the integrated CRE demonstration, leave the CRE check enabled, export a private draft, run `pnpm cre:simulate --input "PATH_TO_PRIVATE_INPUT.json"`, and import the exact result into that draft. Never publish the private export, batch entropy, recovery files or credentials. Result equality is not remote provenance or attestation.
 
-For the integrated CRE demo, create a testnet payment, keep the CRE checkbox enabled, export its private input, run `pnpm cre:simulate --input "PATH_TO_PRIVATE_INPUT.json"`, and import payment-result.json from the printed directory. Keep inputs private. Only sanitized logs/receipts and public encrypted results belong in evidence. Exact-output matching checks integrity against the local draft; it does not cryptographically authenticate file provenance.
-
-## Chainlink — Best Confidential Workflow
-
-[Official requirements](https://ethglobal.com/events/ethonline2026/prizes/chainlink) accept successful CLI simulation or live deployment. NULL uses handlerInTee and its real shared payroll compiler; output now participates in the actual review path. Record the flow and CLI completion log. State that confidential deployment remains pending. The separate Continuity upgrade prize has different requirements; its mandatory onchain change is not a prerequisite of this category.
-
-## ENS — Best Use of ENSv2
-
-[Official requirements](https://ethglobal.com/events/ethonline2026/prizes/ens) require a functional Sepolia ENSv2 integration that is central to the product. NULL uses the hierarchical registry and `authorizeTextRoles` to let a Privy wallet manage only its public payment profile, plus alias-aware Universal Resolver reads. Names drive the actual encrypted-payment preparation path. The integration blocks changed destinations and checks again before approval/submission. This goes beyond displaying a name beside an address.
-
-See [ENS implementation and demo instructions](ENS_INTEGRATION.md) and [confirmed transaction evidence](../deployments/ens-sepolia.json). Demonstrate a recipient linking their own saved profile, an organization paying by name, and record access/revocation. Do not claim that the isolated ENS verification allocation was a funded onchain payment.
-
-## Privy — Best B2B financial product
-
-[Official requirements](https://ethglobal.com/events/ethonline2026/prizes/privy) require a Privy wallet, functional business workflow and real control. Dedicated wallet `0x6567226D425c423b1A5765384Ae343aE5FDeB1d1` uses the owner's quorum rather than an unsupported raw-sign policy rule. Exact wallet, entity, quorum membership/threshold and absence of bypass signers are rechecked. Existing policy-based configurations remain strict.
-
-Follow [Netlify setup](NETLIFY_SUBMISSION.md). Sign in as the actual owner, use the identity-only approval to obtain its public key, back up and register the local policy opening, then complete a real payment approval. Do not describe an isolated rehearsal signer as Privy. Best Financial Flow also requires a completed generally available Privy financial action.
-
-## The Graph — Composable or Standardized products
-
-Retained as an integration. This prize is not one of the recommended three while ENS, Privy and Chainlink are selected. The additional work below matters only if choosing to replace a selected prize with The Graph.
-
-[Official requirements](https://ethglobal.com/events/ethonline2026/prizes/the-graph) require meaningful composition/standardization and live provider data. A single custom event subgraph is insufficient by itself. The reusable module/shared NULL/ERC-5564 model exists, but live execution and consumption need evidence.
-
-Graph Studio rejected SPS deployment because that hosting path is no longer supported. The event subgraph remains intact. The documented Sepolia Substreams endpoint returned Unauthenticated. Follow [standalone instructions](../substreams/private-payments/README.md), privately configure a provider credential, and demonstrate a bounded live run plus reusable consumer. Never reuse the Studio deploy key as a Substreams token or present packaging as live composition.
-
-## Final delivery
-
-1. Deploy the ENS frontend; finish the organization Function's server settings and verify the authenticated API.
-2. Sign in to the existing Privy recipient wallet, restore/save its NULL backup, and publish the Payment ID under `inbox.nullpay2026.eth` with the app's explicit consent.
-3. Complete actual owner-approved payment/recovery and retain transaction hashes plus live Graph discovery evidence.
-4. Record ENS scoped access and the integrated CRE simulation. Use the [demo script](SUBMISSION_DEMO.md), public source and a two-to-four-minute video. Disclose pre-existing work and event-period changes for the appropriate ETHGlobal pool.
-
-Ignored local evidence includes .artifacts/proof-validation.log, .artifacts/cre-ui-simulation.log, .artifacts/cre-before-desktop.png, .artifacts/cre-verified-desktop.png, entry screenshots and cre-starter/.artifacts/payment-*/simulation-receipt.json. These are not automatically public submission artifacts. Do not upload private payroll inputs, backups, .env or credential files.
-
+Official requirements checked September 11: [ENSv2](https://ethglobal.com/events/ethonline2026/prizes/ens) requires a central functional ENSv2 integration; [Privy](https://ethglobal.com/events/ethonline2026/prizes/privy) requires a functional business workflow with a real Privy control; [Chainlink](https://ethglobal.com/events/ethonline2026/prizes/chainlink) accepts successful confidential-workflow CLI simulation. See [event rules](https://ethglobal.com/events/ethonline2026/info/details). No probability of winning is asserted.

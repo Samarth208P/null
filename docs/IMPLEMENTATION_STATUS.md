@@ -1,4 +1,6 @@
-# Implementation status
+# Implementation status — historical September 6 snapshot
+
+**This document preserves the September 6 development record. It is not current readiness.** Later proof execution, withdrawals, ENS, CRE simulation, tests, and hosting supersede its then-pending items. Use [September 11 submission readiness](SUBMISSION_READINESS.md) for current claims and evidence.
 
 This is a development evidence record for the current repository, dated **6 September 2026**. Source code, successful compilation, and a working external deployment are different milestones. **Tests were deliberately skipped at the user's request.** No behavioral, cryptographic, security, integration, or end-to-end validation is implied by the build results below.
 

@@ -37,7 +37,7 @@ export function normalizePaymentName(input: string): string {
     const name = normalize(input.trim());
     if (!name.includes('.') || packetToBytes(name).length > 255) throw new Error();
     return name;
-  } catch { throw new PaymentNameError('invalid', 'Enter a complete ENS name, such as your-name.eth, or paste a NULL Payment ID. Wallet addresses do not work here.'); }
+  } catch { throw new PaymentNameError('invalid', 'Enter a complete ENS name, such as your-name.eth. Wallet addresses do not work here.'); }
 }
 export function canonicalPaymentProfile(value: string): string {
   try { return parsePrivacyProfile(value.trim()).stealthMetaAddress; }
@@ -46,6 +46,26 @@ export function canonicalPaymentProfile(value: string): string {
 export function profileFingerprint(profile: string): Hex { return keccak256(stringToHex(canonicalPaymentProfile(profile))); }
 export function paymentDestination(input: string): { kind: 'profile'; profile: string } | { kind: 'name'; name: string } {
   return input.trim().startsWith('st:eth:') ? { kind: 'profile', profile: canonicalPaymentProfile(input) } : { kind: 'name', name: normalizePaymentName(input) };
+}
+/** Required receiving identity for the live NULL application. Raw IDs remain a crypto format. */
+export function requiredPaymentNames(rows: readonly { destination?: string; profile: string; paymentName?: PaymentNameSnapshot }[]): PaymentNameSnapshot[] {
+  if (rows.length < 1 || rows.length > 8) throw new PaymentNameError('invalid', 'Add between one and eight ENS recipients.');
+  return rows.map((row, index) => {
+    const destination = paymentDestination(row.destination ?? row.profile);
+    if (destination.kind !== 'name') throw new PaymentNameError('missing', `Recipient ${index + 1} needs an ENS payment name. Ask them to link their Payment ID in their NULL inbox.`);
+    const snapshot = row.paymentName;
+    if (!snapshot || snapshot.name !== destination.name || snapshot.chainId !== ENS_CHAIN_ID || snapshot.profile !== canonicalPaymentProfile(row.profile) || snapshot.fingerprint !== profileFingerprint(row.profile)) {
+      throw new PaymentNameError('changed', `Check and confirm the ENS name for recipient ${index + 1} before preparing this payment.`);
+    }
+    return { ...snapshot };
+  });
+}
+/** Count is the compiler's real recipient count, never the caller's filtered name count. */
+export async function recheckRequiredPaymentNames(client: PublicClient, snapshots: readonly PaymentNameSnapshot[] | undefined, recipientCount: number): Promise<void> {
+  if (!Number.isInteger(recipientCount) || recipientCount < 1 || recipientCount > 8 || !snapshots || snapshots.length !== recipientCount) throw new PaymentNameError('missing', 'Every recipient needs a confirmed ENS payment name. Prepare this payment again.');
+  requiredPaymentNames(snapshots.map(paymentName => ({ destination: paymentName.name, profile: paymentName.profile, paymentName })));
+  await recheckPaymentNames(client, snapshots);
+  await Promise.all([...new Set(snapshots.map(snapshot => snapshot.resolver))].map(resolver => assertPermissionedResolver(client, resolver)));
 }
 export async function assertEnsChain(client: PublicClient): Promise<void> {
   if (client.chain?.id !== ENS_CHAIN_ID || await client.getChainId() !== ENS_CHAIN_ID) throw new PaymentNameError('network', 'Payment names use Sepolia. Switch your wallet and connection to Sepolia.');

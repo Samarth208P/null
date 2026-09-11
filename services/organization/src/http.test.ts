@@ -8,6 +8,8 @@ test('serverless HTTP adapter keeps API routes and rejects unauthenticated or fo
   const handle=serverless(organizationHandler);
   const request=async(path:string,method='GET',headers:Record<string,string>={})=>handle({path,httpMethod:method,headers,multiValueHeaders:{},queryStringParameters:null,multiValueQueryStringParameters:null,requestContext:{},body:null,isBase64Encoded:false},{} as never) as Promise<{statusCode:number;body:string}>;
   const missing=await request('/api/organization/config');assert.equal(missing.statusCode,401);assert.equal(JSON.parse(missing.body).code,'NULL_SESSION_REQUIRED');
+  const health=await request('/health');assert.equal(health.statusCode,200);
+  assert.deepEqual(JSON.parse(health.body),{status:'configured',approvalExecution:'not-tracked'});
   assert.equal((await request('/api/organization/config','GET',{origin:'https://attacker.example.test'})).statusCode,403);
   assert.equal((await request('/api/organization/config','OPTIONS',{origin:'https://app.example.test'})).statusCode,204);
   assert.equal((await request('/api/organization/unknown')).statusCode,404);

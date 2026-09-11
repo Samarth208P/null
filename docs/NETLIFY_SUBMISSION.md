@@ -1,5 +1,7 @@
 # Deploy the reviewed submission
 
+September 11 release `6aa3c2a2f2baaeb953c29c25` is deployed and verified. The required ENS frontend and updated organization function are live. See [release evidence](../deployments/submission-release-2026-09-11.json). This deployment does not establish a completed Privy-owner financial action or publish the working-tree source changes to GitHub.
+
 ## Git-based deployment
 
 ### Withdrawal release values
@@ -22,6 +24,18 @@ Commit all reviewed source files, including the new `packages/ens` workspace pac
 The frontend production build passes locally. **A Git deployment does not copy your local environment into Netlify.** The required production server and public settings have now been copied and verified without logging their values. The earlier hosted organization API returned HTTP 503 because those server settings were missing; the release must return JSON 401 for an unauthenticated request after deployment. Real owner approval is a separate check.
 
 ## Optional CLI deployment
+
+For this pnpm workspace, select the app explicitly to avoid an interactive monorepo prompt. After a successful local build, deploy both the assets and freshly bundled function with:
+
+```powershell
+pnpm build
+$projectRoot = (Get-Location).Path
+netlify deploy --prod --filter @null-protocol/web --no-build --dir "$projectRoot/apps/web/dist" --functions "$projectRoot/netlify/functions" --skip-functions-cache --json
+```
+
+Run this from the repository root. Use absolute paths: with `--filter`, the CLI may resolve a relative Functions path from `apps/web` and silently omit the function. A successful asset upload is not enough; verify `/api/organization/config` returns JSON `401` and the direct function health route returns JSON. Do not pass `--context` with `--no-build`; this CLI accepts it only when building.
+
+The root `.npmrc` pins isolated dependency linking without a global virtual store. On Windows, stop local test servers before reinstalling packages that contain loaded native modules. Use the pinned lockfile; do not upgrade dependencies to repair a file lock. The September 11 managed-build attempt was canceled after its automatic install stalled; it was not published. See [current readiness](SUBMISSION_READINESS.md) for the verified replacement release.
 
 The root `netlify.toml` builds the web app and the organization function. Local CLI deployment includes the current working tree; no Git commit is required. Do not deploy a drag-and-drop frontend folder alone: that omits the approval API.
 

@@ -4,9 +4,9 @@ This is a development implementation, not an audited privacy guarantee. The comp
 
 | Data | Private-flow treatment |
 |---|---|
-| Names, email, employee references | Local sender metadata, absent from exported protocol bundle |
+| Names, email, employee references | Private sender references are absent from the protocol bundle. ENS names and their linked profiles are public; RPC providers can observe name lookups. |
 | Amount per recipient | Private witness and encrypted allocation |
-| Long-term profile | Shared with sender directly or through a public ENS record; not a receiving EOA |
+| Long-term profile | Live app requires a public ENS payment record; profile contains public keys, not a receiving EOA. Low-level SDK accepts profiles directly. |
 | One-time stealth public key | Committed and encrypted, not plaintext in protocol events |
 | Spending/viewing secrets | Local only, encrypted at rest when saved |
 | Distribution existence | Public |

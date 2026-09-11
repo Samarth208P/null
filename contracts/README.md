@@ -17,7 +17,7 @@ The smart contract layer governs the onchain state of the NULL protocol. It enfo
       ┌──────────────────┬──────────────┼────────────────┬──────────────────┐
       ▼                  ▼              ▼                ▼                  ▼
 ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────────┐
-│ ShieldVerifier│ │DistrVerifier  │ │ ClaimVerifier │ │WithdrawVerifier│ │PolicyRegistry.sol │
+│ ShieldVerifier│ │DistrVerifier  │ │ ClaimVerifier │ │WithdrawVerifier│ │NullAuthRegistry.sol │
 └───────────────┘ └───────────────┘ └───────────────┘ └───────────────┘ └───────────────────┘
 ```
 
@@ -26,9 +26,9 @@ The smart contract layer governs the onchain state of the NULL protocol. It enfo
    * **Tree Accumulators:** Maintains append-only Poseidon Merkle trees for Shielded Notes and 8-Slot Distributions.
    * **Nullifier Registry:** Deterministically records consumed note nullifiers and claim nullifiers to prevent double-spends.
    * **Asset Custody:** Manages ERC-20 token reserves (USDC) with strict balance conservation checks.
-2. **`PolicyRegistry.sol`:**
-   * Accumulator tree storing registered organization authorization policies and quorum signers.
-3. **EVM Verifiers (`contracts/src/verifiers/`):**
+2. **`NullAuthRegistry.sol`:**
+   * Accumulator tree storing organization policy commitments; signer data remains in private policy openings.
+3. **EVM Verifiers (`contracts/src/generated/`):**
    * Immutable UltraHonk verifier contracts generated directly from compiled Noir circuits.
 
 ---
@@ -37,10 +37,10 @@ The smart contract layer governs the onchain state of the NULL protocol. It enfo
 
 | Event | Purpose | Consumed By |
 | :--- | :--- | :--- |
-| `NoteInserted(bytes32 commitment, uint32 leafIndex)` | Emitted on note creation (Shield or Claim). | Subgraph / Browser Tree Builder |
-| `DistributionInserted(bytes32 commitment, bytes envelopes)` | Emitted on private batch execution with 8 encrypted envelopes. | Recipient Scanner / Indexer |
-| `NullifierSpent(bytes32 nullifier)` | Emitted when a note or claim is consumed. | Client Wallet / Relayer |
-| `Withdrawn(address recipient, uint256 amount, address asset)` | Emitted on note exit or treasury refund. | Public Ledger |
+| `NoteInserted` | Emitted on note creation (Shield or Claim). | Subgraph / Browser Tree Builder |
+| `DistributionInserted` and `EnvelopePublished` | Emitted on private batch execution with 8 encrypted envelopes. | Recipient Scanner / Indexer |
+| `AllocationConsumed` and spent-nullifier mappings | Claim events plus onchain spent-state checks; consult the generated ABI for exact fields. | Client Wallet / Relayer |
+| `Withdrawn(uint256 noteNullifier, address recipient, uint64 amount)` | Emitted on note exit or treasury refund. | Public Ledger |
 
 ---
 

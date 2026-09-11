@@ -81,7 +81,7 @@ export async function organizationHandler(request: IncomingMessage, response: Se
     response.setHeader('access-control-allow-origin', origin); response.setHeader('vary', 'Origin');
   }
   if (request.method === 'OPTIONS') { response.setHeader('access-control-allow-methods', 'POST, GET'); response.setHeader('access-control-allow-headers', 'authorization, content-type'); response.writeHead(204); response.end(); return; }
-  if (request.method === 'GET' && request.url === '/health') { reply(authorizer ? 200 : 503, { status: authorizer ? 'configured' : 'unavailable', approvalExecuted: false }); return; }
+  if (request.method === 'GET' && request.url === '/health') { reply(authorizer ? 200 : 503, { status: authorizer ? 'configured' : 'unavailable', approvalExecution: 'not-tracked' }); return; }
   if (!['/api/organization/config', '/api/organization/prepare', '/api/organization/authorize', '/api/organization/prepare-identity', '/api/organization/identify'].includes(request.url ?? '') || !((request.url === '/api/organization/config' && request.method === 'GET') || (request.url !== '/api/organization/config' && request.method === 'POST'))) { reply(404, { code: 'NULL_NOT_FOUND' }); request.resume(); return; }
   try {
     if (!config || !privy || !authorizer) throw new OrganizationError('NULL_ORGANIZATION_CONFIG_REQUIRED', 503);

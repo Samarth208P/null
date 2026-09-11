@@ -1,0 +1,23 @@
+# Build provenance and AI assistance
+
+This disclosure separates verifiable repository work from claims the team must confirm before submitting to ETHOnline 2026.
+
+## AI assistance
+
+Codex was used for implementation, debugging, documentation, test execution, and deployment preparation. On September 11 it implemented required ENS recipients in the live application, corrected submission claims, refreshed CRE simulation evidence after the user completed login, and ran validation. These changes require the same human review as other source changes. No AI-generated narration should be used for the final demo.
+
+The September 11 assisted code changes are in `packages/ens/src/index.ts` and its tests; the web application's `PaymentDestination`, `DistributionWizard`, `Recipient`, `Workspace`, `LiveOperation` and loader components; and the organization service health response and HTTP test. Codex also revised the root/package/service READMEs, ENS/privacy/readiness/deployment documents, this disclosure, and the demo/submission copy. The team should add earlier AI-assisted work and its own concrete contributions before submitting; this session does not establish the complete historical attribution.
+
+## Existing components
+
+NULL uses external libraries and tooling including Noir, Barretenberg-generated verifiers, Chainlink CRE SDK/CLI and starter scaffolding, Privy SDKs, ENSv2 contracts, viem, React/Vite, The Graph, and cryptographic libraries. Generated code and these dependencies are not original NULL work. Pinned versions and sources are recorded in workspace manifests, the lockfile, circuit manifests, and deployment artifacts.
+
+The working tree already contained the pool, circuits, private distribution SDK, withdrawal flow, ENS setup, Privy approval service, and CRE integration at the start of the September 11 fix. This describes the starting point of this implementation session, not whether those components predate the hackathon.
+
+## Team confirmation still required
+
+Before submission, add the actual event-period contribution list and identify any code, designs, or projects that existed before the event. Confirm the selected event track against the official rules. Commit dates alone cannot establish when work began or who created it. Do not claim all work was built during the event until the team verifies that statement.
+
+The changes are reviewable in Git; deployment of a working tree does not automatically publish those changes to the linked GitHub repository. Ensure the exact demonstrated source is available to judges.
+
+Reference: [official rules and submission requirements](https://ethglobal.com/events/ethonline2026/info/details).

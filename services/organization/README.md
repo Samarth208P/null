@@ -1,64 +1,32 @@
-# 🏢 Privy Authenticated Organization Gateway
+# Privy organization approval gateway
 
-> **B2B Treasury Governance & Multi-Signer Quorum Authorization**
+The organization service authenticates the configured Privy member, verifies the dedicated wallet and its controls, prepares an exact payment intent, and asks Privy to sign only after owner authorization. **The current live configuration is one owner with threshold one. A completed Privy-approved financial action remains pending.** It does not demonstrate multi-person governance.
 
-The organization service acts as an authenticated bridge between corporate decision-makers and the NULL smart contracts. It enforces **Privy multi-signer quorum policies** over distribution intents before generating zero-knowledge proofs.
+The service receives public circuit inputs and signature requests, not payroll rows, ENS names, recipient keys, or private allocation amounts. ENS is resolved and rechecked in the browser. The signature binds the distribution commitment, envelope root, chain, pool, nonce and deadline. The browser uses the verified compact signature as a private circuit witness; the server does not generate the proof.
 
----
+## Controls
 
-## 🔒 Security Architecture
+- Verify access tokens and server-configured organization membership. Selecting Organization in the UI grants no authority.
+- Verify wallet address, organization entity, expected owner quorum membership/threshold, policies where configured, and absence of bypass signers.
+- Bind short-lived approval tickets to the authenticated user/session. Consume tickets atomically before signing.
+- Use strong-consistency Netlify Blobs for shared pending tickets. Rate limits are per function instance, not a distributed abuse quota.
+- Reject an unsigned wallet raw-sign request. This live rejection has been verified, but is not evidence of a completed signed payment.
 
-```
-                       ┌────────────────────────────┐
-                       │   Privy-Authenticated Org   │
-                       │    Dashboard / Approvers   │
-                       └─────────────┬──────────────┘
-                                     │ 1. ES256 Access Token + Prepared Intent
-                                     ▼
-                       ┌────────────────────────────┐
-                       │    Organization Gateway    │
-                       │  (Local Node / Netlify Fn) │
-                       └─────────────┬──────────────┘
-                                     │ 2. Enforce Quorum Threshold
-                                     ▼
-                       ┌────────────────────────────┐
-                       │  Privy REST Wallet Signing │
-                       │ (Generates Compact Witness)│
-                       └─────────────┬──────────────┘
-                                     │ 3. Return ZK Circuit Witness
-                                     ▼
-                       ┌────────────────────────────┐
-                       │   Noir Distribution Proof  │
-                       └────────────────────────────┘
-```
+The general authorization adapter supports additional approver signatures, but the shipped browser setup and configured wallet use one owner. No claim is made that multiple independent approvers exercised it.
 
-* **No Plaintext Ingestion:** The service never receives employee salaries, names, or private recipient keys. It operates exclusively on public circuit inputs, root digests, and authorization signatures.
-* **Strict Quorum Enforcement:** Multi-owner quorum rules ensure that no single rogue administrator can broadcast unauthorized payroll distributions.
-* **Token Verification:** Every request requires a valid Privy ES256 access token verified via `@privy-io/node` against the official Privy JWKS.
-
----
-
-## 📡 API Endpoints
+## API
 
 | Route | Method | Purpose |
-| :--- | :--- | :--- |
-| `/health` | `GET` | Service readiness and configuration check. |
-| `/api/organization/config` | `GET` | Authenticated query for wallet controls and quorum metadata. |
-| `/api/organization/prepare` | `POST` | Validates distribution parameters and returns a short-lived approval ticket. |
-| `/api/organization/authorize` | `POST` | Submits collected quorum signatures to Privy and returns the authorized circuit witness. |
+| --- | --- | --- |
+| `/health` | GET | Configuration probe; `approvalExecution: "not-tracked"` explicitly distinguishes health from historical payment evidence |
+| `/api/organization/config` | GET | Authenticated wallet and quorum configuration |
+| `/api/organization/prepare-identity` | POST | Prepare an identity-only signing challenge |
+| `/api/organization/identify` | POST | Verify the owner-approved challenge and recover the public key |
+| `/api/organization/prepare` | POST | Validate distribution or treasury-withdrawal public inputs and prepare a ticket |
+| `/api/organization/authorize` | POST | Consume the ticket, submit authorization signatures to Privy, return a verified compact signature |
 
----
+## Run and demonstrate
 
-## 🛠️ Running the Service
+Run `pnpm organization` locally or deploy the [Netlify function](../../netlify/functions/organization.ts) together with the frontend. Follow [Netlify configuration](../../docs/NETLIFY_SUBMISSION.md); never put server credentials in browser variables.
 
-### 1. Local Development
-```sh
-# Run the standalone organization gateway (binds to 127.0.0.1:8788)
-pnpm organization
-
-# Or launch along with the web app and relayer
-pnpm dev:all
-```
-
-### 2. Netlify Serverless Deployment
-The repository includes a production-ready Netlify serverless Function route (`netlify/functions/organization.ts`). Shared intent storage ensures strongly consistent ticket validation across serverless worker instances.
+The real owner must sign in, choose **Use Privy organization**, save the resulting local policy backup, register that policy, then complete a funded payment to a confirmed ENS recipient. Identity-only signing moves no funds and does not complete the financial demo. Preserve the actual transaction receipt before claiming success. See [current readiness](../../docs/SUBMISSION_READINESS.md) and [adapter implementation](../../packages/auth/src/server.ts).

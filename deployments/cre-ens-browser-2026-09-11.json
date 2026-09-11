@@ -1,0 +1,20 @@
+{
+  "verified": true,
+  "status": "passed",
+  "startedAt": "2026-09-11T08:38:59.671Z",
+  "finishedAt": "2026-09-11T08:39:18.849Z",
+  "syntheticOnly": false,
+  "inputSource": "browser export from a test-only authenticated session; verification recipient",
+  "paymentBroadcast": false,
+  "privyOwnerApproval": false,
+  "localSimulation": true,
+  "remoteExecutionVerified": false,
+  "attestationVerified": false,
+  "chainId": "11155111",
+  "poolAddress": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "batchId": "aa0baa51-81ee-4a8b-ab83-ef55f1acef3a",
+  "commitment": "0x220fd49fc4e0b402bf65b9325a26a595c13b39a724fb4a40352429ac3f423e14",
+  "envelopeRoot": "0x2e34bd841177c59d5c5dae188140253a076a8bc37c9763ba2035d9f9b31b287d",
+  "encryptedEnvelopes": 8,
+  "authenticatedFixtureFetches": 1
+}

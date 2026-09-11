@@ -48,6 +48,7 @@ export function PrivateInbox() {
 
   async function copyProfile() {
     if (!store.identityBackedUp) { setRecovery('export'); return; }
+    if (store.mode === 'testnet' && !store.receivingName) { setNameOpen(true); return; }
     const version = identityRevision.current;
     setCopyError(''); setCopying(true);
     try {
@@ -67,7 +68,7 @@ export function PrivateInbox() {
     } catch {
       if (version !== identityRevision.current) return;
       setProfileExpanded(true);
-      setCopyError(store.receivingName ? 'Could not verify and copy your name. Try again, or copy your Payment ID below.' : 'Could not copy. Select your Payment ID below and copy it.');
+      setCopyError(store.mode === 'testnet' ? 'Could not verify and copy your ENS name. Check the name settings and try again. Existing payments remain accessible.' : 'Could not copy. Select your Payment ID below and copy it.');
     } finally { if (version === identityRevision.current) setCopying(false); }
   }
 
@@ -122,10 +123,10 @@ export function PrivateInbox() {
     <section className="receive-panel" aria-label="Receive payments">
     <div className="receive-heading">
       <span className="profile-symbol"><KeyRound size={21} strokeWidth={1.6} /></span>
-      <div className="receive-label"><h2>{store.receivingName?.name || 'Receive payments'}</h2><p>{store.receivingName ? 'Share this name with the sender.' : 'Share your Payment ID with the sender.'}</p></div>
-      <Button variant="secondary" icon={Copy} busy={copying} onClick={() => void copyProfile()}>{!store.identityBackedUp ? 'Save backup to receive' : store.receivingName ? 'Copy ENS name' : 'Copy Payment ID'}</Button>
+      <div className="receive-label"><h2>{store.receivingName?.name || (store.mode === 'testnet' ? 'Set up your ENS inbox' : 'Receive payments')}</h2><p>{store.receivingName ? 'Share this name with the sender.' : store.mode === 'testnet' ? 'Link a Sepolia ENS name to receive new payments.' : 'Share your Payment ID with the sender.'}</p></div>
+      <Button variant="secondary" icon={Copy} busy={copying} onClick={() => void copyProfile()}>{!store.identityBackedUp ? 'Save backup to receive' : store.receivingName ? 'Copy ENS name' : store.mode === 'testnet' ? 'Link ENS name' : 'Copy Payment ID'}</Button>
     </div>
-    <div className="receive-tools"><span>{store.receivingName ? 'ENS · Sepolia' : 'Prefer a short name?'}</span><button className="text-link" aria-expanded={nameOpen} aria-controls="receive-name-settings" onClick={() => setNameOpen(value => !value)}>{nameOpen ? 'Close name settings' : store.receivingName ? 'Manage ENS name' : 'Use an ENS name'}<ArrowRight size={14} /></button></div>
+    <div className="receive-tools"><span>{store.receivingName ? 'ENS · Sepolia' : store.mode === 'testnet' ? 'Required for new payments' : 'Sepolia ENS names'}</span><button className="text-link" aria-expanded={nameOpen} aria-controls="receive-name-settings" onClick={() => setNameOpen(value => !value)}>{nameOpen ? 'Close name settings' : store.receivingName ? 'Manage ENS name' : 'Link ENS name'}<ArrowRight size={14} /></button></div>
     {copyError && <p className="form-error" role="alert">{copyError}</p>}
     {nameOpen && <div id="receive-name-settings"><Suspense fallback={<p role="status">Opening name settings…</p>}><PaymentNameManager key={store.identity.profile.stealthMetaAddress} /></Suspense></div>}
     </section>
@@ -141,7 +142,7 @@ export function PrivateInbox() {
     </article>)}</div> : <div className="inbox-empty"><EmptyState icon={Inbox} title={scanned ? allocations.length ? 'All collected' : 'No new payments' : 'No payments checked yet'} description={scanned ? allocations.length ? 'Find collected payments in your balance.' : 'Expecting a payment? Check again, or restore your backup.' : 'Received a payment? Check your inbox above.'} /></div>}
     <details className="progressive-details" open={profileExpanded} onToggle={event => setProfileExpanded(event.currentTarget.open)}>
       <summary>View Payment ID</summary>
-      <p>Share this ID, not your wallet address. Keep your backup and password private.</p>
+      <p>{store.mode === 'testnet' ? 'This public ID is the record behind your ENS inbox. Senders use your linked ENS name for new payments. Keep your backup and password private.' : 'Share this ID, not your wallet address. Keep your backup and password private.'}</p>
       <label className="field">Payment ID<textarea className="mono-input" readOnly rows={3} value={store.identity.profile.stealthMetaAddress} onFocus={event => event.currentTarget.select()} /></label>
     </details>
     <Modal title="Collect payment" description="Add this payment to your balance." open={!!selected} onClose={() => { if (!claiming) setSelected(null); }}>

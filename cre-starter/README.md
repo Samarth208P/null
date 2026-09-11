@@ -1,6 +1,6 @@
 # NULL confidential payroll: local CRE simulation
 
-This TypeScript workflow receives a public batch reference and expected roots through an HTTP trigger, fetches synthetic payroll through an authenticated loopback API inside a `handlerInTee` callback, and returns eight encrypted NULL envelopes. The actual CRE CLI simulation passed on 2026-09-06, including equality with an independent local compilation of the complete public bundle.
+This TypeScript workflow receives a public batch reference and expected roots through an HTTP trigger, fetches payroll through an authenticated loopback API inside a `handlerInTee` callback, and returns eight encrypted NULL envelopes. Fresh CRE CLI runs passed on September 11 for both the built-in synthetic fixture and an ENS-resolved browser export, including equality with independent local compilation. See [synthetic evidence](../deployments/cre-simulation-2026-09-11.json) and [browser-run evidence](../deployments/cre-ens-browser-2026-09-11.json).
 
 This is a local simulation: it does not establish remote enclave execution or attestation. No workflow or secret was uploaded, deployed, or activated, and no chain transaction was sent.
 
@@ -70,10 +70,12 @@ Fixture files are immutable: a rerun reuses identical content and refuses to rep
 
 ## Continuing toward a live integration
 
-Future work is an authenticated HTTPS immutable-batch API, an authorized HTTP-trigger address, and a verified completed-result connection into the local NULL app. This starter accepts only the synthetic fixture. Remove the simulation log and review the confidentiality boundary before production use: confidential execution protects the data computed over; the workflow binary itself remains visible to the DON.
+The app connection is implemented: export its private payment draft, run `pnpm cre:simulate --input "PATH_TO_PRIVATE_INPUT.json"` from the repository root, and import the returned `payment-result.json` into the same draft. The app rejects stale or mismatched results before review. The default command still uses synthetic fixtures. Private exports contain payroll and secret entropy and must not be committed or shown in the demo. Matching an imported file does not authenticate remote provenance.
+
+Future work includes a production authenticated HTTPS immutable-batch API, authorized remote HTTP triggering, deployment and attestation. Remove the simulation log and review the confidentiality boundary before production use: confidential execution protects the data computed over; the workflow binary itself remains visible to the DON.
 
 Standard CRE Early Access remains disabled. `cre account access --help` confirmed the command has no command-specific flags; `cre account access` checked access and offered a new request. That new prompt was declined because the earlier standard request is already submitted, preserving the existing request. Approval has not been granted.
 
-Confidential Workflows additionally require the separate [Confidential Workflows access request](https://docs.chain.link/cre/account/confidential-workflows-access). Request confirmation of a free allowance before selecting hosted execution or infrastructure. Local simulation requires neither deployment approval nor paid services. Deployment, activation, secret upload, and the live app connection remain future authorized work.
+Confidential Workflows additionally require the separate [Confidential Workflows access request](https://docs.chain.link/cre/account/confidential-workflows-access). Local simulation requires neither deployment approval nor paid services. Remote deployment, activation, and secret upload remain unverified future work; the local simulation export/import connection is implemented and exercised.
 
 Official references: [confidential workflow pattern](https://docs.chain.link/cre/guides/workflow/using-confidential-workflows/making-workflow-confidential-ts), [TypeScript WASM runtime](https://docs.chain.link/cre/concepts/typescript-wasm-runtime), [standard deployment access](https://docs.chain.link/cre/account/deploy-access).

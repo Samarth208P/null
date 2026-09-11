@@ -4,11 +4,19 @@ Verified on Ethereum Sepolia on September 8, 2026. This is a real ENSv2 integrat
 
 ## What users do
 
-In **Individual → Inbox → Set up payment name**, enter a Sepolia ENS name, check it, save the NULL recovery backup, and choose **Link my Payment ID**. The connected Privy wallet signs the record update. NULL waits for confirmation and reads the record back before offering to copy the name. If several wallets are connected, choose the one that owns the name or holds the record permission.
+In **Individual → Inbox → Link ENS name**, enter a Sepolia ENS name, check it, save the NULL recovery backup, and choose **Link my Payment ID**. The connected Privy wallet signs the record update. NULL waits for confirmation and reads the record back before offering to copy the name. If several wallets are connected, choose the one that owns the name or holds the record permission.
 
 The existing Privy recipient wallet `0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433` now owns **inbox.nullpay2026.eth**. It has permission to set this name's `null.paymentProfile` text record and received 0.0005 Sepolia ETH for gas. **Its Payment ID has not been published.** The signed-in recipient must restore/save their own recovery backup and consent to publication in the app. No recipient private key is sent to a resolver or service.
 
-In **Organization → New payment**, use the **ENS name or Payment ID** field. Check and confirm the name, then prepare the payment. CSV imports accept the same destinations using `name,amount,paymentDestination`; the previous `privacyProfile` heading remains compatible. The live CSV template contains headings only, with no invented recipients.
+In **Organization → New payment**, the **ENS payment name** field is required for every live recipient. Raw Payment IDs and wallet addresses cannot proceed. CSV imports use `name,amount,paymentDestination`; the previous `privacyProfile` heading is still recognized, but live rows must contain ENS names and each imported name needs explicit confirmation. The template contains headings only, with no invented recipients.
+
+## Mandatory receiving identity — September 11
+
+The inbox leads with backup and ENS linking. Each new live distribution requires one confirmed name snapshot per real compiled recipient; filtered or empty name lists cannot bypass approval or submission. The supported Permissioned Resolver implementation is verified. Names are rechecked before preparation, Privy approval, manually imported approval, and final submission. Missing records, expired registrations and changed owner/resolver/profile states block the operation. After a failed lookup there is no raw-ID fallback for a new live payment.
+
+This is enforced by the reference application, not by the immutable pool, Noir circuit, standalone CRE compiler or low-level SDK. They remain identity-agnostic; independent clients can use raw public profiles. Existing discovery, claims, recovery and withdrawals never depend on retaining an ENS name. Revoking an editor stops that editor updating future routing; it does not delete a record or revoke existing funds. Resolver administrators may have broader permissions. Revalidation is a point-in-time read, not an atomic lock against a record change after the last check.
+
+The payer resolves ENS locally and sends only encrypted-batch public inputs to the Privy approval service. No recipient roster is added to the approval API or public transaction. See the [fresh browser/CRE receipt](../deployments/cre-ens-browser-2026-09-11.json) and [current readiness](SUBMISSION_READINESS.md).
 
 ## Why ENSv2 matters here
 

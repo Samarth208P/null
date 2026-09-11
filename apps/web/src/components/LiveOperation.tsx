@@ -15,14 +15,14 @@ import {
 } from '@null-protocol/sdk';
 import { config } from '../lib/config';
 import { useStore } from '../lib/store';
-import { PaymentNameError, recheckPaymentNames, type PaymentNameSnapshot } from '@null-protocol/ens';
+import { PaymentNameError, recheckRequiredPaymentNames, type PaymentNameSnapshot } from '@null-protocol/ens';
 import { ensClient } from '../lib/ens';
 import { download, money, short } from '../lib/format';
 import { Badge, Button, CopyButton, ExternalLink, KeyValue, Modal, Notice } from './ui';
 
 export type LiveOperationRequest = { kind: 'withdraw'; treasury: boolean } | { kind: 'shield'; amountAtomic: bigint } |
   { kind: 'claim'; allocation: DiscoveredAllocation } |
-  { kind: 'create_distribution'; compiled: CompiledDistribution; paymentNames?: PaymentNameSnapshot[] };
+  { kind: 'create_distribution'; compiled: CompiledDistribution; paymentNames: PaymentNameSnapshot[] };
 export interface LiveOperationProps {
   open: boolean;
   onClose: () => void;
@@ -285,7 +285,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   }
   async function prepare() {
     if (!client) return;
-    if (operation.kind === 'create_distribution') await recheckPaymentNames(ensClient, operation.paymentNames ?? []);
+    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
     let result: PreparedOperation;
     if (operation.kind === 'shield') {
       if (!policy || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Choose your organization in Advanced setup and confirm that you understand the deposit notice.');
@@ -312,20 +312,23 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     if (!manualIntent || !policy || !bridge.authorize) return;
     setError(''); setApprovalBusy(true);
     try {
-      if (operation.kind === 'create_distribution') await recheckPaymentNames(ensClient, operation.paymentNames ?? []);
+      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
       const signed = await bridge.authorize(manualIntent, policy);
       pendingApproval.current?.resolve(signed); pendingApproval.current = undefined; setManualIntent(undefined);
     } catch (reason) { setError(errorCopy(reason)); }
     finally { setApprovalBusy(false); }
   }
-  function importSignature() {
+  async function importSignature() {
     if (!/^0x[0-9a-fA-F]{128}$/.test(signature.trim())) { setError('This approval code could not be read. Copy the full code from your organization’s signing tool; it starts with 0x.'); return; }
+    try {
+      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
+    } catch (reason) { setError(errorCopy(reason)); return; }
     pendingApproval.current?.resolve(signature.trim() as Hex); pendingApproval.current = undefined;
     setSignature(''); setManualIntent(undefined); setError('');
   }
   async function submit() {
     if (!prepared || !client || !backupSaved || uncertain) return;
-    if (operation.kind === 'create_distribution') await recheckPaymentNames(ensClient, operation.paymentNames ?? []);
+    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
     setTransactionHash(undefined); setReconciliation('');
     try {
       const connected = transport === 'wallet' ? (wallet ?? await bridge.connect(manifest!.chainId)) : undefined;

@@ -1,49 +1,22 @@
-# 🔐 @null-protocol/auth
+# @null-protocol/auth
 
-> **Privy Multi-Signer Organization Governance & Poseidon Intent Authorizer**
+Browser and server adapters bind Privy organization approval to NULL's exact distribution or treasury-withdrawal intent. **The current configured wallet uses one owner, threshold one.** Multi-approver collection is an adapter extension point; it is not a demonstrated multi-person production workflow.
 
-`@null-protocol/auth` provides browser and server-side utilities to coordinate **Privy multi-signer quorum authorizations** over zero-knowledge distribution intents.
+- Sign the circuit's Poseidon digest with raw secp256k1 signing; do not use `personal_sign` or add Ethereum message prefixes.
+- Validate chain, pool, commitments, envelope root and deadline before requesting approval. Treasury withdrawal also binds the public recipient and amount.
+- Recover and independently verify the returned signer and compact signature locally. The compact signature is a private circuit witness and must not be logged or added to relay payloads.
+- The organization HTTP service authenticates membership and supplies expiring single-use tickets. The adapter alone is not an authentication boundary.
 
----
+## Browser integration
 
-## 🎯 Key Design Principles
+Use `authorizeOrganizationDistribution` from [src/index.ts](src/index.ts). It requires an absolute service-origin `endpoint`, `appId`, `expectedSigner`, `publicInputs`, the exact `expected` context, `getAccessToken`, and `generateAuthorizationSignature`. The endpoint is the origin, not `/api/organization`; the adapter appends the API path. Supply `collectAdditionalSignatures` only for an intentionally configured larger quorum. The live application checks every required ENS name before calling this adapter.
 
-* **Native Poseidon Digest Signing:** Builds structured raw secp256k1 signing requests over the circuit's exact Poseidon intent digest. Avoids `personal_sign` and Ethereum message prefixes so the signature is directly verifiable inside the Noir distribution circuit.
-* **Bounded Input Binding:** Public inputs (envelope root, output commitment, nullifiers, nonce, deadline, chainId, pool address) are cryptographically committed to the intent.
-* **Multi-Signer Quorum:** Supports collecting signatures across multiple corporate approvers before generating the final ZK proof witness.
+The complete browser call is in [LiveOperation.tsx](../../apps/web/src/components/LiveOperation.tsx). `identifyOrganizationSigner` obtains the public key through an owner-approved identity challenge; it is not a payment.
 
----
+## Server integration
 
-## 📦 Usage
+Use `createPrivyOrganizationAuthorizer` from [src/server.ts](src/server.ts). Its typed configuration requires wallet, organization entity, quorum, expected owners, policy/control mode, threshold, chain and pool in addition to app credentials. The [organization service](../../services/organization/src/server.ts) is the complete host example, including verified sessions and ticket storage. Do not call the server adapter from the browser or expose the app secret.
 
-### 1. Browser Client (`@null-protocol/auth`)
-```typescript
-import { authorizeOrganizationDistribution } from '@null-protocol/auth';
+`prepare(publicInputs, expected)` creates a canonical request; `authorize({ publicInputs, expected, requestExpiryMs, signatures })` verifies controls and returns the checked signature. Tickets belong to the HTTP service, not to the raw adapter API.
 
-const result = await authorizeOrganizationDistribution({
-  endpoint: '/api/organization',
-  appId: import.meta.env.VITE_PRIVY_APP_ID,
-  expectedSigner: '0x6567226D425c423b1A5765384Ae343aE5FDeB1d1',
-  publicInputs: compiledInputs,
-  getAccessToken: () => privy.getAccessToken(),
-  generateAuthorizationSignature: (req) => privy.generateAuthorizationSignature(req),
-});
-
-// Pass result.compactSignature into Noir distribution proof witness
-```
-
-### 2. Server Adapter (`@null-protocol/auth/server`)
-```typescript
-import { createPrivyOrganizationAuthorizer } from '@null-protocol/auth/server';
-
-const authorizer = createPrivyOrganizationAuthorizer({
-  appId: process.env.PRIVY_APP_ID!,
-  appSecret: process.env.PRIVY_APP_SECRET!,
-  walletAddress: process.env.PRIVY_ORGANIZATION_WALLET_ADDRESS!,
-  walletId: process.env.PRIVY_ORGANIZATION_WALLET_ID!,
-  ownerQuorumId: process.env.PRIVY_ORGANIZATION_OWNER_QUORUM_ID!,
-});
-
-const prepared = await authorizer.prepare(publicInputs, expectedContext);
-const authorized = await authorizer.authorize({ ticket: prepared.ticket, signatures });
-```
+Live unsigned-request rejection has been verified. A real owner-approved financial action remains outstanding; see [submission readiness](../../docs/SUBMISSION_READINESS.md).

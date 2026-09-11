@@ -12,6 +12,10 @@ Finance administrators prepare confidential distributions, organization approver
 ## Product Purpose
 Private distribution infrastructure for Ethereum, with payroll as its first application. The product connects a shielded treasury, fixed eight-slot allocations, encrypted recipient delivery, and entitlement claims against a global distribution accumulator.
 
+## Required ENS receiving identity
+
+For every new live distribution, recipients must link a Sepolia ENSv2 payment name and the sender must confirm its resolved profile. Reject raw IDs and incomplete name coverage; recheck before preparation, approval and submission. Keep recovery, claims and withdrawal available without a name so expiry cannot strand existing funds. This is an application constraint, not an immutable-contract or circuit invariant. Names and linked public profiles are public.
+
 ## Positioning
 Distribute value, reveal nothing. Privacy claims apply inside the proposed private protocol zone; entry, exit, network metadata, and employer knowledge have explicit boundaries.
 

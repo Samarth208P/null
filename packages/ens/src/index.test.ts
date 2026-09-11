@@ -4,7 +4,7 @@ import { profileFromKeys } from '@null-protocol/crypto';
 import { keccak256, stringToHex, zeroAddress, type Address, type PublicClient } from 'viem';
 import { sepolia } from 'viem/chains';
 import { namehash, packetToBytes } from 'viem/ens';
-import { ENS_V2, PAYMENT_RECORD, PaymentNameError, canonicalPaymentProfile, normalizePaymentName, paymentDestination, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, recheckPaymentNames, resolvePaymentName, samePaymentDestination, type PaymentNameSnapshot } from './index';
+import { ENS_V2, PAYMENT_RECORD, PaymentNameError, canonicalPaymentProfile, normalizePaymentName, paymentDestination, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, recheckPaymentNames, requiredPaymentNames, recheckRequiredPaymentNames, resolvePaymentName, samePaymentDestination, type PaymentNameSnapshot } from './index';
 
 // Unit-test fixtures only. Production names always resolve through Sepolia RPC.
 const scalar = (value: number) => Uint8Array.from([...Array(31).fill(0), value]);
@@ -96,4 +96,26 @@ test('access inspection checks root, global-key, name and record permissions', a
   const {client,calls} = fixture(); assert.deepEqual(await paymentEditorAccess(client, 'alice.eth', editor), {allowed:false, broaderAccess:false, recordAccess:false});
   const rights = calls.filter(call => call.args.functionName === 'hasRoles'); assert.equal(rights.length, 4);
   assert.equal(rights[0].args.args[0], 0n); assert.ok(rights.every(call => call.args.args[1] === 16n && call.args.args[2] === editor));
+});
+
+test('live payments reject raw IDs, unconfirmed names and mismatched profile snapshots', async () => {
+  const paymentName = await resolvePaymentName(fixture().client, 'alice.eth');
+  const row = { destination: 'ALICE.ETH', profile, paymentName };
+  assert.deepEqual(requiredPaymentNames([row]), [paymentName]);
+  for (const rows of [[], Array(9).fill(row), [{profile}], [{...row, paymentName: undefined}], [{...row, profile: otherProfile}], [{...row, destination: 'bob.eth'}], [{...row, paymentName: {...paymentName, fingerprint: zeroAddress}}]]) {
+    assert.throws(() => requiredPaymentNames(rows), PaymentNameError);
+  }
+});
+
+test('approval and submission require ENS coverage for every real compiled recipient', async () => {
+  const { client, calls } = fixture();
+  const snapshot = await resolvePaymentName(client, 'alice.eth');
+  const before = calls.length;
+  for (const snapshots of [undefined, [], [snapshot]]) await assert.rejects(recheckRequiredPaymentNames(client, snapshots, 2), PaymentNameError);
+  for (const count of [0, 9, NaN, 1.5]) await assert.rejects(recheckRequiredPaymentNames(client, [snapshot], count), PaymentNameError);
+  assert.equal(calls.length, before, 'incomplete coverage must fail before any network lookup');
+  await recheckRequiredPaymentNames(client, [snapshot], 1);
+  for (const changed of [{value: otherProfile}, {owner: editor}, {resolver: editor}, {value: null}, {expiry: 999n}, {implementation: editor}]) {
+    await assert.rejects(recheckRequiredPaymentNames(fixture(changed).client, [snapshot], 1), PaymentNameError);
+  }
 });

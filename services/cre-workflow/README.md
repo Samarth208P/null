@@ -1,75 +1,31 @@
-# 🔐 Chainlink CRE Confidential Distribution Compiler
+# Chainlink CRE payroll compiler
 
-> **Confidential Workflows powered by Chainlink Runtime Environment (CRE) & Hardware Enclaves (TEE)**
+NULL registers a real `handlerInTee` to fetch authenticated private payroll and compile eight padded encrypted delivery envelopes. **The execution evidence is local CRE CLI simulation. No remote enclave execution, deployment, or attestation is verified.** Local simulation does not protect payroll from the operator of the local machine.
 
-The NULL CRE workflow executes sensitive payroll computation and encrypted envelope generation inside a **Hardware-Enforced Trusted Execution Environment (TEE)** using `@chainlink/cre-sdk` `handlerInTee`. Node operators and public observers never see raw employee salaries, names, or addresses.
+The handler gets the payroll API token through the CRE secret capability, fetches the batch, validates it, and calls the shared deterministic compiler. Only public commitment roots, transport data, and ciphertext leave the handler. Recipient spending/viewing private keys are never an input; the payroll contains public payment profiles, amounts, private references, and secret batch entropy. In the application, those profiles come from confirmed ENS receiving names.
 
----
+Source: [workflow](src/main.ts), [shared compiler](src/compiler.ts), and [simulation harness](../../cre-starter/scripts/simulate-payroll.ts). The confidential deployment target is distinct from the local compiler fallback. A WASM build alone is not execution evidence.
 
-## 🏗️ How the TEE Compiler Works
+## Reproduce execution
 
-```
-                     ┌────────────────────────────────────────┐
-                     │          Chainlink TEE Enclave         │
-                     │          (handlerInTee WASM)           │
-                     └───────────────────┬────────────────────┘
-                                         │
-    1. Authenticated HTTPS Request       │ 2. Compute Stealth Envelopes
-       with TEE Secret (Bearer Token)    │    & Poseidon Roots
-                                         │
-    ┌──────────────────────────────┐     │     ┌──────────────────────────────┐
-    │ Private Payroll API / Server │ ◄───┴───► │ Public Commitment & Envelopes│
-    │ (Protected JSON Dataset)     │           │ (Safe for Public Onchain TX) │
-    └──────────────────────────────┘           └──────────────────────────────┘
-```
-
-1. **Confidential Retrieval:** The TEE retrieves the employer's secret API token via `TeeRuntime.getSecret` and requests the payroll batch over HTTPS (`GET ${NULL_PAYROLL_BASE_URL}/${batchId}`).
-2. **Encrypted Slot Generation:** The enclave validates the dataset, generates 8 constant-size (608-byte) AES-256-GCM encrypted envelopes, and computes the Poseidon commitment tree.
-3. **Public Output Only:** The TEE outputs only the public commitment roots and ciphertexts. Raw identities, amounts, and spending keys never leave the secure enclave.
-
----
-
-## 🛠️ Local Simulation & Development
-
-### 1. Run End-to-End Simulation (Fastest Demo Flow)
 ```sh
-# Run the local CRE simulation runner
 pnpm cre:simulate
+# Or export the private input from the payment wizard:
+pnpm cre:simulate --input "PATH_TO_PRIVATE_INPUT.json"
 ```
 
-### 2. Standalone Service Commands
-```sh
-# Check CRE environment status
-pnpm --filter @null-protocol/cre-workflow status:cre
+Run from the repository root after authenticating with `cre login`. The wrapper selects the staging target and HTTP trigger non-interactively. It serves an authenticated loopback fixture, runs the actual CRE CLI, validates the returned public bundle against independent compilation, and writes a receipt. It sends no transaction. On authentication failure, finish browser login and rerun; do not treat a cached result as fresh execution.
 
-# Initialize local credentials (generates trigger keys & API tokens in root .env)
-pnpm --filter @null-protocol/cre-workflow setup:env --init-credentials
+Import `payment-result.json` into the same browser draft. When the CRE check is enabled, mismatched or stale output keeps review locked. File equality verifies integrity against the draft, not the origin of the file. This check is an explicit local simulation option in the application; there is no automatic remote CRE orchestration.
 
-# Compile workflow WASM via Javy / Bun
-pnpm --filter @null-protocol/cre-workflow build:cli
+The [September 11 receipt](../../deployments/cre-simulation-2026-09-11.json) records successful synthetic execution, authenticated retrieval, and eight encrypted envelopes. Neither a simulation nor successful output import establishes payment broadcast or Privy approval.
 
-# Run the local authenticated mock payroll server (binds 127.0.0.1:8789)
-pnpm --filter @null-protocol/cre-workflow payroll:serve
-```
+## Private input
 
----
+The payroll endpoint is a collection route; the handler appends `/<batchId>`. Use the browser export or [payroll parser](src/compiler.ts) for the exact schema:
 
-## 📡 API Data Contract & Endpoint Format
+- `batchId`: private batch reference.
+- `batchEntropyHex`: fresh nonzero 32-byte secret entropy; never publish or reuse it.
+- `recipients`: one to eight entries with `employeeRef`, atomic integer-string `amountAtomic`, and `stealthMetaAddress` in validated `st:eth:` public-profile format.
 
-The payroll endpoint (`NULL_PAYROLL_BASE_URL`) must point to a collection route (e.g., `https://payroll.example.com/batches`). The workflow handler appends `/${batchId}` and expects:
-
-```json
-{
-  "batchId": "batch-2026-09-01",
-  "batchEntropyHex": "0x4f...32_bytes...",
-  "recipients": [
-    {
-      "employeeRef": "emp-001",
-      "amountAtomic": "2500000000",
-      "stealthMetaAddress": "0x04...65_bytes..."
-    }
-  ]
-}
-```
-
-*Note: Enclave WASM uses `@noble/ciphers` AES-256-GCM for deterministic encryption without requiring browser WebCrypto APIs.*
+The standalone compiler accepts public profiles and does not itself resolve ENS. The browser resolves and revalidates ENS before supplying keys; the pool does not check names on chain. Do not publish private exports, bearer tokens, recovery files, or raw confidential logs. See [CRE project setup](../../cre-starter/README.md) and [readiness](../../docs/SUBMISSION_READINESS.md).
