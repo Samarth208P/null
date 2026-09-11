@@ -1,0 +1,13 @@
+{
+  "name": "@null-protocol/payout-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node --import tsx src/prepare.ts", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@null-protocol/payouts": "workspace:*",
+    "@null-protocol/sdk": "workspace:*",
+    "@null-protocol/client": "workspace:*",
+    "viem": "2.37.3"
+  }
+}

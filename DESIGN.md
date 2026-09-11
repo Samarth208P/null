@@ -137,6 +137,8 @@ Preserve the exact supplied six-blade aperture geometry. The UI mark inherits `c
 
 ## Components
 
+The developer entry extends this existing system with a fluid 36–60px hero heading at 1.1 line height, 23px section headings, and 14px code/form panel corners. Supporting text uses 12–17px steps. These sizes apply to the public toolkit introduction; the authenticated account-entry scale remains unchanged. Code keeps a keyboard-focusable horizontal scroll area on narrow screens. The hero example is explicitly illustrative, the preparation fixture is labeled, and unpublished/local-only features remain qualified.
+
 - **Buttons:** charcoal primary and red danger actions have white labels and the primary shadow. Secondary actions are pale raised controls that become inset when pressed. Disabled actions lose their shadow and retain readable muted text. Standard buttons are at least 42px tall; desktop utility actions are 38px, mobile actions 44px, and entry continuation 48px.
 - **Fields:** 46px minimum height, strong one-pixel outline, inset shadow, 10px corners, and visible labels. Mobile editable text is 16px. Keyboard focus has a two-pixel outline. Read-only and disabled fields omit the inset shadow.
 - **Navigation and filters:** active routes and selected tabs are raised, with semantic selected states. The mobile drawer retains its focus trap, inert background, Escape dismissal, and focus return. Preserve the skip link and route-change focus.

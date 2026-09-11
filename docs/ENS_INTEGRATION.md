@@ -1,5 +1,7 @@
 # ENSv2 payment names
 
+The high-level payout API and live reference app require ENS snapshots for every new recipient, including large sequential jobs. Account setup asks for a preferred ENS name and prefills publication after backup; it does not register or publish automatically. The organization form accepts `ens,amount` CSV. Lower-level cryptographic/contract APIs remain identity-agnostic, and recovery/claims/withdrawals survive ENS expiry. See the [integration guide](SDK_INTEGRATION.md).
+
 Verified on Ethereum Sepolia on September 8, 2026. This is a real ENSv2 integration with confirmed registration and permission transactions. Resolution does not use a mock service, a static name-to-profile map, or an ordinary wallet-address substitute.
 
 ## What users do

@@ -1,7 +1,8 @@
 import type { Route } from './store';
+import { normalizePaymentName } from '@null-protocol/ens';
 
 export type AccountType = 'individual' | 'organization';
-export type WorkspaceProfile = { type: AccountType; organizationName?: string };
+export type WorkspaceProfile = { type: AccountType; organizationName?: string; ensName?: string };
 
 // This is a local UI preference, never proof of organization membership.
 export function profileStorageKey(userId: string) { return `null:workspace:v1:${encodeURIComponent(userId)}`; }
@@ -9,10 +10,11 @@ export function parseProfile(raw: string | null): WorkspaceProfile | null {
   try {
     const value: unknown = JSON.parse(raw || 'null');
     if (!value || typeof value !== 'object' || !('type' in value)) return null;
-    if (value.type === 'individual') return { type: 'individual' };
+    const ensName = 'ensName' in value && typeof value.ensName === 'string' ? normalizePaymentName(value.ensName) : undefined;
+    if (value.type === 'individual') return { type: 'individual', ...(ensName ? { ensName } : {}) };
     if (value.type !== 'organization' || !('organizationName' in value) || typeof value.organizationName !== 'string') return null;
     const name = value.organizationName.trim();
-    return name && name.length <= 50 ? { type: 'organization', organizationName: name } : null;
+    return name && name.length <= 50 ? { type: 'organization', organizationName: name, ...(ensName ? { ensName } : {}) } : null;
   } catch { return null; }
 }
 

@@ -5,18 +5,18 @@ import type { AuthPolicyOpening, ChainContext, CompiledDistribution, DiscoveredA
 export const CONTRACT_NAMES = ['nullPool', 'nullAuthRegistry', 'poseidon3', 'shieldVerifier', 'createDistributionVerifier', 'claimVerifier'] as const;
 export type ContractName = typeof CONTRACT_NAMES[number];
 export interface DeploymentManifest {
-  status: 'deployed'; protocolVersion: '0.1.0' | '0.2.0'; chainId: 11155111 | 31337; deploymentBlock: number;
+  status: 'deployed'; protocolVersion: '0.1.0' | '0.2.0' | '0.3.0'; chainId: 11155111 | 31337; deploymentBlock: number;
   asset: { symbol: string; decimals: 6; address: Address };
-  contracts: Record<ContractName, Address> & { withdrawVerifier?: Address };
-  codeHashes: Record<ContractName | 'asset', Hex> & { withdrawVerifier?: Hex };
-  build: { noir: '1.0.0-beta.22'; barretenberg: '5.0.0-nightly.20260522'; circuitArtifacts: Record<Exclude<CircuitKind, 'withdraw'>, ArtifactReference & { verifierSourceSha256: Hex }> & { withdraw?: ArtifactReference & { verifierSourceSha256: Hex } } };
-  security: { networkScope: 'testnet-only'; withdrawalsImplemented: boolean; audited: false };
+  contracts: Record<ContractName, Address> & { withdrawVerifier?: Address; partialWithdrawVerifier?: Address };
+  codeHashes: Record<ContractName | 'asset', Hex> & { withdrawVerifier?: Hex; partialWithdrawVerifier?: Hex };
+  build: { noir: '1.0.0-beta.22'; barretenberg: '5.0.0-nightly.20260522'; circuitArtifacts: Record<Exclude<CircuitKind, 'withdraw' | 'withdraw_partial'>, ArtifactReference & { verifierSourceSha256: Hex }> & { withdraw?: ArtifactReference & { verifierSourceSha256: Hex }; withdraw_partial?: ArtifactReference & { verifierSourceSha256: Hex } } };
+  security: { networkScope: 'testnet-only'; withdrawalsImplemented: boolean; partialWithdrawalsImplemented?: boolean; audited: false };
 }
 export type OperationStage = 'deployment' | 'history' | 'authorization' | 'saving-recovery' | ProofStage | 'approval' | 'simulating' | 'submitting' | 'confirming' | 'confirmed';
 export interface OperationOptions {
   signal?: AbortSignal;
   onProgress?: (stage: OperationStage) => void;
-  onTransactionSubmitted?: (transaction: { hash: Hex; purpose: 'approval' | 'register-policy' | 'shield' | 'claim' | 'createDistribution' | 'withdraw' }) => void;
+  onTransactionSubmitted?: (transaction: { hash: Hex; purpose: 'approval' | 'register-policy' | 'shield' | 'claim' | 'createDistribution' | 'withdraw' | 'withdrawPartial' }) => void;
 }
 export interface OwnedTreasuryNote {
   ownerNullifierKey: bigint; noteSecret: bigint; amountAtomic: bigint; policyCommitment: Hex;
@@ -42,9 +42,10 @@ export interface LiveClientOptions {
   maxGas?: bigint;
   persistLocalSecret: (checkpoint: SecretCheckpoint) => Promise<void>;
 }
-export type BroadcastTransport = { mode: 'wallet'; wallet: WalletClient } | { mode: 'relay'; url: string };
+export type BroadcastTransport = { mode: 'wallet'; wallet: WalletClient } | { mode: 'relay'; url: string } |
+  { mode: 'sponsored'; send: (operation: PublicOperation) => Promise<Hex> };
 export interface PublicOperation {
-  chainId: number; pool: Address; method: 'shield' | 'claim' | 'createDistribution' | 'withdraw'; proof: Hex; publicInputs: Hex[];
+  chainId: number; pool: Address; method: 'shield' | 'claim' | 'createDistribution' | 'withdraw' | 'withdrawPartial'; proof: Hex; publicInputs: Hex[];
   envelopes?: { ephemeralPubKey: Hex; viewTag: Hex; ciphertext: Hex }[];
 }
 export interface PreparedOperation {
@@ -76,6 +77,8 @@ export interface DistributionOptions extends OperationOptions {
 export interface ClaimOptions extends OperationOptions { allocation: DiscoveredAllocation; validForSeconds?: number }
 export interface WithdrawalOptions extends OperationOptions {
   note: OwnedPrivateNote | OwnedTreasuryNote; recipient: Address; validForSeconds?: number;
+  /** Omit for a full note exit. A smaller amount requires the v0.3 recipient change verifier. */
+  amountAtomic?: bigint;
   authPolicy?: AuthPolicyOpening;
   authorize?: (intent: { digest: Hex; publicInputs: readonly Hex[]; context: ChainContext; recipient: Address; amountAtomic: bigint }) => Promise<Hex>;
   acknowledgePublicWithdrawal: true;

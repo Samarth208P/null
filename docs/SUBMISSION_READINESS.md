@@ -2,6 +2,12 @@
 
 Updated September 11, 2026. This is an unaudited Sepolia prototype. Successful source checks, local simulation, historical transaction receipts, and real owner actions are recorded separately.
 
+## Embeddable toolkit update
+
+The working implementation now includes an ENS-first source SDK and own-UI example, larger sequential payout jobs, a public developer preparation page, ENS during account setup, wallet/sponsor transport choice, and a new v0.3 partial-withdrawal circuit/pool/client. The [local genuine-proof rehearsal](PAYOUT_V3_VERIFICATION.md) completed with exact change recovery, sponsored gas, adversarial cases and zero remaining liabilities. SDK interruption/planning tests passed. This local evidence does not upgrade Sepolia or complete the Privy financial demo.
+
+Before presenting the new product as live: publish matching source, deploy/verify v0.3 and its artifacts, run a public owner-approved payment, and demonstrate a host app paying by ENS followed by a chosen-amount withdrawal. Packages remain unpublished source. Jobs are non-atomic with no automatic resume after reload. High proof gas, operational sponsorship limits and correlation risks remain material weaknesses. A focused, truthful demonstration is stronger evidence than a claimed winning percentage.
+
 ## Current decision
 
 Target **ENS — Best Use of ENSv2**, **Privy — Best B2B financial product**, and **Chainlink — Best Confidential Workflow**. These are submission targets, not a claim of qualification or predicted wins. The Graph remains the discovery integration.

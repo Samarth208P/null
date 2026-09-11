@@ -2,7 +2,11 @@
 
 > **Privacy-Preserving Onchain Broadcaster & Bounded Gas Submitter**
 
-The NULL relayer provides a gasless settlement service for users. Recipients claiming allocations or executing withdrawals do not need to hold ETH or link a public funding wallet to submit transactions to Sepolia.
+The NULL relayer is a reference broadcaster using a separate server-side wallet to pay gas. It accepts distributions, claims, full withdrawals and, with a matching v0.3 manifest, partial withdrawals. v0.3 was verified locally and is not deployed publicly. A funded sponsor lets recipients submit without ETH; withdrawal addresses, public amounts and network metadata remain visible.
+
+Route the SDK's `{ mode: 'sponsored', send }` callback through your authenticated endpoint and `createRelayer`. CORS/IP limits do not authenticate customers or enforce sponsor budgets. Add customer authorization and spending limits before exposing a funded service.
+
+Optional server-only `RELAYER_MAX_GAS` sets the per-transaction ceiling including 20% estimated-gas padding. The unchanged default of 3,000,000 is below several genuine-proof transactions. The local v0.3 test used 10,000,000. Set a budget from actual verified transactions; this is not a monetary fee quote. Keep the gas key out of browser configuration. Deposits still require the funding wallet.
 
 ---
 

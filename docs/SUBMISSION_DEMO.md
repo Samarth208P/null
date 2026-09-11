@@ -1,5 +1,7 @@
 # NULL — human-narrated demo plan
 
+For the new toolkit narrative, begin with a host application importing `@null-protocol/payouts`: enter ENS names and amounts, show resolved destinations, then show actual approved payout receipts and local recipient discovery. Explain who sponsors gas. The public developer preparation example creates real ciphertext but sends no payment. Use the [v0.3 local proof receipt](PAYOUT_V3_VERIFICATION.md) to demonstrate partial withdrawal evidence until a matching public deployment exists; never splice it into footage implying the current Sepolia pool supports that feature. State that larger jobs have separate confirmations and partial progress, and that withdrawals expose their amount/address/timing.
+
 Aim for 3:15, using actual results. Record a 2–4 minute video at 720p or higher with your own spoken narration; do not use AI narration or speed up footage. Confirm the deadline and final upload constraints in the [official event requirements](https://ethglobal.com/events/ethonline2026/info/details). Keep private exports, backup contents, passwords and credentials off-screen.
 
 ## 0:00–0:25 — The primitive

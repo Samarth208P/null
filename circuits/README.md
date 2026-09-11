@@ -2,7 +2,7 @@
 
 > **Private Entitlements & Value Conservation powered by Noir & Barretenberg UltraHonk**
 
-NULL uses four custom Zero-Knowledge circuits written in [Noir](https://noir-lang.org/) to prove balance conservation, distribution validity, claim ownership, and note withdrawals without leaking private inputs.
+NULL's deployed v0.2 uses four custom Zero-Knowledge circuits written in [Noir](https://noir-lang.org/). The new locally verified v0.3 adds a fifth, `withdraw_partial`, to prove a recipient's chosen public exit amount and exact private change. No public v0.3 deployment is claimed. See [verification](../docs/PAYOUT_V3_VERIFICATION.md).
 
 ---
 
@@ -54,7 +54,10 @@ Each circuit receives an exact sequence of public inputs verified onchain by Sol
 | **`shield`** | `[version, chainId, pool, amount, treasuryBody, authPolicy]` |
 | **`create_distribution`** | `[version, chainId, pool, noteRoot, authRoot, nullifier0, nullifier1, distributionCommitment, envelopeRootHi128, envelopeRootLo128, changeBody, transportTagHi128, transportTagLo128, nonce, validUntil]` |
 | **`claim`** | `[version, chainId, pool, globalDistributionRoot, claimNullifier, privateBody, nonce, validUntil]` |
-| **`withdraw`** | `[version, chainId, pool, noteRoot, noteNullifier, recipient, amount, asset, nonce, validUntil]` |
+| **`withdraw`** | `[version, chainId, pool, noteRoot, authRoot, noteNullifier, recipient, amount, nonce, validUntil]` |
+| **`withdraw_partial`** | `[version, chainId, pool, noteRoot, authRoot, noteNullifier, recipient, amount, changeBody, nonce, validUntil]` |
+
+`withdraw_partial` accepts only recipient notes. The original amount, membership path, note opening and change opening remain private witnesses. It constrains `0 < withdrawn < original` and commits to `original - withdrawn`. Full exits use `withdraw`. The asset is fixed by the pool. Partial change requires a new encrypted recovery checkpoint.
 
 ---
 

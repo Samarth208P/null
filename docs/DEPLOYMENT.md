@@ -1,5 +1,9 @@
 # Deployment and service setup
 
+**September 11 toolkit update:** no new browser/Netlify variable is required for the SDK homepage or ENS preparation. The standalone relayer gained optional server-only `RELAYER_MAX_GAS`; its unchanged 3,000,000 default is too low for several proof transactions. The local v0.3 rehearsal used 10,000,000.
+
+The public deployment remains v0.2. Partial withdrawals require a new v0.3 pool/fifth verifier, matching artifacts, manifest/address configuration, indexer/relayer updates and a fresh rehearsal. Existing commands below still target v0.2. Do not change its manifest to imply an upgrade. Commit/review the demonstrated source before releasing the web build. See [v0.3 verification](PAYOUT_V3_VERIFICATION.md).
+
 This setup deploys the contracts to Ethereum Sepolia and runs the web app and relayer on your own computer. All local configuration is in one private root `.env`; no website hosting is required. Confirmed transactions and current execution evidence belong in [implementation status](IMPLEMENTATION_STATUS.md). Contract deployment and local service configuration do not establish a working proof/payment flow or a live Privy/CRE integration. See [free defaults and optional integration limits](FREE_SEPOLIA.md).
 
 ## 1. Install and preserve a matching artifact set

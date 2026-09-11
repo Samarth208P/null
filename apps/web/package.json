@@ -11,6 +11,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@null-protocol/payouts": "workspace:*",
     "@null-protocol/ens": "workspace:*",
     "@null-protocol/client": "workspace:*",
     "@null-protocol/auth": "workspace:*",

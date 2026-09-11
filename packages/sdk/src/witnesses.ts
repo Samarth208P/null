@@ -140,6 +140,32 @@ export interface WithdrawWitnessOptions {
   context: ChainContext; note: TreasuryNoteOpening; recipient: Hex; authRoot: Hex;
   authPolicy?: AuthPolicyOpening; policyPath?: MerklePath; nonce: bigint; validUntil: bigint;
 }
+export interface PartialWithdrawalWitnessOptions {
+  context: ChainContext; note: TreasuryNoteOpening; recipient: Hex; authRoot: Hex;
+  amountAtomic: bigint; changeOwnerNullifierKey: bigint; changeNoteSecret: bigint;
+  nonce: bigint; validUntil: bigint;
+}
+/** Recipient-only partial exit. Requires a separately deployed partial-withdrawal verifier. */
+export function buildPartialWithdrawalWitness(options: PartialWithdrawalWitnessOptions): PreparedWitness & { changeBodyCommitment: Hex; changeAmountAtomic: bigint } {
+  validateDeadline(options.nonce, options.validUntil);
+  const { note } = options;
+  assertAmount(note.amountAtomic); assertAmount(options.amountAtomic);
+  if (options.amountAtomic >= note.amountAtomic) throw new NullError('NULL_AMOUNT_INVALID', 'A partial withdrawal must leave a positive private balance. Use a full withdrawal for the entire note.');
+  const recipient = bytesToBigInt(fromHex(options.recipient, 20));
+  if (!recipient || recipient === BigInt(options.context.poolAddress)) throw new NullError('NULL_DESTINATION_INVALID', 'Choose a receiving wallet other than the pool.');
+  const body = privateNoteBody(note.ownerNullifierKey, note.amountAtomic, note.noteSecret);
+  const commitment = finalNoteCommitment(body, note.path.index); assertPath(note.path, commitment);
+  const changeAmountAtomic = note.amountAtomic - options.amountAtomic;
+  const changeBodyCommitment = privateNoteBody(options.changeOwnerNullifierKey, changeAmountAtomic, options.changeNoteSecret);
+  const publicInputs = [...contextFields(options.context), fieldFromHex(note.path.root), fieldFromHex(options.authRoot),
+    fieldFromHex(noteNullifier(commitment, note.ownerNullifierKey)), recipient, options.amountAtomic,
+    fieldFromHex(changeBodyCommitment), options.nonce, options.validUntil].map(fieldHex);
+  return { publicInputs, changeBodyCommitment, changeAmountAtomic, witness: {
+    inputs: publicInputs, owner_nullifier_key: note.ownerNullifierKey.toString(), note_secret: note.noteSecret.toString(),
+    note_amount: note.amountAtomic.toString(), leaf_index: note.path.index, note_siblings: note.path.siblings,
+    change_owner_nullifier_key: nonzeroField(options.changeOwnerNullifierKey).toString(), change_note_secret: nonzeroField(options.changeNoteSecret).toString(),
+  } };
+}
 export function withdrawalIntentDigest(inputs: readonly Hex[]): Hex {
   if (inputs.length !== 10) throw new NullError('NULL_INTENT_INVALID', 'Withdrawal requires ten public fields.');
   return fieldHex(hashFields('null.v1.withdraw-intent', inputs.map(fieldFromHex)));

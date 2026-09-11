@@ -8,6 +8,10 @@
     "node": ">=22.16.0"
   },
   "scripts": {
+    "test:payouts": "pnpm --filter @null-protocol/payouts test",
+    "test:partial-withdrawal": "node --import tsx --test packages/sdk/src/partial-withdrawal.test.ts",
+    "test:flow-v3": "node --import tsx tools/test-payment-flow-v3.mts",
+    "example:payouts": "pnpm --filter @null-protocol/payout-example start",
     "test:domains": "node --import tsx --test packages/crypto/src/domains.test.ts",
     "dev": "pnpm --filter @null-protocol/web dev",
     "dev:all": "node tools/dev.mjs",

@@ -2,7 +2,7 @@ import { Noir, type CompiledCircuit } from '@noir-lang/noir_js';
 import { Barretenberg, BackendType, UltraHonkBackend } from '@aztec/bb.js';
 import type { Hex, ProofRequest, ProofResult, ProofStage } from './types';
 
-const COUNTS = { shield: 6, create_distribution: 15, claim: 8, withdraw: 10 } as const;
+const COUNTS = { shield: 6, create_distribution: 15, claim: 8, withdraw: 10, withdraw_partial: 11 } as const;
 const FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const evm = { verifierTarget: 'evm' as const }; // ZK-enabled Keccak UltraHonk. Never evm-no-zk.
 function hex(bytes: Uint8Array): Hex { return `0x${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`; }

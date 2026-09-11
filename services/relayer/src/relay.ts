@@ -1,16 +1,16 @@
-import { createPublicClient, createWalletClient, encodeFunctionData, http, keccak256, type Address, type Hex } from 'viem';
+import { createPublicClient, createWalletClient, encodeFunctionData, http, keccak256, parseAbi, type Address, type Hex } from 'viem';
 import { privateKeyToAccount, nonceManager } from 'viem/accounts';
 import { nullPoolAbi } from '@null-protocol/contracts';
 
 const FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 export interface RelayEnvelope { ephemeralPubKey: Hex; viewTag: Hex; ciphertext: Hex }
-export interface RelayPayload { chainId: number; pool: Address; method: 'claim' | 'createDistribution' | 'withdraw'; proof: Hex; publicInputs: Hex[]; envelopes?: RelayEnvelope[] }
+export interface RelayPayload { chainId: number; pool: Address; method: 'claim' | 'createDistribution' | 'withdraw' | 'withdrawPartial'; proof: Hex; publicInputs: Hex[]; envelopes?: RelayEnvelope[] }
 export interface RelayManifest {
   status: string;
   chainId: number;
-  contracts: { nullPool: Address; claimVerifier: Address; createDistributionVerifier: Address; withdrawVerifier?: Address };
+  contracts: { nullPool: Address; claimVerifier: Address; createDistributionVerifier: Address; withdrawVerifier?: Address; partialWithdrawVerifier?: Address };
   asset: { address: Address };
-  codeHashes: { nullPool: Hex; claimVerifier: Hex; createDistributionVerifier: Hex; withdrawVerifier?: Hex };
+  codeHashes: { nullPool: Hex; claimVerifier: Hex; createDistributionVerifier: Hex; withdrawVerifier?: Hex; partialWithdrawVerifier?: Hex };
 }
 export class RelayError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
@@ -27,8 +27,8 @@ export function validateRelayPayload(value: unknown): RelayPayload {
   if (!Number.isSafeInteger(value.chainId) || Number(value.chainId) <= 0) throw new RelayError('NULL_CONTEXT_MISMATCH');
   hex(value.pool, 20); hex(value.proof);
   if (value.proof.length > 262_146 || value.proof.length < 66) throw new RelayError('NULL_PAYLOAD_REJECTED');
-  if (value.method !== 'claim' && value.method !== 'createDistribution' && value.method !== 'withdraw') throw new RelayError('NULL_METHOD_REJECTED');
-  if (!Array.isArray(value.publicInputs) || value.publicInputs.length !== (value.method === 'claim' ? 8 : value.method === 'withdraw' ? 10 : 15)) throw new RelayError('NULL_PAYLOAD_REJECTED');
+  if (value.method !== 'claim' && value.method !== 'createDistribution' && value.method !== 'withdraw' && value.method !== 'withdrawPartial') throw new RelayError('NULL_METHOD_REJECTED');
+  if (!Array.isArray(value.publicInputs) || value.publicInputs.length !== (value.method === 'claim' ? 8 : value.method === 'withdraw' ? 10 : value.method === 'withdrawPartial' ? 11 : 15)) throw new RelayError('NULL_PAYLOAD_REJECTED');
   for (const input of value.publicInputs) { hex(input, 32); if (BigInt(input) >= FIELD) throw new RelayError('NULL_PAYLOAD_REJECTED'); }
   if (BigInt(value.publicInputs[0]) !== 1n || BigInt(value.publicInputs[1]) !== BigInt(Number(value.chainId)) || BigInt(value.publicInputs[2]) !== BigInt(value.pool)) throw new RelayError('NULL_CONTEXT_MISMATCH');
   if (value.method !== 'createDistribution' && value.envelopes !== undefined) throw new RelayError('NULL_PAYLOAD_REJECTED');
@@ -42,10 +42,11 @@ export function validateRelayPayload(value: unknown): RelayPayload {
   }
   return value as unknown as RelayPayload;
 }
+const partialAbi = parseAbi(['function withdrawPartial(bytes proof, bytes32[] inputs)', 'function partialWithdrawVerifier() view returns (address)', 'function partialWithdrawVerifierCodeHash() view returns (bytes32)']);
 export function exportSelfBroadcast(value: unknown) {
   const payload = validateRelayPayload(value);
   type EightEnvelopes = [RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope];
-  const data = payload.method !== 'createDistribution'
+  const data = payload.method === 'withdrawPartial' ? encodeFunctionData({ abi: partialAbi, functionName: 'withdrawPartial', args: [payload.proof, payload.publicInputs] }) : payload.method !== 'createDistribution'
     ? encodeFunctionData({ abi: nullPoolAbi, functionName: payload.method, args: [payload.proof, payload.publicInputs] })
     : encodeFunctionData({ abi: nullPoolAbi, functionName: 'createDistribution', args: [payload.proof, payload.publicInputs, payload.envelopes as EightEnvelopes] });
   return { chainId: payload.chainId, to: payload.pool, value: '0x0', data, method: payload.method };
@@ -63,6 +64,13 @@ export function createRelayer(config: { manifest: RelayManifest; rpcUrl: string;
   const read = (functionName: ReadFunction, args: [] | [bigint] = []) => rpc.readContract({ address: manifest.contracts.nullPool, abi: nullPoolAbi, functionName, args });
   async function verifyDeployment() {
     if (await rpc.getChainId() !== manifest.chainId) throw new RelayError('NULL_CONTEXT_MISMATCH', 503);
+    if (manifest.contracts.partialWithdrawVerifier) {
+      const verifier = manifest.contracts.partialWithdrawVerifier;
+      const code = await rpc.getCode({ address: verifier });
+      const address = await rpc.readContract({ address: manifest.contracts.nullPool, abi: partialAbi, functionName: 'partialWithdrawVerifier' });
+      const hash = await rpc.readContract({ address: manifest.contracts.nullPool, abi: partialAbi, functionName: 'partialWithdrawVerifierCodeHash' });
+      if (!code || keccak256(code) !== manifest.codeHashes.partialWithdrawVerifier || address.toLowerCase() !== verifier.toLowerCase() || hash !== manifest.codeHashes.partialWithdrawVerifier) throw new RelayError('NULL_VERIFIER_MISMATCH', 503);
+    }
     if (manifest.contracts.withdrawVerifier) {
       const code = await rpc.getCode({address:manifest.contracts.withdrawVerifier});
       if (!code || keccak256(code) !== manifest.codeHashes.withdrawVerifier || String(await rpc.readContract({address:manifest.contracts.nullPool,abi:nullPoolAbi,functionName:'withdrawVerifier'})).toLowerCase() !== manifest.contracts.withdrawVerifier.toLowerCase() || await rpc.readContract({address:manifest.contracts.nullPool,abi:nullPoolAbi,functionName:'withdrawVerifierCodeHash'}) !== manifest.codeHashes.withdrawVerifier) throw new RelayError('NULL_VERIFIER_MISMATCH',503);
@@ -85,6 +93,7 @@ export function createRelayer(config: { manifest: RelayManifest; rpcUrl: string;
     relay(value: unknown) {
       const payload = validateRelayPayload(value);
       if (payload.chainId !== manifest.chainId || payload.pool.toLowerCase() !== manifest.contracts.nullPool.toLowerCase()) throw new RelayError('NULL_CONTEXT_MISMATCH');
+      if (payload.method === 'withdrawPartial' && (!manifest.contracts.partialWithdrawVerifier || !manifest.codeHashes.partialWithdrawVerifier)) throw new RelayError('NULL_METHOD_REJECTED');
       if (payload.method === 'withdraw' && (!manifest.contracts.withdrawVerifier || !manifest.codeHashes.withdrawVerifier)) throw new RelayError('NULL_METHOD_REJECTED');
       const transaction = exportSelfBroadcast(payload);
       const id = keccak256(transaction.data);
@@ -101,7 +110,7 @@ export function createRelayer(config: { manifest: RelayManifest; rpcUrl: string;
         if (payload.method === 'claim') {
           if (await read('spentClaimNullifier', [BigInt(payload.publicInputs[4])])) throw new RelayError('NULL_NULLIFIER_SPENT', 409);
         } else {
-          for (const index of payload.method === 'withdraw' ? [5] : [5, 6]) if (await read('spentNoteNullifier', [BigInt(payload.publicInputs[index])])) throw new RelayError('NULL_NULLIFIER_SPENT', 409);
+          for (const index of payload.method === 'withdraw' || payload.method === 'withdrawPartial' ? [5] : [5, 6]) if (await read('spentNoteNullifier', [BigInt(payload.publicInputs[index])])) throw new RelayError('NULL_NULLIFIER_SPENT', 409);
         }
         // eth_call executes the actual immutable pool verifier with the exact bound calldata.
         try { await rpc.call({ account: account.address, to: transaction.to, data: transaction.data }); } catch { throw new RelayError('NULL_PROOF_INVALID', 422); }

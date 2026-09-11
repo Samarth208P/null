@@ -4,7 +4,9 @@ Use only after checking [current readiness](SUBMISSION_READINESS.md). Replace pe
 
 ## Short description
 
-NULL turns one funded business payout into individually claimable private entitlements. ENSv2 supplies recipient-controlled payment inboxes, Chainlink CRE compiles encrypted delivery envelopes, and Privy binds organization approval to the exact encrypted batch. Recipients discover payments locally and use Noir proofs to claim against a global distribution accumulator. Payroll is the demonstration; the primitive also fits grants and contractor distributions.
+NULL lets applications embed private ENS payouts with their own UI and local keys. Organizations provide ENS names and amounts; the toolkit resolves receiving keys and splits large jobs into funded, encrypted batches. Recipients discover and claim locally with Noir proofs. Integrators can sponsor public transactions or let organizations pay gas. ENSv2 supplies receiving identity, CRE checks compilation in local simulation, and the Privy adapter binds owner approval to the payout. Packages are workspace source, not a published managed service.
+
+New v0.3 partial withdrawals preserve a private remainder and passed a local genuine-proof rehearsal with independent sponsored gas. They are not deployed on Sepolia; the current live pool supports whole-note exits. Make this distinction explicit in the demo.
 
 ## What is distinctive
 

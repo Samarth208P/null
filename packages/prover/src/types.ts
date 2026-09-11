@@ -1,6 +1,6 @@
 import type { InputMap } from '@noir-lang/noir_js';
 
-export type CircuitKind = 'shield' | 'create_distribution' | 'claim' | 'withdraw';
+export type CircuitKind = 'shield' | 'create_distribution' | 'claim' | 'withdraw' | 'withdraw_partial';
 export type Hex = `0x${string}`;
 export interface ArtifactReference {
   url: string;

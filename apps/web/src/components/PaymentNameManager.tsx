@@ -8,6 +8,7 @@ import { config } from '../lib/config';
 import { ensClient } from '../lib/ens';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
+import { useAccount } from '../lib/account';
 import { clearPendingNameUpdate, readPendingNameUpdate, savePendingNameUpdate, type PendingNameUpdate } from '../lib/ens-pending';
 import { Button, Notice } from './ui';
 
@@ -35,11 +36,12 @@ export function PaymentNameManager() { return config.privyAppId ? <PrivyNames />
 
 function NameManager({ connect, walletControl }: { connect: Connection; walletControl?: ReactNode }) {
   const store = useStore();
+  const account = useAccount();
   const { userId } = useSession();
   const userKey = userId ?? 'connected-wallet';
   const [savedUpdate] = useState(() => readPendingNameUpdate(userKey));
   const updateRef = useRef<PendingNameUpdate | undefined>(savedUpdate);
-  const [name, setName] = useState(savedUpdate?.name ?? store.receivingName?.name ?? '');
+  const [name, setName] = useState(savedUpdate?.name ?? store.receivingName?.name ?? account.profile?.ensName ?? '');
   const [checked, setChecked] = useState<Awaited<ReturnType<typeof inspectPaymentName>>>();
   const [linked, setLinked] = useState<PaymentNameSnapshot | undefined>(store.receivingName);
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false);

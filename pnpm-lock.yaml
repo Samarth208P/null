@@ -24,6 +24,21 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  apps/payout-example:
+    dependencies:
+      '@null-protocol/client':
+        specifier: workspace:*
+        version: link:../../packages/client
+      '@null-protocol/payouts':
+        specifier: workspace:*
+        version: link:../../packages/payouts
+      '@null-protocol/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      viem:
+        specifier: 2.37.3
+        version: 2.37.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
+
   apps/web:
     dependencies:
       '@null-protocol/auth':
@@ -41,6 +56,9 @@ importers:
       '@null-protocol/graph-client':
         specifier: workspace:*
         version: link:../../packages/graph-client
+      '@null-protocol/payouts':
+        specifier: workspace:*
+        version: link:../../packages/payouts
       '@null-protocol/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -141,6 +159,21 @@ importers:
       '@null-protocol/contracts':
         specifier: workspace:*
         version: link:../contracts
+      viem:
+        specifier: 2.37.3
+        version: 2.37.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
+
+  packages/payouts:
+    dependencies:
+      '@null-protocol/client':
+        specifier: workspace:*
+        version: link:../client
+      '@null-protocol/ens':
+        specifier: workspace:*
+        version: link:../ens
+      '@null-protocol/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       viem:
         specifier: 2.37.3
         version: 2.37.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)

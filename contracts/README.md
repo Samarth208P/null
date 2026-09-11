@@ -4,6 +4,8 @@
 
 The smart contract layer governs the onchain state of the NULL protocol. It enforces zero-knowledge proof verification, tracks accumulator trees, registers nullifiers to prevent double-spending, and handles ERC-20 asset deposits and withdrawals.
 
+**Version boundary:** `NullPool.sol` remains the deployed v0.2 pool. New `NullPoolV3.sol` adds immutable `PartialWithdrawVerifier` wiring and `withdrawPartial`: spend a recipient note, transfer the chosen public amount, and insert exact private change. Recipient amount/address, membership and change are proof-bound; failed token transfer reverts note consumption. Treasury partial exits are not supported. The [local real-proof rehearsal](../docs/PAYOUT_V3_VERIFICATION.md) passed; no public v0.3 deployment is claimed. Existing deploy scripts below still target v0.2.
+
 ---
 
 ## 🏗️ Architecture Overview

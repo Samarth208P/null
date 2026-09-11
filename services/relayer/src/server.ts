@@ -13,7 +13,9 @@ try {
   if (process.env.NULL_MANIFEST_PATH && process.env.RELAYER_RPC_URL && process.env.RELAYER_PRIVATE_KEY) {
     const manifestPath = resolve(fileURLToPath(new URL('../../../', import.meta.url)), process.env.NULL_MANIFEST_PATH);
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as RelayManifest;
-    relayer = createRelayer({ manifest, rpcUrl: process.env.RELAYER_RPC_URL, privateKey: process.env.RELAYER_PRIVATE_KEY as Hex });
+    const maxGas = process.env.RELAYER_MAX_GAS ? BigInt(process.env.RELAYER_MAX_GAS) : undefined;
+    if (maxGas !== undefined && maxGas <= 0n) throw new Error('Invalid relayer gas ceiling');
+    relayer = createRelayer({ manifest, rpcUrl: process.env.RELAYER_RPC_URL, privateKey: process.env.RELAYER_PRIVATE_KEY as Hex, maxGas });
     await relayer.verifyDeployment();
   }
 } catch { relayer = undefined; }

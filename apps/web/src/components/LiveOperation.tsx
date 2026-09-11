@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PayoutDraft } from '@null-protocol/payouts';
+import { PayoutClient, type ApprovePayoutOptions } from '@null-protocol/payouts/client';
+import { planWithdrawal, type WithdrawalStep } from '@null-protocol/payouts/withdrawals';
 import { useAuthorizationSignature, usePrivy, useWallets } from '@privy-io/react-auth';
 import { createWalletClient, custom, getAddress, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { publicKeyToAddress } from 'viem/accounts';
@@ -10,24 +13,25 @@ import {
 } from '@null-protocol/client';
 import { authorizeOrganizationDistribution, identifyOrganizationSigner, type AuthorizationRequest } from '@null-protocol/auth';
 import {
-  NullError, authPolicyCommitment, fromHex, secp256k1, toHex, deriveField, randomBytes, utf8,
+  NullError, parseAmount, authPolicyCommitment, fromHex, secp256k1, toHex, deriveField, randomBytes, utf8,
   type AuthPolicyOpening, type CompiledDistribution, type DiscoveredAllocation,
 } from '@null-protocol/sdk';
 import { config } from '../lib/config';
 import { useStore } from '../lib/store';
 import { PaymentNameError, recheckRequiredPaymentNames, type PaymentNameSnapshot } from '@null-protocol/ens';
 import { ensClient } from '../lib/ens';
-import { download, money, short } from '../lib/format';
+import { download, money, short, amount as displayAmount } from '../lib/format';
 import { Badge, Button, CopyButton, ExternalLink, KeyValue, Modal, Notice } from './ui';
 
 export type LiveOperationRequest = { kind: 'withdraw'; treasury: boolean } | { kind: 'shield'; amountAtomic: bigint } |
   { kind: 'claim'; allocation: DiscoveredAllocation } |
-  { kind: 'create_distribution'; compiled: CompiledDistribution; paymentNames: PaymentNameSnapshot[] };
+  { kind: 'create_distribution'; compiled: CompiledDistribution; paymentNames: PaymentNameSnapshot[]; draft: PayoutDraft; compilation: ApprovePayoutOptions['compilation']; batches?: { draft: PayoutDraft; compilation: ApprovePayoutOptions['compilation'] }[] };
 export interface LiveOperationProps {
   open: boolean;
   onClose: () => void;
   operation: LiveOperationRequest;
   onConfirmed?: (result: ConfirmedOperation) => void;
+  onBatchConfirmed?: (result: ConfirmedOperation, index: number) => void;
 }
 type Intent = Parameters<DistributionOptions['authorize']>[0] | Parameters<NonNullable<WithdrawalOptions['authorize']>>[0];
 type SecretStore = ReturnType<typeof createEncryptedCheckpointStore>;
@@ -141,10 +145,15 @@ function errorCopy(reason: unknown): string {
   return reason instanceof Error && codes[reason.message] ? codes[reason.message]! : 'This step could not be completed. Check your connection and try again.';
 }
 
-function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: LiveOperationProps & { bridge: WalletBridge }) {
+function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfirmed, bridge }: LiveOperationProps & { bridge: WalletBridge }) {
   const workspaceStore = useStore();
   const [privateNotes, setPrivateNotes] = useState<OwnedPrivateNote[]>([]);
   const [withdrawalNoteId, setWithdrawalNoteId] = useState('');
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [batchProgress, setBatchProgress] = useState(0);
+  const batchReceipts = useRef<ConfirmedOperation[]>([]);
+  const withdrawalSteps = useRef<WithdrawalStep[]>([]);
+  const activeNames = useRef<PaymentNameSnapshot[]>(operation.kind === 'create_distribution' ? operation.paymentNames : []);
   const [recipient, setRecipient] = useState('');
   const [manifest, setManifest] = useState<DeploymentManifest>();
   const [manifestError, setManifestError] = useState('');
@@ -152,6 +161,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   const passwordRef = useRef('');
   const [vault, setVault] = useState<SecretStore>();
   const [client, setClient] = useState<NullLiveClient>();
+  const payouts = useMemo(() => client ? new PayoutClient(client, ensClient) : undefined, [client]);
   const [policies, setPolicies] = useState<AuthPolicyOpening[]>([]);
   const [selectedPolicy, setSelectedPolicy] = useState('');
   const [notes, setNotes] = useState<OwnedTreasuryNote[]>([]);
@@ -178,13 +188,14 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   const policy = policies.find(item => authPolicyCommitment(item) === selectedPolicy);
   const treasuryOperation = operation.kind === 'shield' || operation.kind === 'create_distribution' || operation.kind === 'withdraw' && operation.treasury;
   const withdrawalNotes = treasuryOperation ? notes : privateNotes;
-  const withdrawalNote = withdrawalNotes.find(note => note.commitment === withdrawalNoteId);
+  const balanceWithdrawal = operation.kind === 'withdraw' && !operation.treasury && !!manifest?.security.partialWithdrawalsImplemented;
+  const withdrawalNote = balanceWithdrawal ? privateNotes[0] : withdrawalNotes.find(note => note.commitment === withdrawalNoteId);
   const amountAtomic = operation.kind === 'shield' ? operation.amountAtomic : operation.kind === 'claim'
-    ? operation.allocation.amountAtomic : operation.kind === 'withdraw' ? withdrawalNote?.amountAtomic ?? 0n : operation.compiled.allocations.reduce((total, allocation) => total + allocation.amountAtomic, 0n);
+    ? operation.allocation.amountAtomic : operation.kind === 'withdraw' ? withdrawalAmount ? displayAmount(withdrawalAmount) : balanceWithdrawal ? privateNotes.reduce((sum, note) => sum + note.amountAtomic, 0n) : withdrawalNote?.amountAtomic ?? 0n : operation.batches?.reduce((total, batch) => total + batch.draft.summary.totalAmountAtomic, 0n) ?? operation.compiled.totalAmount;
   const proofOptions = () => ({ signal: controller.current?.signal, onProgress: setStage,
     onTransactionSubmitted: ({ hash, purpose }: { hash: Hex; purpose: string }) => {
       const method = operation.kind === 'create_distribution' ? 'createDistribution' : operation.kind;
-      if (purpose === method) setTransactionHash(hash);
+      if (purpose === method || method === 'withdraw' && purpose === 'withdrawPartial') setTransactionHash(hash);
     } });
 
   useEffect(() => {
@@ -207,6 +218,14 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   useEffect(() => () => { controller.current?.abort(); pendingApproval.current?.reject(new DOMException('Cancelled', 'AbortError')); passwordRef.current = ''; }, []);
 
   function close() {
+    if (busy && !pendingApproval.current) {
+      setError('Wait for the current operation to finish before closing. If a transaction has been sent, keep this screen open until its status is known.');
+      return;
+    }
+    if (uncertain) {
+      setError('Check the pending transaction status before closing. Its result is unknown; starting another payout could pay the same recipients twice.');
+      return;
+    }
     controller.current?.abort();
     pendingApproval.current?.reject(new DOMException('Cancelled', 'AbortError'));
     pendingApproval.current = undefined;
@@ -285,21 +304,25 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   }
   async function prepare() {
     if (!client) return;
-    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
+    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     let result: PreparedOperation;
     if (operation.kind === 'shield') {
       if (!policy || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Choose your organization in Advanced setup and confirm that you understand the deposit notice.');
       result = await client.prepareShield({ amountAtomic: operation.amountAtomic, policyCommitment: authPolicyCommitment(policy), acknowledgePublicDeposit: true, ...proofOptions() });
     } else if (operation.kind === 'withdraw') {
       if (!withdrawalNote || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Select a note and acknowledge the public withdrawal.');
-      result = await client.prepareWithdrawal({note:withdrawalNote,recipient:getAddress(recipient.trim()),acknowledgePublicWithdrawal:true,...proofOptions(),...(operation.treasury ? {authPolicy:policy,authorize:async (intent: Parameters<NonNullable<WithdrawalOptions['authorize']>>[0]) => {setManualIntent(intent);return new Promise<Hex>((resolve,reject)=>{pendingApproval.current={resolve,reject};});}} : {})});
+      if (balanceWithdrawal && !withdrawalSteps.current.length) withdrawalSteps.current = planWithdrawal(privateNotes, withdrawalAmount ? parseAmount(withdrawalAmount) : amountAtomic);
+      const step = withdrawalSteps.current[batchReceipts.current.length];
+      result = await client.prepareWithdrawal({note:step?.note ?? withdrawalNote,recipient:getAddress(recipient.trim()),...(step ? {amountAtomic:step.amountAtomic} : withdrawalAmount ? {amountAtomic:parseAmount(withdrawalAmount)} : {}),acknowledgePublicWithdrawal:true,...proofOptions(),...(operation.treasury ? {authPolicy:policy,authorize:async (intent: Parameters<NonNullable<WithdrawalOptions['authorize']>>[0]) => {setManualIntent(intent);return new Promise<Hex>((resolve,reject)=>{pendingApproval.current={resolve,reject};});}} : {})});
     } else if (operation.kind === 'claim') {
       result = await client.prepareClaim({ allocation: operation.allocation, ...proofOptions() });
     } else {
       if (!policy) throw new NullError('NULL_POLICY_INVALID', 'Add your organization file in Advanced setup first.');
       const chosen = notes.filter(note => selectedNotes.includes(note.commitment) && note.policyCommitment === selectedPolicy);
       if (chosen.length < 1 || chosen.length > 2) throw new NullError('NULL_NOTE_INVALID', 'Choose one or two available balances in Advanced setup.');
-      result = await client.prepareDistribution({ compiled: operation.compiled, treasuryNotes: chosen, authPolicy: policy, ...proofOptions(),
+      const batch = operation.batches?.[batchReceipts.current.length] ?? { draft: operation.draft, compilation: operation.compilation };
+      activeNames.current = batch.draft.paymentNames;
+      result = await payouts!.approve(batch.draft, { compilation: batch.compilation, treasuryNotes: chosen, authPolicy: policy, ...proofOptions(),
         authorize: async intent => {
           setManualIntent(intent);
           return new Promise<Hex>((resolve, reject) => { pendingApproval.current = { resolve, reject }; });
@@ -312,7 +335,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
     if (!manualIntent || !policy || !bridge.authorize) return;
     setError(''); setApprovalBusy(true);
     try {
-      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
+      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
       const signed = await bridge.authorize(manualIntent, policy);
       pendingApproval.current?.resolve(signed); pendingApproval.current = undefined; setManualIntent(undefined);
     } catch (reason) { setError(errorCopy(reason)); }
@@ -321,19 +344,52 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
   async function importSignature() {
     if (!/^0x[0-9a-fA-F]{128}$/.test(signature.trim())) { setError('This approval code could not be read. Copy the full code from your organization’s signing tool; it starts with 0x.'); return; }
     try {
-      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
+      if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     } catch (reason) { setError(errorCopy(reason)); return; }
     pendingApproval.current?.resolve(signature.trim() as Hex); pendingApproval.current = undefined;
     setSignature(''); setManualIntent(undefined); setError('');
   }
+  function recordBatch(result: ConfirmedOperation) {
+    if (batchReceipts.current.some(receipt => receipt.transactionHash === result.transactionHash)) return;
+    const index = batchReceipts.current.length; batchReceipts.current.push(result); setBatchProgress(batchReceipts.current.length);
+    if (operation.kind === 'create_distribution') try { onBatchConfirmed?.(result, index); } catch { /* A UI callback cannot alter a confirmed transaction. */ }
+  }
   async function submit() {
     if (!prepared || !client || !backupSaved || uncertain) return;
-    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, operation.paymentNames, operation.compiled.realCount);
+    if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     setTransactionHash(undefined); setReconciliation('');
     try {
       const connected = transport === 'wallet' ? (wallet ?? await bridge.connect(manifest!.chainId)) : undefined;
       if (connected) setWallet(connected);
-      const result = await client.submit(prepared, connected ? { mode: 'wallet', wallet: connected } : { mode: 'relay', url: config.relayerUrl! }, proofOptions());
+      const sender = operation.kind === 'create_distribution' ? payouts! : client;
+      let result = batchReceipts.current.find(receipt => operation.kind === 'create_distribution' ? receipt.distributionCommitment === prepared.publicOperation.publicInputs[7] : operation.kind === 'withdraw' && receipt.withdrawal?.nullifier === prepared.publicOperation.publicInputs[5]) ?? await sender.submit(prepared, connected ? { mode: 'wallet', wallet: connected } : { mode: 'relay', url: config.relayerUrl! }, proofOptions());
+      if (balanceWithdrawal && withdrawalSteps.current.length > 1) {
+        recordBatch(result);
+        if (!result.localRecoverySaved) throw new Error('Withdrawal confirmed, but local recovery was not saved. Restore recovery before continuing.');
+        while (batchReceipts.current.length < withdrawalSteps.current.length) {
+          const step = withdrawalSteps.current[batchReceipts.current.length];
+          const next = await client.prepareWithdrawal({ ...step, recipient: getAddress(recipient.trim()), acknowledgePublicWithdrawal: true, ...proofOptions() });
+          setPrepared(next); setBackupSaved(false);
+          setStage('complete');
+          setReconciliation('Save the updated funds backup, then confirm the next transfer. The completed transfer will not be repeated.');
+          return;
+        }
+      }
+      if (operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1) {
+        recordBatch(result);
+        if (!result.localRecoverySaved) throw new Error('Payment confirmed, but recovery could not be saved. Stop and restore the confirmed change before continuing.');
+        while (batchReceipts.current.length < operation.batches.length) {
+          const batch = operation.batches[batchReceipts.current.length]; activeNames.current = batch.draft.paymentNames;
+          const available = (await client.recoverTreasuryNotes((await vault!.load()).checkpoints)).filter(item => !item.spent && item.note.policyCommitment === selectedPolicy && item.note.amountAtomic > 0n).map(item => item.note);
+          const next = await payouts!.approve(batch.draft, { compilation: batch.compilation, treasuryNotes: available.slice(0, 2), authPolicy: policy!, ...proofOptions(),
+            authorize: async intent => { setManualIntent(intent); return new Promise<Hex>((resolve, reject) => { pendingApproval.current = { resolve, reject }; }); },
+          });
+          setPrepared(next); setBackupSaved(false);
+          setStage('complete');
+          setReconciliation('Save the updated funds backup, then confirm the next batch. Completed batches will not be repeated.');
+          return;
+        }
+      }
       setConfirmed(result); setStage('confirmed');
       try { onConfirmed?.(result); } catch { /* A parent UI callback cannot change the confirmed chain result. */ }
     } catch (reason) {
@@ -344,8 +400,25 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
 
   async function reconcile() {
     if (!prepared || !client) return;
-    const state = await client.reconcile(prepared, transactionHash, proofOptions());
+    const sender = operation.kind === 'create_distribution' ? payouts! : client;
+    const state = await sender.reconcile(prepared, transactionHash, proofOptions());
     if (state.status === 'confirmed') {
+      if (balanceWithdrawal && withdrawalSteps.current.length > 1) {
+        recordBatch(state.result);
+        if (batchReceipts.current.length < withdrawalSteps.current.length) {
+          setUncertain(false); setBackupSaved(true); setStage('complete');
+          setReconciliation('This transfer is confirmed. Continue to withdraw the remaining amount; completed transfers will not be repeated.');
+          return;
+        }
+      }
+      if (operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1) {
+        recordBatch(state.result);
+        if (batchReceipts.current.length < operation.batches.length) {
+          setUncertain(false); setBackupSaved(true); setStage('complete');
+          setReconciliation('This batch is confirmed. Continue to send the remaining batches; confirmed batches will not be repeated.');
+          return;
+        }
+      }
       setConfirmed(state.result); setUncertain(false); setTransactionHash(state.result.transactionHash); setStage('confirmed'); setReconciliation('');
       try { onConfirmed?.(state.result); } catch { /* Confirmed chain state remains authoritative. */ }
     } else if (state.status === 'reverted') {
@@ -360,6 +433,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
 
   const title = operation.kind === 'shield' ? 'Add funds' : operation.kind === 'claim' ? 'Collect payment' : operation.kind === 'withdraw' ? 'Withdraw funds' : 'Send payment';
   return <Modal title={title} description="Review the details before you confirm." open={open} onClose={close} wide>
+    {operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1 && <Notice>{batchProgress} of {operation.batches.length} private batches confirmed. Your wallet may request an approval for each batch. Completed batches are not rolled back if a later batch fails.</Notice>}
     {operation.kind === 'withdraw' && !withdrawalNote ? <p className="field-hint">Your withdrawal amount will appear after you unlock your funds and choose a note.</p> : <div className="claim-amount">{money(amountAtomic, true)}<span>USDC</span></div>}
     {manifestError ? <Notice tone="warning">{manifestError}<p>Nothing has been sent.</p></Notice>
       : !manifest ? <p className="processing-status" role="status">Checking the connection…</p>
@@ -389,9 +463,11 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, bridge }: Li
               </>}
             </details></>}
             {operation.kind === 'withdraw' && <div className="section-block">
-              <label className="field">Funds to withdraw<select value={withdrawalNoteId} disabled={busy} onChange={event => {setWithdrawalNoteId(event.target.value); const chosen=withdrawalNotes.find(note=>note.commitment===event.target.value);if(chosen && 'policyCommitment' in chosen)setSelectedPolicy(chosen.policyCommitment);}}><option value="">Choose a note</option>{withdrawalNotes.map((note,index)=><option key={note.commitment} value={note.commitment}>{money(note.amountAtomic,true)} USDC · Note {index+1}</option>)}</select><small>Withdraw one full note at a time. No change is left behind.</small></label>
+              {balanceWithdrawal ? <KeyValue label="Available private balance">{money(privateNotes.reduce((sum, note) => sum + note.amountAtomic, 0n), true)} USDC</KeyValue> : <label className="field">Funds to withdraw<select value={withdrawalNoteId} disabled={busy || !!prepared} onChange={event => {setWithdrawalNoteId(event.target.value); setWithdrawalAmount(''); const chosen=withdrawalNotes.find(note=>note.commitment===event.target.value);if(chosen && 'policyCommitment' in chosen)setSelectedPolicy(chosen.policyCommitment);}}><option value="">Choose a note</option>{withdrawalNotes.map((note,index)=><option key={note.commitment} value={note.commitment}>{money(note.amountAtomic,true)} USDC · Note {index+1}</option>)}</select><small>This deployed pool supports full-note withdrawals. Partial recipient withdrawals require the v0.3 pool.</small></label>}
+              {balanceWithdrawal && <label className="field">Amount to withdraw<input value={withdrawalAmount} disabled={busy || !!prepared || batchProgress > 0} inputMode="decimal" placeholder="Leave empty to withdraw the available balance" onChange={event => { withdrawalSteps.current = []; setWithdrawalAmount(event.target.value); }} /><small>The remainder stays private. Several received notes may need several public transfers. Save an updated funds backup for the remainder.</small></label>}
+              {balanceWithdrawal && withdrawalSteps.current.length > 1 && <Notice>{batchProgress} of {withdrawalSteps.current.length} transfers confirmed. Your wallet may ask for each transfer. This withdrawal is not atomic.</Notice>}
               {!withdrawalNotes.length && <Notice>No available notes. Restore your Payment ID or funds backup first.</Notice>}
-              <label className="field">Receiving wallet address<input value={recipient} maxLength={42} disabled={busy} onChange={event=>setRecipient(event.target.value)} placeholder="0x…" autoComplete="off" spellCheck={false} /></label>
+              <label className="field">Receiving wallet address<input value={recipient} maxLength={42} disabled={busy || !!prepared || batchProgress > 0} onChange={event=>setRecipient(event.target.value)} placeholder="0x…" autoComplete="off" spellCheck={false} /></label>
               <Notice tone="warning">The receiving address and amount become public. A known address, timing or wallet used to pay gas can link your activity. A relayer hides your gas-paying wallet, not this public exit.</Notice>
               <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy} onChange={event=>setAcknowledged(event.target.checked)} /><span>I checked this address and understand the withdrawal is public.</span></label>
             </div>}

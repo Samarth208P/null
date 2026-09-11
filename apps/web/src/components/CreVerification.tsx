@@ -5,7 +5,7 @@ import { download } from '../lib/format';
 import { verifyCreResult, type CrePayrollExport } from '../lib/cre';
 import { Button, Notice } from './ui';
 
-export function CreVerification({ payroll, expected, onVerified }: { payroll: CrePayrollExport; expected: PublicDistributionBundle; onVerified: (bundle: PublicDistributionBundle) => void }) {
+export function CreVerification({ payroll, expected, onVerified }: { payroll: CrePayrollExport; expected: PublicDistributionBundle; onVerified: (bundle: PublicDistributionBundle, result: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -14,7 +14,8 @@ export function CreVerification({ payroll, expected, onVerified }: { payroll: Cr
     setBusy(true); setError('');
     try {
       if (file.size > 100_000) throw new Error('The CRE result file is too large.');
-      onVerified(verifyCreResult(await file.text(), payroll.batchId, expected));
+      const result = await file.text();
+      onVerified(verifyCreResult(result, payroll.batchId, expected), result);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not check the CRE result.'); }
     finally { setBusy(false); if (input.current) input.current.value = ''; }
   }

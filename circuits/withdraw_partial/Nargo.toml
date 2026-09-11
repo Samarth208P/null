@@ -1,0 +1,9 @@
+[package]
+name = "withdraw_partial"
+type = "bin"
+authors = ["NULL contributors"]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+null_lib = { path = "../lib" }
+poseidon = { path = "../vendor/poseidon-0.1.1" }

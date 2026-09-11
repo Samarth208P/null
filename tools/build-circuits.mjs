@@ -24,7 +24,7 @@ if (process.platform === 'win32') {
 }
 const target = resolve(root, 'circuits/target');
 mkdirSync(target, { recursive: true });
-const kinds = ['shield', 'create_distribution', 'claim', 'withdraw'];
+const kinds = ['shield', 'create_distribution', 'claim', 'withdraw', 'withdraw_partial'];
 const selected = process.argv.find(arg => arg.startsWith('--kind='))?.slice(7);
 if (selected && !kinds.includes(selected)) throw new Error('Unknown circuit kind');
 const checksums = selected ? { ...JSON.parse(readFileSync(resolve(target, 'manifest.json'), 'utf8')).circuits } : {};
@@ -84,7 +84,7 @@ if (withVerifiers) {
       const options = { verifierTarget: 'evm' };
       const vk = await backend.getVerificationKey(options);
       const originalSource = await backend.getSolidityVerifier(vk, options);
-      const name = kind === 'shield' ? 'ShieldVerifier' : kind === 'claim' ? 'ClaimVerifier' : kind === 'withdraw' ? 'WithdrawVerifier' : 'CreateDistributionVerifier';
+      const name = kind === 'shield' ? 'ShieldVerifier' : kind === 'claim' ? 'ClaimVerifier' : kind === 'withdraw_partial' ? 'PartialWithdrawVerifier' : kind === 'withdraw' ? 'WithdrawVerifier' : 'CreateDistributionVerifier';
       if (!/contract HonkVerifier\b/.test(originalSource)) throw new Error('Unexpected generated verifier source');
       const source = originalSource.replace(/contract HonkVerifier\b/, `contract ${name}`);
       writeFileSync(resolve(target, `${kind}.vk`), vk);
