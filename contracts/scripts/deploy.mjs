@@ -278,6 +278,5 @@ for (const kind of Object.keys(names)) copyFileSync(resolve(root, `circuits/targ
 copyFileSync(resolve(root, 'circuits/target/manifest.json'), resolve(root, 'apps/web/public/circuits/manifest.json'));
 // Keep the browser's public RPC setting. Deployment URLs can carry credentials in paths.
 updateRootEnv({ NULL_POOL_ADDRESS: addresses.nullPool, NULL_MANIFEST_PATH: `deployments/${chainId}-withdrawals-v2.json`,
-  VITE_POOL_ADDRESS: addresses.nullPool, VITE_DEFAULT_ENVIRONMENT: 'testnet',
-  VITE_DEPLOYMENT_BLOCK: String(manifest.deploymentBlock), VITE_DEPLOYMENT_MANIFEST_URL: '/deployment.json' });
+  VITE_POOL_ADDRESS: addresses.nullPool, VITE_DEPLOYMENT_MANIFEST_URL: '/deployment.json' });
 process.stdout.write(`Deployment manifest written to ${output}; public artifacts and root .env synchronized. Restart Vite.\n`);

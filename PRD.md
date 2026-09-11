@@ -1,5 +1,7 @@
 # NULL — Product Requirements Document
 
+**Original September 5 protocol specification, retained for design provenance.** Proposed features and targets below are not current implementation claims. See [PRODUCT.md](PRODUCT.md), the [integration guide](docs/SDK_INTEGRATION.md) and [submission readiness](docs/SUBMISSION_READINESS.md) for the ENS-first toolkit, deployed v0.2 behavior and locally verified v0.3 work.
+
 > **Private distribution infrastructure for Ethereum**
 >
 > **Core thesis:** A payer should be able to commit a funded distribution onchain without publishing the recipients, individual amounts, receiving addresses, or a claim-to-batch link. A recipient should be able to discover their allocation non-interactively, prove entitlement privately, and materialize it as a shielded note without revealing which allocation they claimed.

@@ -1,14 +1,10 @@
 import { parsePublicBundle, type PublicDistributionBundle } from '@null-protocol/sdk';
+import { canonical } from './internal';
 
 export interface CrePayrollExport {
   batchId: string;
   batchEntropyHex: string;
   recipients: { employeeRef: string; amountAtomic: string; stealthMetaAddress: string }[];
-}
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(',')}}`;
-  return JSON.stringify(value);
 }
 /** Checks data integrity against this draft. A local result file is not remote attestation. */
 export function verifyCreResult(text: string, batchId: string, expected: PublicDistributionBundle): PublicDistributionBundle {

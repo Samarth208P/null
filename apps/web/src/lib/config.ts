@@ -6,7 +6,6 @@ export const config = {
   graphUrl: import.meta.env.VITE_GRAPH_URL as string | undefined,
   relayerUrl: import.meta.env.VITE_RELAYER_URL as string | undefined,
   poolAddress: import.meta.env.VITE_POOL_ADDRESS as `0x${string}` | undefined,
-  deploymentBlock: BigInt(import.meta.env.VITE_DEPLOYMENT_BLOCK || '0'),
   confirmations: Math.max(1, Number(import.meta.env.VITE_CONFIRMATIONS || '3')),
 };
 

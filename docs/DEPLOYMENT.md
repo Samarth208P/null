@@ -71,16 +71,15 @@ Keep [sepolia.template.json](../deployments/sepolia.template.json) as an unconfi
 
 Before any broadcast, the deployment script simulates all eight constructors using RPC state overrides and computes a gas allowance with a 20% margin. It requires an RPC that supports state overrides for `eth_call` and `eth_estimateGas`; the default PublicNode endpoint was verified. Actual deployed runtime must match both constructor simulation and linked compiler output. Repeating the deployment command with a matching completed journal and manifest can finish an interrupted browser synchronization without redeploying contracts.
 
-After successful deployment, the command copies the actual manifest to `apps/web/public/deployment.json`, synchronizes the matching circuit JSONs and artifact manifest into `apps/web/public/circuits/`, and updates the pool, deployment block, manifest URL, and default Sepolia workspace in root `.env`. It preserves the browser's existing public RPC instead of copying a deployment RPC that might contain credentials. Restart Vite. Public proving artifacts do not contain recipient secrets.
+After successful deployment, the command copies the actual manifest to `apps/web/public/deployment.json`, synchronizes matching circuit JSONs and artifact manifest into `apps/web/public/circuits/`, and updates the pool and manifest settings in root `.env`. The deployment block comes from the manifest. The app defaults to Sepolia in code. The script preserves the browser's public RPC instead of copying a deployment RPC that might contain credentials. Restart Vite. Public proving artifacts do not contain recipient secrets.
 
 Vite reads the root `.env` and exposes only the `VITE_` values listed in [the canonical example](../.env.example):
 
 | Browser value | Meaning |
 | --- | --- |
 | `VITE_DEPLOYMENT_MANIFEST_URL` | Reviewed deployed manifest URL; defaults to `/deployment.json` |
-| `VITE_DEFAULT_ENVIRONMENT` | `sandbox` for a fresh checkout; deployment sets `testnet` |
 | `VITE_RPC_URL` | Public RPC URL without private server credentials |
-| `VITE_POOL_ADDRESS`, `VITE_DEPLOYMENT_BLOCK` | Public discovery context matching the actual manifest |
+| `VITE_POOL_ADDRESS` | Pool address matching the actual manifest; discovery reads the deployment block from that manifest |
 | `VITE_CONFIRMATIONS` | Confirmation threshold; never represent unconfirmed events as final |
 | `VITE_GRAPH_URL` | Optional public Graph query endpoint |
 | `VITE_RELAYER_URL` | Optional configured relay base URL |

@@ -1,13 +1,13 @@
 import {
   type Hex, type ProfileKeys, type PrivacyProfile, NullError, assertAmount, bigintToBytes, bytesToBigInt,
-  concatBytes, deriveField, deriveScalar, deriveStealthDelivery, fieldFromHex, fieldHex, fromHex,
-  hashFields, hkdf, hmac, parsePrivacyProfile, profileFromKeys, randomBytes, secp256k1, sha256, split128, toHex, utf8,
+  concatBytes, deriveField, deriveScalar, deriveStealthDelivery, fieldFromHex, fromHex,
+  hkdf, hmac, parsePrivacyProfile, profileFromKeys, randomBytes, secp256k1, sha256, toHex, utf8,
 } from '@null-protocol/crypto';
 import {
-  type AllocationV1, type ChainContext, type DistributionRecord, type EncryptionProvider, type EnvelopeV1, type MerklePath,
+  type AllocationV1, type ChainContext, type DistributionRecord, type EncryptionProvider, type EnvelopeV1,
   allocationLeaf, buildEnvelope, claimIntentDigest, claimNullifier, decryptEnvelope, deriveNoteSecrets,
   distributionCommitment, envelopeRoot, finalNoteCommitment, merklePath8, merkleRoot8, privateNoteBody,
-  rootFromPath, serializeEnvelope, validateContext,
+  serializeEnvelope, validateContext,
 } from '@null-protocol/protocol';
 
 export * from '@null-protocol/crypto';

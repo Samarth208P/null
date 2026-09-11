@@ -366,7 +366,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
       if (balanceWithdrawal && withdrawalSteps.current.length > 1) {
         recordBatch(result);
         if (!result.localRecoverySaved) throw new Error('Withdrawal confirmed, but local recovery was not saved. Restore recovery before continuing.');
-        while (batchReceipts.current.length < withdrawalSteps.current.length) {
+        if (batchReceipts.current.length < withdrawalSteps.current.length) {
           const step = withdrawalSteps.current[batchReceipts.current.length];
           const next = await client.prepareWithdrawal({ ...step, recipient: getAddress(recipient.trim()), acknowledgePublicWithdrawal: true, ...proofOptions() });
           setPrepared(next); setBackupSaved(false);
@@ -378,7 +378,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
       if (operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1) {
         recordBatch(result);
         if (!result.localRecoverySaved) throw new Error('Payment confirmed, but recovery could not be saved. Stop and restore the confirmed change before continuing.');
-        while (batchReceipts.current.length < operation.batches.length) {
+        if (batchReceipts.current.length < operation.batches.length) {
           const batch = operation.batches[batchReceipts.current.length]; activeNames.current = batch.draft.paymentNames;
           const available = (await client.recoverTreasuryNotes((await vault!.load()).checkpoints)).filter(item => !item.spent && item.note.policyCommitment === selectedPolicy && item.note.amountAtomic > 0n).map(item => item.note);
           const next = await payouts!.approve(batch.draft, { compilation: batch.compilation, treasuryNotes: available.slice(0, 2), authPolicy: policy!, ...proofOptions(),

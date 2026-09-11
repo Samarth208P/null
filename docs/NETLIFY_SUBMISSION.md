@@ -1,5 +1,13 @@
 # Deploy the reviewed submission
 
+## Environment impact of the payout SDK update
+
+No new Netlify environment variables are required for the SDK/developer entry and ENS batch UI. Keep the existing v0.2 pool, manifest, Privy and organization settings. The relayer is a separate Node service; optional `RELAYER_MAX_GAS` belongs on that server, not in this site's organization function. Never add the relay signing key as a `VITE_` variable.
+
+`VITE_DEFAULT_ENVIRONMENT` and `VITE_DEPLOYMENT_BLOCK` are obsolete and no longer read. They can be removed from Netlify if present, but leaving them there does not block this release. Sepolia mode comes from code and the deployment block comes from the verified manifest. The historical values below document the older deployment.
+
+Partial withdrawals still need a real v0.3 pool/verifier deployment with matching artifacts and configuration. Do not change production addresses just to enable a UI flag. Local environment files are not automatically synchronized to Netlify.
+
 September 11 release `6aa3c2a2f2baaeb953c29c25` is deployed and verified. The required ENS frontend and updated organization function are live. See [release evidence](../deployments/submission-release-2026-09-11.json). This deployment does not establish a completed Privy-owner financial action or publish the working-tree source changes to GitHub.
 
 ## Git-based deployment

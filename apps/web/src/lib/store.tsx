@@ -13,19 +13,7 @@ export type PrivateNote = { id: string; amount: bigint; commitment: string; crea
 export type Identity = ReturnType<typeof createPrivacyProfile>;
 
 function newWorkspace() {
-  const identity = createPrivacyProfile();
-  if (config.defaultEnvironment === 'testnet') return { identity, recipients: [] as RecipientRow[], drafts: [] as Distribution[] };
-  const otherProfiles = Array.from({ length: 3 }, () => createPrivacyProfile().profile.stealthMetaAddress);
-  const recipients: RecipientRow[] = ['Alice Chen', 'Bob Williams', 'Carol Park', 'Dave Miller'].map((name, index) => ({
-    id: crypto.randomUUID(), name, amount: ['4201.123456', '7503.654321', '3107.777777', '9211.222222'][index], profile: index === 0 ? identity.profile.stealthMetaAddress : otherProfiles[index - 1],
-  }));
-  const now = new Date();
-  const drafts: Distribution[] = [
-    { id: crypto.randomUUID(), name: 'September payroll', category: 'Payroll', createdAt: now.toISOString(), status: 'Draft', recipients },
-    { id: crypto.randomUUID(), name: 'Design partners', category: 'Contractors', createdAt: new Date(now.getTime() - 86400000).toISOString(), status: 'Draft', recipients: recipients.slice(0, 2).map((row, i) => ({ ...row, id: crypto.randomUUID(), amount: ['3250.00', '3590.00'][i] })) },
-    { id: crypto.randomUUID(), name: 'Contributor grants', category: 'Grants', createdAt: new Date(now.getTime() - 2 * 86400000).toISOString(), status: 'Draft', recipients: recipients.slice(0, 3).map((row, i) => ({ ...row, id: crypto.randomUUID(), amount: ['5000.00', '4500.00', '3000.00'][i] })) },
-  ];
-  return { identity, recipients, drafts };
+  return { identity: createPrivacyProfile(), recipients: [] as RecipientRow[], drafts: [] as Distribution[] };
 }
 
 type Store = {

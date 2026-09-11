@@ -1,4 +1,4 @@
-import { type Hex, NullError, bigintToBytes, concatBytes, fieldFromHex, fromHex, keccak_256, toHex, utf8 } from '@null-protocol/crypto';
+import { type Hex, NullError, concatBytes, fieldFromHex, fromHex, keccak_256, toHex, utf8 } from '@null-protocol/crypto';
 import { type ChainContext, type MerklePath, IncrementalMerkleTree, validateContext } from '@null-protocol/protocol';
 
 export interface PoolReaderOptions { context: ChainContext; rpcUrl: string; timeoutMs?: number; fetch?: typeof globalThis.fetch }

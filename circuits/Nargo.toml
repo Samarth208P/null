@@ -1,3 +1,3 @@
 [workspace]
-members = ["lib", "shield", "create_distribution", "claim", "withdraw"]
+members = ["lib", "shield", "create_distribution", "claim", "withdraw", "withdraw_partial"]
 

@@ -30,7 +30,7 @@ export async function resolvePayoutJobRecipients(ens: PublicClient, recipients: 
 
 export interface PayoutJobProgress {
   batch: number; batchCount: number;
-  phase: 'prepared' | 'approved' | 'confirmed' | 'needs-reconciliation';
+  phase: 'prepared' | 'approved' | 'confirmed';
   transactionHash?: string;
 }
 
