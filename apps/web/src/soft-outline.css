@@ -71,6 +71,10 @@
 .name-input-row input { min-width: 0; flex: 1; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); box-shadow: var(--inset); }
 .name-input-row input::placeholder { color: var(--muted); opacity: 1; }
 .name-input-row .button { flex-shrink: 0; }
+.inbox-name-input { display: flex; align-items: center; flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--inset); }
+.inbox-name-input:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+.name-input-row .inbox-name-input input { width: 0; border: 0; background: transparent; box-shadow: none; outline: none; }
+.inbox-name-suffix { flex-shrink: 0; padding-right: 14px; color: var(--secondary); font-size: 13px; white-space: nowrap; }
 .name-setup-result { margin-top: 0; }
 .inbox-setup-progress { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; padding: 0; margin: 0 0 26px; }
 .inbox-setup-progress li { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
@@ -123,6 +127,8 @@ fieldset.wizard-surface { border: 0; margin: 0; min-width: 0; }
   .receive-backup { flex-direction: column; gap: 8px; }
   .name-input-row { flex-wrap: wrap; }
   .name-input-row input { width: 100%; flex-basis: 100%; font-size: 16px; }
+  .inbox-name-input { flex-basis: 100%; }
+  .name-input-row .inbox-name-input input { flex-basis: 0; padding-right: 4px; }
   .name-input-row .button { width: 100%; }
   .payment-name-manager .button-row { align-items: stretch; flex-direction: column; }
   .inbox-setup-progress { gap: 10px 14px; }

@@ -15,6 +15,12 @@ import { download } from '../lib/format';
 import { findNameWallet, type NameWallet } from '../lib/ens-wallet';
 
 type Connection = (address?: Address) => Promise<WalletClient>;
+const inboxNameSuffix = '.nullpay2026.eth';
+function editableInboxName(name: string) {
+  const trimmed = name.trim();
+  const label = trimmed.slice(0, -inboxNameSuffix.length);
+  return trimmed.toLowerCase().endsWith(inboxNameSuffix) && label && !label.includes('.') && !/^0x[\da-f]{40}$/i.test(label) ? label : name;
+}
 type SetupProps = { onRecovery: (mode: 'export' | 'restore') => void; onLinked?: () => void; initialName?: string; onNameChange?: (name: string) => void };
 function PrivyNames(props: SetupProps) {
   const { wallets, ready } = useWallets();
@@ -46,7 +52,9 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const userKey = userId ?? 'connected-wallet';
   const [savedUpdate] = useState(() => readPendingNameUpdate(userKey));
   const updateRef = useRef<PendingNameUpdate | undefined>(savedUpdate);
-  const [name, setName] = useState(savedUpdate?.name ?? initialName ?? store.receivingName?.name ?? account.profile?.ensName ?? '');
+  const [name, setName] = useState(() => editableInboxName(savedUpdate?.name ?? initialName ?? store.receivingName?.name ?? account.profile?.ensName ?? ''));
+  const showNameSuffix = !name.includes('.') && !/^0x[\da-f]{40}$/i.test(name.trim());
+  const completeName = name.trim() && showNameSuffix ? `${name.trim()}${inboxNameSuffix}` : name.trim();
   const [checked, setChecked] = useState<Awaited<ReturnType<typeof inspectPaymentName>>>();
   const [linked, setLinked] = useState<PaymentNameSnapshot | undefined>(store.receivingName);
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false);
@@ -80,9 +88,9 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   async function lookup(version: number) {
     setChecked(undefined); setChosenWallet(undefined); setWalletsChecked(false); setConsent(false); setLinked(undefined);
     setStatus('Checking your name…');
-    const result = await inspectPaymentName(ensClient, name);
+    const result = await inspectPaymentName(ensClient, completeName);
     if (version !== revision.current) return;
-    setName(result.name); onNameChange?.(result.name);
+    setName(editableInboxName(result.name)); onNameChange?.(result.name);
     setChecked(result);
     if (result.value === store.identity.profile.stealthMetaAddress) {
       const snapshot = await resolvePaymentName(ensClient, result.name);
@@ -168,8 +176,15 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     </ol>}
     {!checked && !pending && <form onSubmit={event => { event.preventDefault(); if (name.trim()) void run(lookup); }}>
       <label className="field" htmlFor="receiving-ens-name">Your ENS name on Sepolia</label>
-      <div className="name-input-row"><input id="receiving-ens-name" value={name} disabled={busy} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name.eth" onChange={event => { changeName(); setName(event.target.value); onNameChange?.(event.target.value); }} /><Button type="submit" disabled={!name.trim() || !walletsReady} busy={busy}>Continue</Button></div>
-      <p className="field-hint">We’ll find the right connected wallet for your name. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get an ENS name <ExternalLink size={12} /></a></p>
+      <div className="name-input-row">
+        <div className="inbox-name-input">
+          <input id="receiving-ens-name" value={name} disabled={busy} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name" aria-describedby="receiving-ens-preview receiving-ens-hint" aria-invalid={!!error} onChange={event => { changeName(); setName(editableInboxName(event.target.value)); onNameChange?.(event.target.value); }} />
+          {showNameSuffix && <span className="inbox-name-suffix" aria-hidden="true">{inboxNameSuffix}</span>}
+        </div>
+        <Button type="submit" disabled={!name.trim() || !walletsReady} busy={busy}>Continue</Button>
+      </div>
+      <span id="receiving-ens-preview" className="sr-only">{completeName ? `Full ENS name: ${completeName}.` : `Name ending in ${inboxNameSuffix}.`}</span>
+      <p id="receiving-ens-hint" className="field-hint">Use a name you own, or paste a full ENS name. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get an ENS name <ExternalLink size={12} /></a></p>
     </form>}
     {checked && !pending && <div className="name-setup-result">
       <div className="name-summary"><span><Globe2 size={16} /><bdi>{checked.name}</bdi></span><button type="button" className="text-link" disabled={busy} onClick={changeName}>Change name</button></div>
