@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useConnectWallet, useWallets } from '@privy-io/react-auth';
-import { createWalletClient, custom, encodeFunctionData, getAddress, type Address, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
+import { createWalletClient, custom, encodeFunctionData, getAddress, zeroAddress, type Address, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { sepolia } from 'viem/chains';
 import { Check, Copy, Download, ExternalLink, Globe2 } from 'lucide-react';
 import { ENS_CHAIN_ID, PaymentNameError, inspectPaymentEditorScope, inspectPaymentName, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, resolvePaymentName, type PaymentNameSnapshot } from '@null-protocol/ens';
@@ -12,10 +12,11 @@ import { useAccount } from '../lib/account';
 import { clearPendingNameUpdate, readPendingNameUpdate, savePendingNameUpdate, type PendingNameUpdate } from '../lib/ens-pending';
 import { Button, KeyValue, Notice } from './ui';
 import { download } from '../lib/format';
-import { findNameWallet, type NameWallet } from '../lib/ens-wallet';
+import { findAssignedNames, findNameWallet, type NameWallet } from '../lib/ens-wallet';
+import ensDeployment from '../../../../deployments/ens-sepolia.json';
 
 type Connection = (address?: Address) => Promise<WalletClient>;
-const inboxNameSuffix = '.nullpay2026.eth';
+const inboxNameSuffix = `.${ensDeployment.namespace}`;
 function editableInboxName(name: string) {
   const trimmed = name.trim();
   const label = trimmed.slice(0, -inboxNameSuffix.length);
@@ -66,16 +67,20 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const [scope, setScope] = useState<Awaited<ReturnType<typeof inspectPaymentEditorScope>>>();
   const [chosenWallet, setChosenWallet] = useState<NameWallet>();
   const [walletsChecked, setWalletsChecked] = useState(false);
+  const [unassignedName, setUnassignedName] = useState('');
+  const [assignedNames, setAssignedNames] = useState<string[]>();
   const [permissionWallet, setPermissionWallet] = useState('');
   const revision = useRef(0), inFlight = useRef(false);
   const previousIdentity = useRef(store.identity);
   const walletAvailable = chosenWallet && (!wallets || wallets.some(wallet => wallet.address.toLowerCase() === chosenWallet.address.toLowerCase()));
+  const ownerConnected = checked && wallets?.some(wallet => wallet.address.toLowerCase() === checked.owner.toLowerCase());
   const setupStep = !checked || !walletAvailable ? 0 : !store.identityBackedUp ? 1 : 2;
   useEffect(() => () => { revision.current++; }, []);
   useEffect(() => {
     if (previousIdentity.current === store.identity) return;
     previousIdentity.current = store.identity; revision.current++;
     setChecked(undefined); setLinked(undefined); setChosenWallet(undefined); setWalletsChecked(false);
+    setUnassignedName(''); setAssignedNames(undefined);
     setConsent(false); setStatus(''); setError(''); setBusy(false);
   }, [store.identity]);
   async function run(work: (version: number) => Promise<void>) {
@@ -85,12 +90,37 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     catch (reason) { if (version === revision.current) { setStatus(''); setError(reason instanceof PaymentNameError ? reason.message : 'This step was not confirmed. Check your wallet and connection, then try again.'); } }
     finally { inFlight.current = false; if (version === revision.current) setBusy(false); }
   }
-  async function lookup(version: number) {
+  async function findAssigned(version: number) {
+    setAssignedNames(undefined);
+    if (!walletsReady) throw new PaymentNameError('permission', 'Your wallets are still loading. Try again in a moment.');
+    let candidates = wallets;
+    if (!candidates) {
+      const wallet = await connect();
+      if (!wallet.account) throw new PaymentNameError('permission', 'Connect your wallet to check its assigned name.');
+      candidates = [{ address: wallet.account.address, label: 'Connected wallet' }];
+    }
+    setStatus('Checking names assigned to your connected wallets…');
+    const hints = [ensDeployment.recipientSetup.name, account.profile?.ensName, store.receivingName?.name].filter((value): value is string => !!value);
+    const names = await findAssignedNames(hints, candidates, name => inspectPaymentName(ensClient, name), async (name, address) => (await paymentEditorAccess(ensClient, name, address)).allowed)
+      .catch(() => { throw new PaymentNameError('network', 'Could not check assigned names. Check your connection and try again.'); });
+    if (version !== revision.current) return;
+    setAssignedNames(names); setStatus('');
+  }
+  async function lookup(version: number, input = completeName) {
     setChecked(undefined); setChosenWallet(undefined); setWalletsChecked(false); setConsent(false); setLinked(undefined);
+    setUnassignedName(''); setAssignedNames(undefined);
     setStatus('Checking your name…');
-    const result = await inspectPaymentName(ensClient, completeName);
+    const result = await inspectPaymentName(ensClient, input);
     if (version !== revision.current) return;
     setName(editableInboxName(result.name)); onNameChange?.(result.name);
+    // A parent resolver can answer for an unregistered child. Resolution alone
+    // does not give the child an owner or make it suitable for inbox setup.
+    // Read-only alias resolution remains supported by the ENS package.
+    if (result.owner === zeroAddress) {
+      setUnassignedName(result.name); setStatus('');
+      if (walletsReady && wallets?.length) await findAssigned(version);
+      return;
+    }
     setChecked(result);
     if (result.value === store.identity.profile.stealthMetaAddress) {
       const snapshot = await resolvePaymentName(ensClient, result.name);
@@ -166,6 +196,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   }
   function changeName() {
     revision.current++; setChecked(undefined); setLinked(undefined); setChosenWallet(undefined);
+    setUnassignedName(''); setAssignedNames(undefined);
     setWalletsChecked(false); setConsent(false); setStatus(''); setError(''); setHash(undefined);
   }
   return <div className="payment-name-manager">
@@ -178,14 +209,22 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       <label className="field" htmlFor="receiving-ens-name">Your ENS name on Sepolia</label>
       <div className="name-input-row">
         <div className="inbox-name-input">
-          <input id="receiving-ens-name" value={name} disabled={busy} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name" aria-describedby="receiving-ens-preview receiving-ens-hint" aria-invalid={!!error} onChange={event => { changeName(); setName(editableInboxName(event.target.value)); onNameChange?.(event.target.value); }} />
+          <input id="receiving-ens-name" value={name} disabled={busy} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name" aria-describedby={`receiving-ens-preview receiving-ens-hint${unassignedName ? 'receiving-ens-unassigned' : ''}`} aria-invalid={!!error || !!unassignedName} onChange={event => { changeName(); setName(editableInboxName(event.target.value)); onNameChange?.(event.target.value); }} />
           {showNameSuffix && <span className="inbox-name-suffix" aria-hidden="true">{inboxNameSuffix}</span>}
         </div>
         <Button type="submit" disabled={!name.trim() || !walletsReady} busy={busy}>Continue</Button>
       </div>
       <span id="receiving-ens-preview" className="sr-only">{completeName ? `Full ENS name: ${completeName}.` : `Name ending in ${inboxNameSuffix}.`}</span>
-      <p id="receiving-ens-hint" className="field-hint">Use a name you own, or paste a full ENS name. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get an ENS name <ExternalLink size={12} /></a></p>
+      <p id="receiving-ens-hint" className="field-hint">Use an assigned name, or paste a full ENS name you own. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get an ENS name <ExternalLink size={12} /></a></p>
+      {!unassignedName && !assignedNames && <p className="field-hint"><button type="button" className="text-link" disabled={busy || !walletsReady} onClick={() => void run(findAssigned)}>Find my assigned NULL name</button></p>}
     </form>}
+    {!checked && !pending && unassignedName && <div className="inbox-name-help">
+      <div id="receiving-ens-unassigned" role="status"><h3>This name isn’t assigned yet</h3><p><bdi>{unassignedName}</bdi> has no registered owner on Sepolia. Choose an assigned name, or ask the parent name’s owner to create it for your wallet.</p></div>
+      {!assignedNames && !busy && <Button variant="secondary" onClick={() => void run(findAssigned)}>Find my assigned NULL name</Button>}
+    </div>}
+    {!checked && !pending && assignedNames && <div className="inbox-name-options">
+      {assignedNames.length ? <><p className="name-wallet-ready" role="status"><Check size={14} />Your wallet can use {assignedNames.length === 1 ? 'this name' : 'these names'}.</p>{assignedNames.map(assigned => <Button key={assigned} disabled={busy} onClick={() => { setName(editableInboxName(assigned)); onNameChange?.(assigned); void run(version => lookup(version, assigned)); }}>Use {assigned}</Button>)}</> : <p role="status">No usable name was found among this app’s configured assignments for your connected wallets. Enter another name you own, or ask the parent name’s owner to assign one.</p>}
+    </div>}
     {checked && !pending && <div className="name-setup-result">
       <div className="name-summary"><span><Globe2 size={16} /><bdi>{checked.name}</bdi></span><button type="button" className="text-link" disabled={busy} onClick={changeName}>Change name</button></div>
       {linked ? <><h3>Your inbox is ready</h3><p>Share this name to receive payments.</p><Button icon={Copy} busy={busy} onClick={() => void run(async version => {
@@ -194,8 +233,8 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
         if (fresh.profile !== store.identity.profile.stealthMetaAddress) { setLinked(undefined); store.setReceivingName(undefined); throw new PaymentNameError('changed', 'This name’s Payment ID changed. Link it again before sharing.'); }
         await navigator.clipboard.writeText(fresh.name); setStatus('Payment name copied.');
       })}>Copy ENS name</Button></> : busy && !chosenWallet ? null : !walletAvailable ? <div className="inbox-setup-action">
-        <h3>{walletsChecked ? 'Connect a wallet for this name' : 'Check your connected wallets'}</h3>
-        <p>{walletsChecked ? 'None of your connected wallets can update this name. Connect its owner or an authorized wallet, then check again.' : 'We need to confirm which wallet can update your name before continuing.'}</p>
+        <h3>{walletsChecked ? ownerConnected ? 'Payment permission needed' : 'Connect a wallet for this name' : 'Check your connected wallets'}</h3>
+        <p>{walletsChecked ? ownerConnected ? 'Your wallet owns this name, but cannot update its Payment ID yet. Ask the resolver administrator to allow this wallet to update the NULL payment record, then check again.' : 'None of your connected wallets can update this name. Connect its owner or an authorized wallet, then check again.' : 'We need to confirm which wallet can update your name before continuing.'}</p>
         <p className="field-hint">Name owner: <code>{checked.owner}</code></p>
         <div className="button-row">{onConnectWallet && <Button onClick={onConnectWallet} disabled={busy}>Connect another wallet</Button>}<Button variant={onConnectWallet ? 'secondary' : 'primary'} busy={busy} onClick={() => void run(lookup)}>Check wallets again</Button></div>
       </div> : <>

@@ -75,6 +75,11 @@
 .inbox-name-input:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
 .name-input-row .inbox-name-input input { width: 0; border: 0; background: transparent; box-shadow: none; outline: none; }
 .inbox-name-suffix { flex-shrink: 0; padding-right: 14px; color: var(--secondary); font-size: 13px; white-space: nowrap; }
+.inbox-name-help, .inbox-name-options { margin-top: 24px; }
+.inbox-name-help h3 { font-size: 18px; margin: 0 0 8px; }
+.inbox-name-help p, .inbox-name-options p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.inbox-name-options .button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.inbox-name-options .button + .button { margin-top: 10px; }
 .name-setup-result { margin-top: 0; }
 .inbox-setup-progress { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; padding: 0; margin: 0 0 26px; }
 .inbox-setup-progress li { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
