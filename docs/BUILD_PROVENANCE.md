@@ -26,4 +26,6 @@ Before submission, add the actual event-period contribution list and identify an
 
 The changes are reviewable in Git; deployment of a working tree does not automatically publish those changes to the linked GitHub repository. Ensure the exact demonstrated source is available to judges.
 
+On September 12, the owner authorized publishing and completed npm browser authentication. Codex committed and pushed the prepared source, verified the Netlify Git deployment, and submitted the reviewed `0.1.0-preview.2` tarball to npm. The release also disables development-only relayer URLs in production builds. These publishing actions did not perform the owner's Sepolia payment or record its demo.
+
 Reference: [official rules and submission requirements](https://ethglobal.com/events/ethonline2026/info/details).

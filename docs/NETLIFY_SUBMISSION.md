@@ -10,7 +10,7 @@ Production builds ignore a loopback `VITE_RELAYER_URL` and offer connected-walle
 
 Partial withdrawals still need a real v0.3 pool/verifier deployment with matching artifacts and configuration. Do not change production addresses just to enable a UI flag. Local environment files are not automatically synchronized to Netlify.
 
-September 11 release `6aa3c2a2f2baaeb953c29c25` is deployed and verified. The required ENS frontend and updated organization function are live. See [release evidence](../deployments/submission-release-2026-09-11.json). This deployment does not establish a completed Privy-owner financial action or publish the working-tree source changes to GitHub.
+September 12 release `6aa53de521c37e0008ad8eae` was built from pushed commit `22ad5bd1356f0dcc90e5100855a49e91218506a8` and verified in production. Receipt exports, organization activation recovery, ENS permission inspection and the organization function are live. See [release evidence](../deployments/submission-release-2026-09-12.json). The hosted app uses connected-wallet submission. This deployment does not establish a completed Privy-owner financial action.
 
 ## Git-based deployment
 

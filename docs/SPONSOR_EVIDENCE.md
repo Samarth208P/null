@@ -2,7 +2,7 @@
 
 Prepared September 12, 2026. This is a navigation guide to implementation and recorded evidence, not a qualification certificate. Use the same v0.2 Sepolia payout across the three sponsor scenes. The full Privy-approved payment and final video are still pending in the available evidence.
 
-The prepared app now includes a visible organization setup, backup-before-activation, activation reconciliation, an ENS two-record permission comparison, explicit CRE rejection/success states, and public transaction receipt downloads. Follow the [owner rehearsal](OWNER_REHEARSAL.md) when ready to sign. The changes are local until released.
+The released app includes a visible organization setup, backup-before-activation, activation reconciliation, an ENS two-record permission comparison, explicit CRE rejection/success states, and public transaction receipt downloads. Follow the [owner rehearsal](OWNER_REHEARSAL.md) when ready to sign. The [September 12 release evidence](../deployments/submission-release-2026-09-12.json) records the pushed source, verified hosted assets, proof artifacts and organization API checks.
 
 ## Product in one sentence
 

@@ -1,0 +1,77 @@
+{
+  "verifiedAt": "2026-09-12T11:59:29.862Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa53de521c37e0008ad8eae",
+  "deployUrl": "https://6aa53de521c37e0008ad8eae--null-protocol.netlify.app",
+  "ready": true,
+  "sourceCommit": "22ad5bd1356f0dcc90e5100855a49e91218506a8",
+  "sourcePushed": true,
+  "deploymentMethod": "netlify-git-build",
+  "checkedAssets": [
+    {
+      "marker": "Download transaction receipts",
+      "asset": "/assets/LiveOperation-CUlgrkA0.js",
+      "sha256": "5d59ae007f58dfe4898b1d009cd97daf4034910fa1de44fd74a7e3a25e582059"
+    },
+    {
+      "marker": "Save organization backup",
+      "asset": "/assets/LiveOperation-CUlgrkA0.js",
+      "sha256": "5d59ae007f58dfe4898b1d009cd97daf4034910fa1de44fd74a7e3a25e582059"
+    },
+    {
+      "marker": "Check activation",
+      "asset": "/assets/LiveOperation-CUlgrkA0.js",
+      "sha256": "5d59ae007f58dfe4898b1d009cd97daf4034910fa1de44fd74a7e3a25e582059"
+    },
+    {
+      "marker": "Download permission check",
+      "asset": "/assets/PaymentNameManager-DxTp0hqi.js",
+      "sha256": "10ad15066914969728e56a9b1bff85c90c377a94489af8798af98ddb5900f4a7"
+    },
+    {
+      "marker": "0.1.0-preview.2",
+      "asset": "/assets/index-a1tdlWWp.js",
+      "sha256": "55cca8bff01b98007485eba0cf83e6ead50fc207c00dd96314ccfc0252bbc754"
+    }
+  ],
+  "circuitsVerified": [
+    "shield",
+    "create_distribution",
+    "claim",
+    "withdraw"
+  ],
+  "deploymentManifestSha256": "c9d2e8912540d55a1dda6d682b35a99cf43cfa4023b8972ce1d1d267ed6f225a",
+  "pool": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "organizationStatus": 401,
+  "organizationCode": "NULL_SESSION_REQUIRED",
+  "functionHealth": {
+    "status": "configured",
+    "approvalExecution": "not-tracked"
+  },
+  "untrustedOriginStatus": 403,
+  "hostedTransport": "connected-wallet",
+  "interactiveBrowserQa": false,
+  "privyOwnerFinancialActionVerified": false,
+  "npmRelease": {
+    "name": "@samarth208p/null-payouts",
+    "version": "0.1.0-preview.2",
+    "status": "published",
+    "tag": "preview",
+    "integrity": "sha512-uhpwBJfTK7I0Wq4XLzireLoKmghURynVP9Lt0sIH3FX0safGxk4L457bSDguAH3D4Vx2SyQrlKOI5pzS1PN+6w==",
+    "registryTarballMatchesLocal": true,
+    "publishedAt": "2026-09-12T12:00:41.533Z",
+    "verifiedAt": "2026-09-12T12:01:07.851Z",
+    "localConsumerVerified": true,
+    "registryConsumerVerified": true,
+    "registryConsumerVerifiedAt": "2026-09-12T12:02:09.988Z",
+    "packedFiles": 48
+  },
+  "checks": {
+    "workspaceTypecheck": true,
+    "productionBuild": true,
+    "submissionTests": 34,
+    "payoutTests": 13,
+    "localV2GenuineProofAssertions": 17,
+    "creLocalSimulation": true
+  }
+}

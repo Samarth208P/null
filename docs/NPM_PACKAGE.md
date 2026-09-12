@@ -2,7 +2,7 @@
 
 NULL can be distributed as one `@samarth208p/null-payouts` package. The build compiles the payout SDK and its internal NULL dependencies together, rewrites their imports to package-local ESM paths, emits TypeScript declarations, and includes the browser proof worker. Third-party dependencies retain their pinned versions. Existing workspace packages continue to use source exports for development.
 
-Published September 11, 2026: [`@samarth208p/null-payouts@0.1.0-preview.1`](https://www.npmjs.com/package/@samarth208p/null-payouts/v/0.1.0-preview.1), MIT licensed, public access, `preview` tag.
+Published September 12, 2026: [`@samarth208p/null-payouts@0.1.0-preview.2`](https://www.npmjs.com/package/@samarth208p/null-payouts/v/0.1.0-preview.2), MIT licensed, public access, `preview` tag. See the [release evidence](../deployments/submission-release-2026-09-12.json) for registry and deployment verification.
 
 This checkout builds `0.1.0-preview.2`. It adds exact policy-registration transaction reconciliation to the client and ENS payment-versus-website permission inspection at one pinned block. The reference application adds public receipt exports, backup-before-activation, guarded CRE imports and the owner rehearsal guide. The app and Privy server adapter are separate from the npm tarball. The public pool remains Sepolia v0.2.
 
