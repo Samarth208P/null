@@ -20,7 +20,7 @@
     "dev:all": "node tools/dev.mjs",
     "build": "pnpm --filter @null-protocol/web build",
     "check": "pnpm -r --if-present typecheck",
-    "test:submission": "node --import tsx --test apps/web/src/lib/account.test.ts apps/web/src/lib/operation-receipt.test.ts apps/web/src/lib/cre.test.ts apps/web/src/lib/ens-pending.test.ts packages/ens/src/index.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts",
+    "test:submission": "node --import tsx --test apps/web/src/lib/account.test.ts apps/web/src/lib/operation-receipt.test.ts apps/web/src/lib/cre.test.ts apps/web/src/lib/ens-pending.test.ts apps/web/src/lib/ens-wallet.test.ts packages/ens/src/index.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts",
     "ens:status": "node --import tsx tools/ens-status.mts",
     "ens:plan": "node --import tsx tools/ens-sepolia.mts",
     "ens:verify": "node --import tsx tools/ens-sepolia.mts --broadcast",

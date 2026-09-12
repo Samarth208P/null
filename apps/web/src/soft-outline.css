@@ -56,7 +56,7 @@
   .protocol-services li { grid-template-columns: 20px minmax(0, 1fr); }
   .protocol-services .badge { grid-column: 2; }
 }
-.receive-panel { padding: 26px; border-radius: 16px; background: var(--surface); box-shadow: var(--raised); }
+.receive-panel { max-width: 880px; padding: 26px; border-radius: 16px; background: var(--surface); box-shadow: var(--raised); }
 .receive-heading { display: flex; align-items: center; gap: 16px; }
 .receive-label { flex: 1; min-width: 0; }
 .receive-label h2 { margin: 0 0 6px; overflow-wrap: anywhere; }
@@ -66,12 +66,32 @@
 .receive-backup { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 22px 0 34px; color: var(--secondary); font-size: 12px; }
 .receive-backup > div { display: flex; flex-shrink: 0; gap: 18px; }
 .payment-name-manager p { color: var(--secondary); margin: 0 0 16px; max-width: 68ch; }
-.payment-name-manager { padding-top: 28px; margin-top: 24px; border-top: 1px solid var(--line); }
+.payment-name-manager { max-width: 680px; padding-top: 22px; margin-top: 22px; border-top: 1px solid var(--line); }
 .name-input-row { display: flex; gap: 10px; align-items: stretch; }
 .name-input-row input { min-width: 0; flex: 1; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); box-shadow: var(--inset); }
 .name-input-row input::placeholder { color: var(--muted); opacity: 1; }
 .name-input-row .button { flex-shrink: 0; }
-.name-setup-result { margin-top: 24px; }
+.name-setup-result { margin-top: 0; }
+.inbox-setup-progress { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; padding: 0; margin: 0 0 26px; }
+.inbox-setup-progress li { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+.inbox-setup-progress li > span { display: grid; place-items: center; flex-shrink: 0; width: 23px; height: 23px; border: 1px solid var(--line-strong); border-radius: 50%; font-size: 11px; }
+.inbox-setup-progress [aria-current="step"] { color: var(--ink); font-weight: 600; }
+.inbox-setup-progress [aria-current="step"] > span { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+.inbox-setup-progress .complete > span { color: var(--success); border-color: var(--success); }
+.name-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.name-summary > span { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; }
+.name-summary svg { flex-shrink: 0; }
+.name-summary bdi { overflow-wrap: anywhere; }
+.name-summary > button { flex-shrink: 0; font-size: 12px; }
+.payment-name-manager .name-wallet-ready { display: flex; align-items: center; gap: 7px; color: var(--success); font-size: 12px; margin-bottom: 24px; }
+.inbox-setup-action h3, .name-setup-result > h3 { font-size: 18px; margin: 0 0 8px; }
+.inbox-setup-action > p { font-size: 13px; line-height: 1.7; max-width: 58ch; }
+.inbox-setup-action .checkbox-field { margin: 20px 0; }
+.payment-name-manager .setup-restore { margin: 16px 0 0; font-size: 12px; }
+.setup-restore .text-link { font-size: inherit; }
+.name-wallet-details { margin-top: 24px; font-size: 12px; }
+.name-wallet-details summary { cursor: pointer; color: var(--muted); }
+.name-wallet-details[open] summary { margin-bottom: 12px; }
 .name-checked { color: var(--success) !important; display: flex; align-items: center; gap: 7px; font-size: 13px; flex-wrap: wrap; overflow-wrap: anywhere; margin: 10px 0 0; }
 .name-checked span { margin-inline-start: auto; color: var(--muted); }
 .name-permissions { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
@@ -89,7 +109,6 @@
 .name-resolution textarea { font-size: 12px; overflow-wrap: anywhere; }
 fieldset.recipient-editor { border: 0; padding: 0; margin: 0; min-width: 0; }
 fieldset.wizard-surface { border: 0; margin: 0; min-width: 0; }
-fieldset.name-wallet-picker { border: 0; padding: 0; margin: 16px 0; min-width: 0; }
 .review-recipients { border-block: 1px solid var(--line); margin: 24px 0; }
 .review-recipients > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; padding: 16px 0; }
 .review-recipients > div + div { border-top: 1px solid var(--line); }
@@ -106,6 +125,10 @@ fieldset.name-wallet-picker { border: 0; padding: 0; margin: 16px 0; min-width: 
   .name-input-row input { width: 100%; flex-basis: 100%; font-size: 16px; }
   .name-input-row .button { width: 100%; }
   .payment-name-manager .button-row { align-items: stretch; flex-direction: column; }
+  .inbox-setup-progress { gap: 10px 14px; }
+  .inbox-setup-progress li { font-size: 11px; gap: 5px; }
+  .inbox-setup-progress li > span { width: 21px; height: 21px; }
+  .inbox-setup-action > .button { width: 100%; }
 }
 @font-face {
   font-family: "Inter";

@@ -6,7 +6,7 @@ import { useStore } from '../lib/store';
 import { download } from '../lib/format';
 import { Button, Modal, Notice } from './ui';
 
-export function Recovery({ open, onClose, initialMode = 'export' }: { open: boolean; onClose: () => void; initialMode?: 'export' | 'restore' }) {
+export function Recovery({ open, onClose, initialMode = 'export', continueSetup = false }: { open: boolean; onClose: () => void; initialMode?: 'export' | 'restore'; continueSetup?: boolean }) {
   const store = useStore(); const [mode, setMode] = useState(initialMode); const [password, setPassword] = useState(''); const [repeat, setRepeat] = useState(''); const [file, setFile] = useState<File>(); const [persist, setPersist] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const fileInput = useRef<HTMLInputElement>(null);
   const close = () => { setPassword(''); setRepeat(''); setFile(undefined); setError(''); onClose(); };
   async function submit() {
@@ -38,12 +38,12 @@ export function Recovery({ open, onClose, initialMode = 'export' }: { open: bool
     }
     finally { setBusy(false); }
   }
-  return <Modal title="Payment ID backup" description="Keep your Payment ID if you change devices or clear your browser." open={open} onClose={() => { if (!busy) close(); }}>
-    <div className="tabs recovery-tabs">
+  return <Modal title={continueSetup ? mode === 'export' ? 'Save your inbox backup' : 'Restore your inbox' : 'Payment ID backup'} description="Keep access to your payments if you change devices or clear your browser." open={open} onClose={() => { if (!busy) close(); }}>
+    {!continueSetup && <div className="tabs recovery-tabs">
       <button className={mode === 'export' ? 'selected' : ''} onClick={() => { setMode('export'); setError(''); }}>Save backup</button>
       <button className={mode === 'restore' ? 'selected' : ''} onClick={() => { setMode('restore'); setError(''); }}>Restore backup</button>
-    </div>
-    <Notice icon={KeyRound}>Anyone with your backup file and password can access your payments. Keep both private and store them separately. Signing in does not restore this backup.</Notice>
+    </div>}
+    <Notice icon={KeyRound}>Your file and password unlock your payments. Keep them private and store them separately.</Notice>
     {mode === 'restore' && <>
       <button className="file-restore" onClick={() => fileInput.current?.click()}><FileUp size={20} /><span>{file?.name || 'Choose backup file'}</span></button>
       <input type="file" accept=".json,application/json" ref={fileInput} hidden onChange={event => setFile(event.target.files?.[0])} />
@@ -57,8 +57,8 @@ export function Recovery({ open, onClose, initialMode = 'export' }: { open: bool
       <label className="field">Repeat password<input type="password" autoComplete="new-password" value={repeat} onChange={event => setRepeat(event.target.value)} /></label>
       <label className="checkbox-field"><input type="checkbox" checked={persist} onChange={event => setPersist(event.target.checked)} /><span>Also save a password-protected copy in this browser.</span></label>
     </>}
-    <p className="field-hint">This saves access to your Payment ID. It does not save practice payments or drafts, which reset when you reload the page. Your funds backup is separate, under Restore balance.</p>
+    <details className="progressive-details"><summary>What does this backup save?</summary><p>This saves access to your Payment ID. Signing in alone does not restore it. Practice payments and drafts reset when you reload. Your funds backup is separate, under Restore balance.</p></details>
     {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="modal-actions"><Button variant="secondary" disabled={busy} onClick={close}>Cancel</Button><Button busy={busy} icon={mode === 'export' ? Download : KeyRound} onClick={() => void submit()}>{mode === 'export' ? 'Download backup' : 'Restore backup'}</Button></div>
+    <div className="modal-actions"><Button variant="secondary" disabled={busy} onClick={close}>Cancel</Button><Button busy={busy} icon={mode === 'export' ? Download : KeyRound} onClick={() => void submit()}>{mode === 'export' ? continueSetup ? 'Download and continue' : 'Download backup' : 'Restore backup'}</Button></div>
   </Modal>;
 }

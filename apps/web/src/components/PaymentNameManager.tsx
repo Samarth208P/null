@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useWallets } from '@privy-io/react-auth';
+import { useEffect, useRef, useState } from 'react';
+import { useConnectWallet, useWallets } from '@privy-io/react-auth';
 import { createWalletClient, custom, encodeFunctionData, getAddress, type Address, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { sepolia } from 'viem/chains';
 import { Check, Copy, Download, ExternalLink, Globe2 } from 'lucide-react';
@@ -12,15 +12,17 @@ import { useAccount } from '../lib/account';
 import { clearPendingNameUpdate, readPendingNameUpdate, savePendingNameUpdate, type PendingNameUpdate } from '../lib/ens-pending';
 import { Button, KeyValue, Notice } from './ui';
 import { download } from '../lib/format';
+import { findNameWallet, type NameWallet } from '../lib/ens-wallet';
 
-type Connection = () => Promise<WalletClient>;
-function PrivyNames() {
-  const { wallets } = useWallets();
-  const [selectedAddress, setSelectedAddress] = useState('');
-  const selected = wallets.find(item => item.address === selectedAddress) ?? wallets.find(item => item.walletClientType === 'privy') ?? wallets[0];
-  return <NameManager walletControl={wallets.length > 1 ? <label className="field">Wallet for name updates<select value={selected?.address ?? ''} onChange={event => setSelectedAddress(event.target.value)}>{wallets.map(wallet => <option key={wallet.address} value={wallet.address}>{wallet.walletClientType === 'privy' ? 'Privy' : 'Connected'} · {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}</option>)}</select><small>Use the name’s owner or an authorized wallet.</small></label> : undefined} connect={async () => {
-    const wallet = selected;
-    if (!wallet) throw new PaymentNameError('permission', 'Your wallet is still opening. Try again when sign-in has finished.');
+type Connection = (address?: Address) => Promise<WalletClient>;
+type SetupProps = { onRecovery: (mode: 'export' | 'restore') => void; onLinked?: () => void; initialName?: string; onNameChange?: (name: string) => void };
+function PrivyNames(props: SetupProps) {
+  const { wallets, ready } = useWallets();
+  const { connectWallet } = useConnectWallet();
+  return <NameManager {...props} walletsReady={ready} wallets={wallets.map(wallet => ({ address: wallet.address as Address, label: wallet.walletClientType === 'privy' ? 'Privy wallet' : 'Connected wallet' }))}
+    onConnectWallet={() => connectWallet()} connect={async address => {
+    const wallet = wallets.find(item => item.address.toLowerCase() === address?.toLowerCase());
+    if (!wallet) throw new PaymentNameError('permission', 'Connect the wallet for this name, then check the name again.');
     await wallet.switchChain(ENS_CHAIN_ID);
     return createWalletClient({ account: wallet.address as Address, chain: sepolia, transport: custom(await wallet.getEthereumProvider()) });
   }} />;
@@ -33,16 +35,18 @@ async function connectInjected(): Promise<WalletClient> {
   await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
   return createWalletClient({ account: accounts[0], chain: sepolia, transport: custom(provider) });
 }
-export function PaymentNameManager() { return config.privyAppId ? <PrivyNames /> : <NameManager connect={connectInjected} />; }
+export function PaymentNameManager(props: SetupProps) { return config.privyAppId ? <PrivyNames {...props} /> : <NameManager {...props} connect={connectInjected} />; }
 
-function NameManager({ connect, walletControl }: { connect: Connection; walletControl?: ReactNode }) {
+export function NameManager({ connect, wallets, walletsReady = true, onConnectWallet, onRecovery, onLinked, initialName, onNameChange }: SetupProps & {
+  connect: Connection; wallets?: readonly NameWallet[]; walletsReady?: boolean; onConnectWallet?: () => void;
+}) {
   const store = useStore();
   const account = useAccount();
   const { userId } = useSession();
   const userKey = userId ?? 'connected-wallet';
   const [savedUpdate] = useState(() => readPendingNameUpdate(userKey));
   const updateRef = useRef<PendingNameUpdate | undefined>(savedUpdate);
-  const [name, setName] = useState(savedUpdate?.name ?? store.receivingName?.name ?? account.profile?.ensName ?? '');
+  const [name, setName] = useState(savedUpdate?.name ?? initialName ?? store.receivingName?.name ?? account.profile?.ensName ?? '');
   const [checked, setChecked] = useState<Awaited<ReturnType<typeof inspectPaymentName>>>();
   const [linked, setLinked] = useState<PaymentNameSnapshot | undefined>(store.receivingName);
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false);
@@ -52,23 +56,51 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
   const [pending, setPending] = useState(!!savedUpdate);
   const [walletAddress, setWalletAddress] = useState<Address>();
   const [scope, setScope] = useState<Awaited<ReturnType<typeof inspectPaymentEditorScope>>>();
+  const [chosenWallet, setChosenWallet] = useState<NameWallet>();
+  const [walletsChecked, setWalletsChecked] = useState(false);
+  const [permissionWallet, setPermissionWallet] = useState('');
   const revision = useRef(0), inFlight = useRef(false);
+  const previousIdentity = useRef(store.identity);
+  const walletAvailable = chosenWallet && (!wallets || wallets.some(wallet => wallet.address.toLowerCase() === chosenWallet.address.toLowerCase()));
+  const setupStep = !checked || !walletAvailable ? 0 : !store.identityBackedUp ? 1 : 2;
   useEffect(() => () => { revision.current++; }, []);
+  useEffect(() => {
+    if (previousIdentity.current === store.identity) return;
+    previousIdentity.current = store.identity; revision.current++;
+    setChecked(undefined); setLinked(undefined); setChosenWallet(undefined); setWalletsChecked(false);
+    setConsent(false); setStatus(''); setError(''); setBusy(false);
+  }, [store.identity]);
   async function run(work: (version: number) => Promise<void>) {
     if (inFlight.current) return;
     inFlight.current = true; const version = revision.current; setBusy(true); setError(''); setStatus(''); setScope(undefined);
     try { await work(version); }
-    catch (reason) { if (version === revision.current) setError(reason instanceof PaymentNameError ? reason.message : 'This step was not confirmed. Check your wallet and connection, then try again.'); }
+    catch (reason) { if (version === revision.current) { setStatus(''); setError(reason instanceof PaymentNameError ? reason.message : 'This step was not confirmed. Check your wallet and connection, then try again.'); } }
     finally { inFlight.current = false; if (version === revision.current) setBusy(false); }
   }
   async function lookup(version: number) {
+    setChecked(undefined); setChosenWallet(undefined); setWalletsChecked(false); setConsent(false); setLinked(undefined);
+    setStatus('Checking your name…');
     const result = await inspectPaymentName(ensClient, name);
     if (version !== revision.current) return;
-    setChecked(result); setLinked(undefined);
+    setName(result.name); onNameChange?.(result.name);
+    setChecked(result);
     if (result.value === store.identity.profile.stealthMetaAddress) {
       const snapshot = await resolvePaymentName(ensClient, result.name);
-      if (version === revision.current) { setLinked(snapshot); store.setReceivingName(snapshot); }
+      if (version === revision.current) { setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); setStatus(''); }
+      return;
     }
+    if (!walletsReady) throw new PaymentNameError('permission', 'Your wallets are still loading. Try again in a moment.');
+    setStatus('Finding a wallet that can update this name…');
+    let candidates = wallets;
+    if (!candidates) {
+      const wallet = await connect();
+      if (!wallet.account) throw new PaymentNameError('permission', 'Connect the wallet that owns this name.');
+      candidates = [{ address: wallet.account.address, label: 'Connected wallet' }];
+    }
+    const selected = await findNameWallet(candidates, result.owner, async address => (await paymentEditorAccess(ensClient, result.name, address)).allowed)
+      .catch(() => { throw new PaymentNameError('network', 'Could not check wallet permissions. Check your connection and try again.'); });
+    if (version !== revision.current) return;
+    setChosenWallet(selected); setWalletsChecked(true); setStatus('');
   }
   async function confirmed(transaction: Hex, version: number) {
     const update = updateRef.current;
@@ -88,7 +120,7 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
       const snapshot = await resolvePaymentName(ensClient, update.name);
       if (snapshot.profile !== store.identity.profile.stealthMetaAddress || snapshot.fingerprint !== update.fingerprint) throw new PaymentNameError('changed', 'The transaction was confirmed, but this device has a different Payment ID. Restore your backup before sharing this name.');
       if (version !== revision.current) return;
-      setLinked(snapshot); store.setReceivingName(snapshot); setStatus('Your payment name is live on Sepolia.');
+      setChecked({ ...snapshot, value: snapshot.profile }); setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); setStatus('Your payment name is live on Sepolia.');
     } else {
       const access = await paymentEditorAccess(ensClient, update.name, update.editor!);
       if (version !== revision.current) return;
@@ -99,10 +131,12 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
   async function write(kind: 'profile' | 'grant' | 'revoke', version: number) {
     if (!checked || pending || (kind === 'profile' && !consent)) return;
     if (kind === 'profile' && !store.identityBackedUp) throw new PaymentNameError('permission', 'Save your Payment ID backup from the inbox before linking this name.');
-    const wallet = await connect();
+    if (kind === 'profile' && !walletAvailable) throw new PaymentNameError('permission', 'Check the name again to find an authorized wallet.');
+    const wallet = await connect(kind === 'profile' ? chosenWallet?.address : (permissionWallet || checked.owner) as Address);
     if (version !== revision.current) return;
     const account = wallet.account?.address;
     if (!account || await wallet.getChainId() !== ENS_CHAIN_ID) throw new PaymentNameError('network', 'Connect the name’s wallet on Sepolia.');
+    if (kind === 'profile' && account.toLowerCase() !== chosenWallet?.address.toLowerCase()) throw new PaymentNameError('changed', 'The wallet changed. Check your name again before linking.');
     setWalletAddress(account);
     const simulation = kind === 'profile'
       ? await prepareProfileWrite(ensClient, checked.name, store.identity.profile.stealthMetaAddress, account, checked.resolver)
@@ -122,25 +156,52 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
     setHash(transaction); setPending(true); setStatus('Waiting for Sepolia confirmation…');
     await confirmed(transaction, version);
   }
+  function changeName() {
+    revision.current++; setChecked(undefined); setLinked(undefined); setChosenWallet(undefined);
+    setWalletsChecked(false); setConsent(false); setStatus(''); setError(''); setHash(undefined);
+  }
   return <div className="payment-name-manager">
-    <label className="field" htmlFor="receiving-ens-name">Your ENS name on Sepolia</label>
-    <div className="name-input-row"><input id="receiving-ens-name" value={name} disabled={busy || pending} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name.eth" onChange={event => { revision.current++; setName(event.target.value); setChecked(undefined); setLinked(undefined); setConsent(false); setStatus(''); setError(''); setHash(undefined); }} /><Button variant="secondary" disabled={!name.trim() || pending} busy={busy} onClick={() => void run(lookup)}>Check name</Button></div>
-    <p className="field-hint">Use a name you own. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get a name in ENS <ExternalLink size={12} /></a></p>
-    {checked && <div className="name-setup-result">
-      <p className="name-checked"><Globe2 size={15} /><bdi>{checked.name}</bdi><span>Sepolia</span></p>
-      {walletControl && <fieldset className="name-wallet-picker" disabled={busy || pending}>{walletControl}</fieldset>}
-      {linked ? <><p><Check size={14} /> Linked to your Payment ID.</p><Button variant="secondary" icon={Copy} onClick={() => void run(async version => {
+    {!linked && !pending && <ol className="inbox-setup-progress" aria-label="Inbox setup progress">
+      {['Choose name', 'Save backup', 'Link name'].map((label, index) => <li key={label} aria-current={index === setupStep ? 'step' : undefined} className={index < setupStep ? 'complete' : ''}>
+        <span aria-hidden="true">{index < setupStep ? <Check size={13} /> : index + 1}</span>{label}
+      </li>)}
+    </ol>}
+    {!checked && !pending && <form onSubmit={event => { event.preventDefault(); if (name.trim()) void run(lookup); }}>
+      <label className="field" htmlFor="receiving-ens-name">Your ENS name on Sepolia</label>
+      <div className="name-input-row"><input id="receiving-ens-name" value={name} disabled={busy} maxLength={512} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name.eth" onChange={event => { changeName(); setName(event.target.value); onNameChange?.(event.target.value); }} /><Button type="submit" disabled={!name.trim() || !walletsReady} busy={busy}>Continue</Button></div>
+      <p className="field-hint">We’ll find the right connected wallet for your name. <a href="https://app.ens.dev" target="_blank" rel="noopener noreferrer">Get an ENS name <ExternalLink size={12} /></a></p>
+    </form>}
+    {checked && !pending && <div className="name-setup-result">
+      <div className="name-summary"><span><Globe2 size={16} /><bdi>{checked.name}</bdi></span><button type="button" className="text-link" disabled={busy} onClick={changeName}>Change name</button></div>
+      {linked ? <><h3>Your inbox is ready</h3><p>Share this name to receive payments.</p><Button icon={Copy} busy={busy} onClick={() => void run(async version => {
         const fresh = await resolvePaymentName(ensClient, linked.name);
         if (version !== revision.current) return;
         if (fresh.profile !== store.identity.profile.stealthMetaAddress) { setLinked(undefined); store.setReceivingName(undefined); throw new PaymentNameError('changed', 'This name’s Payment ID changed. Link it again before sharing.'); }
         await navigator.clipboard.writeText(fresh.name); setStatus('Payment name copied.');
-      })}>Copy payment name</Button></> : <>
-        <Notice tone="warning">Your name and Payment ID become public. Use a pseudonym for privacy. Amounts and recovery keys stay private.</Notice>
-        {checked.value && <p className="field-hint">This replaces the name’s current Payment ID.</p>}
-        <label className="checkbox-field"><input type="checkbox" checked={consent} disabled={busy || pending} onChange={event => setConsent(event.target.checked)} /><span>I saved my backup and agree to publish my Payment ID.</span></label>
-        <Button disabled={!consent || pending} busy={busy} onClick={() => void run(version => write('profile', version))}>Link my Payment ID</Button>
+      })}>Copy ENS name</Button></> : busy && !chosenWallet ? null : !walletAvailable ? <div className="inbox-setup-action">
+        <h3>{walletsChecked ? 'Connect a wallet for this name' : 'Check your connected wallets'}</h3>
+        <p>{walletsChecked ? 'None of your connected wallets can update this name. Connect its owner or an authorized wallet, then check again.' : 'We need to confirm which wallet can update your name before continuing.'}</p>
+        <p className="field-hint">Name owner: <code>{checked.owner}</code></p>
+        <div className="button-row">{onConnectWallet && <Button onClick={onConnectWallet} disabled={busy}>Connect another wallet</Button>}<Button variant={onConnectWallet ? 'secondary' : 'primary'} busy={busy} onClick={() => void run(lookup)}>Check wallets again</Button></div>
+      </div> : <>
+        <p className="name-wallet-ready"><Check size={14} />Wallet found. We’ll use it when you confirm.</p>
+        {!store.identityBackedUp ? <div className="inbox-setup-action">
+          <h3>Save your inbox backup</h3>
+          <p>This file keeps access to your payments if you change devices. Choose a password and save it once.</p>
+          <Button icon={Download} onClick={() => onRecovery('export')}>Save backup and continue</Button>
+          <p className="setup-restore">Already have a Payment ID? <button type="button" className="text-link" onClick={() => onRecovery('restore')}>Restore your backup</button></p>
+        </div> : <div className="inbox-setup-action">
+          <h3>Link your name</h3>
+          <p>Your name and receiving Payment ID will be public. Your recovery keys stay private.</p>
+          {checked.value && <Notice tone="warning">This name already has a Payment ID. Linking replaces it for future payments. Restore its existing backup instead if you want to keep that Payment ID.</Notice>}
+          <label className="checkbox-field"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /><span>I agree to link my Payment ID publicly.</span></label>
+          <Button disabled={!consent || !walletsReady} busy={busy} onClick={() => void run(version => write('profile', version))}>Link name</Button>
+          <p className="field-hint">Confirm one Sepolia transaction in your wallet. You’ll need Sepolia ETH for the network fee.</p>
+        </div>}
+        <details className="name-wallet-details"><summary>Wallet details</summary><p>{chosenWallet!.label}: <code>{chosenWallet!.address}</code></p><p>Permission checked on Sepolia. We’ll check again before sending.</p></details>
       </>}
-      <details className="name-permissions"><summary>Payment record access</summary><p>Allow another wallet to update only this name’s Payment ID.</p><p className="field-hint">Only trust an editor who may redirect future payments. Name ownership and other records are unchanged.</p>
+      {linked && <details className="name-permissions"><summary>Advanced: payment record access</summary><p>Allow another wallet to update only this name’s Payment ID.</p><p className="field-hint">Only trust an editor who may redirect future payments. Name ownership and other records are unchanged.</p>
+        {wallets && <label className="field">Wallet for permission changes<select value={permissionWallet || checked.owner} disabled={busy} onChange={event => setPermissionWallet(event.target.value)}><option value={checked.owner}>Name owner · {checked.owner.slice(0, 8)}…{checked.owner.slice(-6)}</option>{wallets.filter(wallet => wallet.address.toLowerCase() !== checked.owner.toLowerCase()).map(wallet => <option key={wallet.address} value={wallet.address}>{wallet.label} · {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}</option>)}</select></label>}
         <label className="field">Editor wallet address<input value={editor} maxLength={42} disabled={busy || pending} onChange={event => { setEditor(event.target.value); setScope(undefined); setStatus(''); setError(''); }} placeholder="0x…" spellCheck={false} autoComplete="off" /></label>
         <div className="button-row"><Button variant="secondary" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim())} busy={busy} onClick={() => void run(version => write('grant', version))}>Grant record access</Button><Button variant="ghost" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(version => write('revoke', version))}>Remove record access</Button><Button variant="ghost" disabled={!/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(async version => { const result = await inspectPaymentEditorScope(ensClient, checked.name, getAddress(editor.trim())); if (version === revision.current) setScope(result); })}>Check access</Button></div>
         {scope && scope.name === checked.name && scope.editor.toLowerCase() === editor.trim().toLowerCase() && <div className="section-block" role="status">
@@ -151,7 +212,7 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
           {scope.broaderPaymentAccess && <Notice tone="warning">This wallet has broader payment-record permissions. Removing one grant may leave other access in place.</Notice>}
           <Button variant="ghost" icon={Download} onClick={() => download('null-ens-permissions.json', JSON.stringify({ schema: 'null.ens-permissions.v1', chainId: ENS_CHAIN_ID, ...scope, transactionsSent: 0 }, null, 2))}>Download permission check</Button>
         </div>}
-      </details>
+      </details>}
     </div>}
     {walletAddress && <p className="field-hint">Signing wallet: <code>{walletAddress}</code></p>}
     {hash && <p className="field-hint"><a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer">View transaction on Sepolia <ExternalLink size={12} /></a></p>}

@@ -2,10 +2,14 @@
 
 1. NULL waits for Privy to restore an existing session. New visitors see only a sign-in page, including when opening a direct link to a workspace route. Email and wallet authentication use the existing Privy provider. Without a configured provider, the page explains that sign-in is unavailable; there is no guest bypass.
 2. Authenticated users without a saved preference choose Individual or Organization. Organization users also enter a workspace name. No type is preselected on the first visit.
-3. Individuals open their inbox, share a Payment ID, check for payments, and collect them into their Balance. Organizations open an overview of their Funds and Payments, then prepare and review a payment.
+3. Individuals open their inbox, link and share an ENS receiving name, check for payments, and collect them into their Balance. Organizations open an overview of their Funds and Payments, then prepare and review a payment.
 4. Settings contain account type, backups, balance visibility, and explicit sign-out. Test mode and connection controls live under Advanced settings. Help explains how to send, collect, and keep access to payments, with the relevant privacy and withdrawal limits.
 
 ## State and authorization
+
+The inbox opens its setup inline: **Choose name → Save backup → Link name**. Checking a name reads connected-wallet permissions and prefers its owner when authorized; it never assumes that the first Privy wallet can update the name. Missing access has a connect-and-recheck action. Read failures ask for a retry instead of selecting an unverified wallet. Wallet details are collapsed, and permission editing appears under Advanced only after linking.
+
+The backup action opens the existing encrypted recovery form and returns to the same setup. Restoring preserves the typed name while requiring a new lookup and publication consent for the restored identity. Linking requires explicit consent, a matching connected account, the existing write preflight and a wallet transaction. Confirmation keeps the success state, copy action and transaction link visible. No wallet is granted new permissions automatically.
 
 Only the workspace preference is saved in local storage, under a versioned key scoped to the authenticated Privy ID. Invalid preferences return the user to onboarding; unavailable storage permits the current session and displays an explanation. Private keys, drafts, and balances retain the existing in-memory lifecycle. Changing workspace type preserves them. Sign-out, account replacement, and page reload discard the in-memory workspace.
 

@@ -29,6 +29,7 @@ export function PrivateInbox() {
   const [copyError, setCopyError] = useState('');
   const [copying, setCopying] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
+  const [setupName, setSetupName] = useState<string>();
   const scanRevision = useRef(0), scanInFlight = useRef(false);
   const identityRevision = useRef(0);
   useEffect(() => {
@@ -123,14 +124,14 @@ export function PrivateInbox() {
     <section className="receive-panel" aria-label="Receive payments">
     <div className="receive-heading">
       <span className="profile-symbol"><KeyRound size={21} strokeWidth={1.6} /></span>
-      <div className="receive-label"><h2>{store.receivingName?.name || (store.mode === 'testnet' ? 'Set up your ENS inbox' : 'Receive payments')}</h2><p>{store.receivingName ? 'Share this name with the sender.' : store.mode === 'testnet' ? 'Link a Sepolia ENS name to receive new payments.' : 'Share your Payment ID with the sender.'}</p></div>
-      <Button variant="secondary" icon={Copy} busy={copying} onClick={() => void copyProfile()}>{!store.identityBackedUp ? 'Save backup to receive' : store.receivingName ? 'Copy ENS name' : store.mode === 'testnet' ? 'Link ENS name' : 'Copy Payment ID'}</Button>
+      <div className="receive-label"><h2>{store.receivingName?.name || (store.mode === 'testnet' ? 'Set up your inbox' : 'Receive payments')}</h2><p>{store.receivingName ? 'Share this name with the sender.' : store.mode === 'testnet' ? 'Choose a name, keep a backup, and you’re ready to receive.' : 'Share your Payment ID with the sender.'}</p></div>
+      {(store.mode !== 'testnet' || store.receivingName && !nameOpen) && <Button variant="secondary" icon={Copy} busy={copying} onClick={() => void copyProfile()}>{!store.identityBackedUp ? 'Save backup to receive' : store.receivingName ? 'Copy ENS name' : 'Copy Payment ID'}</Button>}
     </div>
-    <div className="receive-tools"><span>{store.receivingName ? 'ENS · Sepolia' : store.mode === 'testnet' ? 'Required for new payments' : 'Sepolia ENS names'}</span><button className="text-link" aria-expanded={nameOpen} aria-controls="receive-name-settings" onClick={() => setNameOpen(value => !value)}>{nameOpen ? 'Close name settings' : store.receivingName ? 'Manage ENS name' : 'Link ENS name'}<ArrowRight size={14} /></button></div>
+    {(store.receivingName || store.mode !== 'testnet') && <div className="receive-tools"><span>ENS · Sepolia</span><button className="text-link" aria-expanded={nameOpen} aria-controls="receive-name-settings" onClick={() => setNameOpen(value => !value)}>{nameOpen ? 'Close name settings' : store.receivingName ? 'Manage ENS name' : 'Link ENS name'}<ArrowRight size={14} /></button></div>}
     {copyError && <p className="form-error" role="alert">{copyError}</p>}
-    {nameOpen && <div id="receive-name-settings"><Suspense fallback={<p role="status">Opening name settings…</p>}><PaymentNameManager key={store.identity.profile.stealthMetaAddress} /></Suspense></div>}
+    {(nameOpen || store.mode === 'testnet' && !store.receivingName) && <div id="receive-name-settings"><Suspense fallback={<p role="status">Opening inbox setup…</p>}><PaymentNameManager key={store.identity.profile.stealthMetaAddress} initialName={setupName} onNameChange={setSetupName} onRecovery={setRecovery} onLinked={() => setNameOpen(true)} /></Suspense></div>}
     </section>
-    <div className="receive-backup"><span>Keep your backup. Sign-in alone won’t restore payments.</span><div><button className="text-link" onClick={() => setRecovery('export')}>Save backup</button><button className="text-link" onClick={() => setRecovery('restore')}>Restore</button></div></div>
+    <div className="receive-backup"><span>{store.identityBackedUp ? 'Keep your backup and password in separate safe places.' : 'Returning to an existing inbox?'}</span><div>{store.identityBackedUp && <button className="text-link" onClick={() => setRecovery('export')}>Save backup</button>}<button className="text-link" onClick={() => setRecovery('restore')}>Restore backup</button></div></div>
     <div className="inbox-toolbar"><div><h2>Payments</h2>{scanned && <Badge>{available.length} available</Badge>}</div>{store.notes.length > 0 && <button className="text-link" onClick={() => store.navigate('balance')}>View balance<ArrowRight size={14} /></button>}</div>
     {error && <div className="form-error" role="alert">{error}{store.mode === 'testnet' && <Button variant="ghost" disabled={scanning} onClick={() => { setForceRpc(true); void scan(true); }}>Try another connection</Button>}</div>}
     {scanning ? <div className="scan-loading" role="status"><span className="skeleton skeleton-title" /><span className="skeleton" /><span className="skeleton skeleton-short" /><p>Checking for payments on your device…</p></div> : available.length ? <div className="entitlement-list">{available.map((item, index) => <article className="entitlement" key={item.id}>
@@ -153,7 +154,7 @@ export function PrivateInbox() {
       </>}
     </Modal>
     <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={result => { if ('claimNullifier' in result.note) store.addNote({ id: crypto.randomUUID(), amount: result.note.amountAtomic, commitment: result.note.commitment, allocationId: result.note.claimNullifier, createdAt: new Date().toISOString() }); store.toast('Payment collected. Confirmed by the test network.'); }} />
-    <Recovery key={recovery || 'closed'} open={recovery !== null} initialMode={recovery || 'export'} onClose={() => setRecovery(null)} />
+    <Recovery key={recovery || 'closed'} open={recovery !== null} initialMode={recovery || 'export'} continueSetup={store.mode === 'testnet' && !store.receivingName} onClose={() => setRecovery(null)} />
   </>;
 }
 

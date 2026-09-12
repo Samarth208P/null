@@ -11,9 +11,9 @@ The local reference app includes the local CRE and sending services. The [public
 ## Recipient: publish the actual receiving profile
 
 1. Sign in as the wallet that owns `inbox.nullpay2026.eth`. The last read-only check confirmed ownership and payment-record permission, with the profile still unpublished.
-2. Choose Individual and open Inbox. Restore an existing Payment ID backup if you already have one; otherwise save the newly created encrypted backup. A new identity cannot recover entitlements addressed to old keys.
-3. Check `inbox.nullpay2026.eth`, review the public-record notice, consent and choose **Link my Payment ID**. Approve the record update in your wallet and wait for the linked state.
-4. Save the transaction link. Under **Payment record access**, enter the wallet whose permissions you want to inspect and choose **Check access**. The two-record comparison reads Sepolia and offers **Download permission check**. It makes no changes. A revoked verification editor can be shown using the existing setup evidence; do not grant new access simply to get a screenshot.
+2. Choose Individual and open Inbox. If returning to an existing Payment ID, choose **Restore backup** first. Otherwise enter `inbox.nullpay2026.eth` and choose **Continue**. NULL checks connected wallets and selects a permitted owner or editor automatically. If none can update the name, use **Connect another wallet**, then **Check wallets again**.
+3. Choose **Save backup and continue**, set a password and download the encrypted file. The same setup advances to **Link your name**. Review the public-record notice, consent and choose **Link name**. Approve the Sepolia record update in your wallet and wait for **Your inbox is ready**. An existing restored backup skips the save step; a new identity cannot recover payments addressed to old keys.
+4. Save the transaction link. After linking, open **Advanced: payment record access**, enter the wallet whose permissions you want to inspect and choose **Check access**. The two-record comparison reads Sepolia and offers **Download permission check**. It makes no changes. A revoked verification editor can be shown using the existing setup evidence; do not grant new access simply to get a screenshot.
 
 The `receive` and `pay` names in automated checks are verification fixtures. They are not recipient accounts to fund.
 
