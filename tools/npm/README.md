@@ -12,7 +12,7 @@ Install the public developer preview:
 npm install @samarth208p/null-payouts@preview
 ```
 
-For source development, `pnpm pack:npm` builds a local tarball that can also be installed with `npm install /absolute/path/to/samarth208p-null-payouts-0.1.0-preview.1.tgz`.
+For source development, `pnpm pack:npm` builds a local tarball that can also be installed with `npm install /absolute/path/to/samarth208p-null-payouts-0.1.0-preview.2.tgz`.
 
 Requires Node.js 22.16+ for Node use. Ships ESM JavaScript and TypeScript declarations. Preparation can run in Node; local recovery, browser workers, and the default proof client require a browser application and bundler. CommonJS `require` is not supported.
 

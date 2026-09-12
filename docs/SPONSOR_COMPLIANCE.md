@@ -1,5 +1,7 @@
 # Sponsor integration status
 
+**Historical implementation snapshot:** the external-evidence gaps below describe an earlier development stage. For current recorded execution and remaining actions, use [submission readiness](SUBMISSION_READINESS.md) and the [sponsor evidence walkthrough](SPONSOR_EVIDENCE.md). In particular, successful local CRE simulation, live ENS reads and published Graph discovery now have evidence; a complete Privy-approved payout remains pending in the available record.
+
 This file separates developed integrations from demonstrated external execution. Source implementation, local source compilation and a hosted sponsor deployment are different milestones. No placeholder address, local draft or login is evidence of an onchain private distribution.
 
 | Integration | Implemented source | External evidence still required |

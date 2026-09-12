@@ -261,6 +261,25 @@ export class NullLiveClient {
     throw new NullError('NULL_TRANSACTION_MISMATCH', 'The confirmed transaction did not register the expected policy.');
   }
 
+  /** Wait for an already submitted activation; never send a second registration. */
+  async reconcilePolicyRegistration(policyCommitment: Hex, hash: Hex, options: OperationOptions = {}) {
+    await this.verifyDeployment(options);
+    progress(options, 'confirming');
+    const receipt = await this.rpc.waitForTransactionReceipt({ hash, confirmations: this.options.confirmations, timeout: this.options.receiptTimeoutMs });
+    if (receipt.status !== 'success') throw new NullError('NULL_POLICY_REGISTRATION_FAILED', 'Organization activation failed on the network.');
+    if (receipt.to?.toLowerCase() !== this.manifest.contracts.nullAuthRegistry.toLowerCase()) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The transaction is not an organization activation.');
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== this.manifest.contracts.nullAuthRegistry.toLowerCase()) continue;
+      try {
+        const event = decodeEventLog({ abi: nullAuthRegistryAbi, data: log.data, topics: log.topics });
+        if (event.eventName === 'PolicyRegistered' && event.args.policyCommitment === fieldFromHex(policyCommitment)) {
+          return { policyCommitment, policyIndex: Number(event.args.policyIndex), transactionHash: receipt.transactionHash };
+        }
+      } catch { /* inspect remaining registry logs */ }
+    }
+    throw new NullError('NULL_TRANSACTION_MISMATCH', 'The activation did not register this organization setup.');
+  }
+
   /** Recover funded/change notes from saved encrypted-local checkpoints and public history. */
   async recoverTreasuryNotes(checkpoints: readonly SecretCheckpoint[], options: OperationOptions = {}): Promise<{ note: OwnedTreasuryNote; spent: boolean }[]> {
     await this.verifyDeployment(options); const history = await this.syncHistory(options); const recovered: { note: OwnedTreasuryNote; spent: boolean }[] = [];

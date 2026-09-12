@@ -89,7 +89,7 @@ export function DeveloperDocs({ route }: { route: string }) {
       <nav aria-label="Guides">{matches.map(item => <a key={item.id} href={`#/developers/${item.id}`} aria-current={guide.id === item.id ? 'page' : undefined}>{item.title}</a>)}</nav>
       {!matches.length && <p className="docs-empty" role="status">No guides match. <button onClick={() => setQuery('')}>Clear search</button></p>}
       <a className="docs-skill-link" href={skillUrl} download="SKILL.md">Download SKILL.md<ArrowDown size={15} /></a>
-      <p className="docs-version">0.1.0-preview.1<br />MIT · Sepolia testnet</p>
+      <p className="docs-version">0.1.0-preview.2<br />MIT · Sepolia testnet</p>
     </aside>
     <main className="docs-article" id="developer-content" tabIndex={-1}>
       <h1 ref={heading} tabIndex={-1}>{guide.title}</h1><p className="docs-lead">{guide.description}</p>
@@ -134,7 +134,7 @@ export function DeveloperDocs({ route }: { route: string }) {
       {guide.id === 'ai' && <>
         <p>Give your coding assistant the same integration rules as your team. This self-contained skill covers the published imports, local custody, ENS checks, authorization, recovery, sponsorship and honest privacy claims.</p>
         <a className="button button-primary docs-download" href={skillUrl} download="SKILL.md">Download SKILL.md<ArrowDown size={16} /></a>
-        <Section title="Add it to your project"><p>Save the file as <code>.agents/skills/null-payouts/SKILL.md</code> for tools that discover project skills there. If your assistant uses another skill directory, use its supported location. You can also attach the file directly to the conversation.</p><Code title="Suggested integration request" value={`Use the null-payouts skill to integrate NULL in this browser app.\nStart with preparation only. Inspect our wallet, auth and storage.\nUse @samarth208p/null-payouts@0.1.0-preview.1.\nList missing deployment and recovery configuration before payment.\nVerify TypeScript, browser worker bundling and encrypted recovery.\nDo not submit transactions as part of the setup.`} /></Section>
+        <Section title="Add it to your project"><p>Save the file as <code>.agents/skills/null-payouts/SKILL.md</code> for tools that discover project skills there. If your assistant uses another skill directory, use its supported location. You can also attach the file directly to the conversation.</p><Code title="Suggested integration request" value={`Use the null-payouts skill to integrate NULL in this browser app.\nStart with preparation only. Inspect our wallet, auth and storage.\nUse @samarth208p/null-payouts@0.1.0-preview.2.\nList missing deployment and recovery configuration before payment.\nVerify TypeScript, browser worker bundling and encrypted recovery.\nDo not submit transactions as part of the setup.`} /></Section>
         <Section title="What the skill prevents"><ul><li>Installing unpublished internal workspace packages.</li><li>Shipping private keys or compiled payroll to a backend.</li><li>Treating preparation, a timeout or a login as a completed payment.</li><li>Enabling partial withdrawals on the wrong pool.</li><li>Claiming stronger privacy than the deployment provides.</li></ul><p>The skill guides implementation. It cannot guarantee an error-free integration or authorize your assistant to spend funds.</p></Section>
         <details className="docs-skill-preview"><summary>Read the complete skill</summary><Code title="SKILL.md" value={skillText} /></details>
       </>}

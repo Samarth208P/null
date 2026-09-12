@@ -1,6 +1,6 @@
 {
   "name": "@samarth208p/null-payouts",
-  "version": "0.1.0-preview.1",
+  "version": "0.1.0-preview.2",
   "description": "ENS-based private payout preparation, claims and transaction orchestration for Ethereum applications",
   "type": "module",
   "license": "MIT",

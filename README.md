@@ -104,6 +104,8 @@ The [payment rehearsal](deployments/payment-flow-sepolia-v2.json) records deposi
 
 ## Submission and AI disclosure
 
+**For sponsor judges:** the [evidence walkthrough](docs/SPONSOR_EVIDENCE.md) maps ENSv2, Chainlink CRE and Privy requirements to exact source, recorded execution, and remaining demo actions.
+
 Codex assisted with implementation, debugging, tests, documentation, and release preparation, including the September 11 ENS requirement and evidence corrections. Dependencies, generated verifiers, sponsor SDKs, templates, and pre-existing code are not claimed as original event work. The team must review the [build provenance disclosure](docs/BUILD_PROVENANCE.md) and confirm the actual event-period work and appropriate track; Git timestamps alone do not establish eligibility.
 
 The [demo plan](docs/SUBMISSION_DEMO.md) includes human narration and the evidence sequence; [submission copy](docs/SUBMISSION_COPY.md) provides sponsor descriptions and judge questions. No final submitted demo video is claimed in this repository. See [readiness](docs/SUBMISSION_READINESS.md) for remaining actions and [security scope](SECURITY.md) for limitations.

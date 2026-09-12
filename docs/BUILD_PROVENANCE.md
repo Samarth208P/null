@@ -4,6 +4,10 @@ This disclosure separates verifiable repository work from claims the team must c
 
 ## AI assistance
 
+On September 12, Codex reviewed sponsor requirements and project evidence, ran local validation and read-only release/ENS checks, and revised the sponsor evidence guide, submission wording, demo plan and stale status statements. It recorded the read-only ENS result. This pass did not send a payment, deploy contracts, publish the submission or record the human demo.
+
+The subsequent sponsor implementation pass added the organization setup/backup/activation UI, receipt export with an explicit public-field allowlist, activation reconciliation, ENS two-record permission inspection, import concurrency guards and verification tests. It ran the CRE CLI simulator and isolated local-chain proof rehearsal, verified live Privy rejection of an unsigned challenge, and prepared an owner handoff. These test actions did not complete the deferred Privy-approved Sepolia payment. Human signing and narration were left to the user as requested.
+
 Codex was used for implementation, debugging, documentation, test execution, and deployment preparation. On September 11 it implemented required ENS recipients in the live application, corrected submission claims, refreshed CRE simulation evidence after the user completed login, and ran validation. These changes require the same human review as other source changes. No AI-generated narration should be used for the final demo.
 
 The September 11 assisted code changes are in `packages/ens/src/index.ts` and its tests; the web application's `PaymentDestination`, `DistributionWizard`, `Recipient`, `Workspace`, `LiveOperation` and loader components; and the organization service health response and HTTP test. Codex also revised the root/package/service READMEs, ENS/privacy/readiness/deployment documents, this disclosure, and the demo/submission copy. The team should add earlier AI-assisted work and its own concrete contributions before submitting; this session does not establish the complete historical attribution.

@@ -4,6 +4,8 @@ NULL can be distributed as one `@samarth208p/null-payouts` package. The build co
 
 Published September 11, 2026: [`@samarth208p/null-payouts@0.1.0-preview.1`](https://www.npmjs.com/package/@samarth208p/null-payouts/v/0.1.0-preview.1), MIT licensed, public access, `preview` tag.
 
+This checkout builds `0.1.0-preview.2`. It adds exact policy-registration transaction reconciliation to the client and ENS payment-versus-website permission inspection at one pinned block. The reference application adds public receipt exports, backup-before-activation, guarded CRE imports and the owner rehearsal guide. The app and Privy server adapter are separate from the npm tarball. The public pool remains Sepolia v0.2.
+
 ```sh
 npm install @samarth208p/null-payouts@preview
 ```
@@ -14,10 +16,10 @@ npm install @samarth208p/null-payouts@preview
 pnpm pack:npm
 ```
 
-This creates `dist/npm/samarth208p-null-payouts-0.1.0-preview.1.tgz`. From another project:
+This creates `dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz`. From another project:
 
 ```sh
-npm install /absolute/path/to/null/dist/npm/samarth208p-null-payouts-0.1.0-preview.1.tgz
+npm install /absolute/path/to/null/dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz
 ```
 
 Use ordinary JavaScript or TypeScript imports:
@@ -33,7 +35,7 @@ import { encryptRecovery } from '@samarth208p/null-payouts/wallet';
 
 The package also exports `/ens`, `/cre`, `/prover`, and `/prover/runtime`. These import paths work in the published package. Workspace examples importing `@null-protocol/sdk`, `@null-protocol/ens`, or `@null-protocol/wallet` should use these package subpaths in a standalone consumer. `@null-protocol/client` integration types are available through `/client`; the Privy server adapter remains a separate source integration.
 
-For browser setup, use the [interactive docs](https://null-protocol.netlify.app/#/developers/quickstart). For AI-assisted integration, download the [NULL skill](../skills/null-payouts/SKILL.md) from the repository or the [AI guide](https://null-protocol.netlify.app/#/developers/ai). The skill is distributed separately from the `0.1.0-preview.1` tarball.
+For browser setup, use the [interactive docs](https://null-protocol.netlify.app/#/developers/quickstart). For AI-assisted integration, download the [NULL skill](../skills/null-payouts/SKILL.md) from the repository or the [AI guide](https://null-protocol.netlify.app/#/developers/ai). The skill is distributed separately from the `0.1.0-preview.2` tarball.
 
 Node.js 22.16+ is supported for preparation. The default live proof client requires a browser bundler. With Vite, use `worker: { format: 'es' }` and `build: { target: 'es2022' }`. CommonJS is not a supported entry point.
 
@@ -60,7 +62,7 @@ The owner selected MIT for this release. The root license is included in the tar
 After those decisions, rebuild and test the exact release, authenticate with the owning npm account, and publish the reviewed tarball:
 
 ```sh
-npm publish ./dist/npm/samarth208p-null-payouts-0.1.0-preview.1.tgz --access public --tag preview
+npm publish ./dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz --access public --tag preview
 ```
 
 The intended consumer command after successful publication is:

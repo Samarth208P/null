@@ -1,0 +1,17 @@
+{
+  "verified": true,
+  "status": "passed",
+  "startedAt": "2026-09-12T10:52:25.774Z",
+  "finishedAt": "2026-09-12T10:52:44.639Z",
+  "syntheticOnly": true,
+  "localSimulation": true,
+  "remoteExecutionVerified": false,
+  "attestationVerified": false,
+  "chainId": "11155111",
+  "poolAddress": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "batchId": "null-cre-synthetic-payroll-v2",
+  "commitment": "0x26d539bd734274adba6cbe1ceecc9436f814d2a3ae0e12140a9daac0ff916c91",
+  "envelopeRoot": "0xabd430546e3d4dfbc5ca4211184c5b9c7c8fc5fd10ec0fa33d98920647232285",
+  "encryptedEnvelopes": 8,
+  "authenticatedFixtureFetches": 1
+}

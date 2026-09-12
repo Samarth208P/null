@@ -149,9 +149,24 @@ export async function preparePaymentDelegate(client: PublicClient, input: string
 export async function paymentEditorAccess(client: PublicClient, input: string, editor: Address) {
   const current = await inspectPaymentName(client, input);
   await assertPermissionedResolver(client, current.resolver);
-  const node = namehash(current.name), part = keccak256(stringToHex(PAYMENT_RECORD));
+  return textEditorAccess(client, current, editor, PAYMENT_RECORD);
+}
+async function textEditorAccess(client: PublicClient, current: Awaited<ReturnType<typeof inspectPaymentName>>, editor: Address, key: string) {
+  const node = namehash(current.name), part = keccak256(stringToHex(key));
   const resource = (a: Hex, b: Hex) => BigInt(keccak256(encodePacked(['bytes32', 'bytes32'], [a, b])));
   const resources = [0n, resource(zeroHash, part), resource(node, zeroHash), resource(node, part)];
-  const rights = await Promise.all(resources.map(value => client.readContract({ address: current.resolver, abi: resolverAbi, functionName: 'hasRoles', args: [value, 1n << 4n, editor] })));
+  const rights = await Promise.all(resources.map(value => client.readContract({ address: current.resolver, abi: resolverAbi, functionName: 'hasRoles', args: [value, 1n << 4n, editor], blockNumber: BigInt(current.blockNumber) })));
   return { allowed: rights.some(Boolean), broaderAccess: rights.slice(0, 3).some(Boolean), recordAccess: rights[3] };
+}
+
+/** Compare two concrete text permissions at one observed block. No wallet or write. */
+export async function inspectPaymentEditorScope(client: PublicClient, input: string, editor: Address) {
+  const current = await inspectPaymentName(client, input);
+  await assertPermissionedResolver(client, current.resolver);
+  const [payment, website] = await Promise.all([
+    textEditorAccess(client, current, getAddress(editor), PAYMENT_RECORD),
+    textEditorAccess(client, current, getAddress(editor), 'url'),
+  ]);
+  return { name: current.name, resolver: current.resolver, editor: getAddress(editor), blockNumber: current.blockNumber,
+    paymentRecord: payment.allowed, websiteRecord: website.allowed, broaderPaymentAccess: payment.broaderAccess };
 }

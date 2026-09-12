@@ -4,7 +4,7 @@ import { profileFromKeys } from '@null-protocol/crypto';
 import { keccak256, stringToHex, zeroAddress, type Address, type PublicClient } from 'viem';
 import { sepolia } from 'viem/chains';
 import { namehash, packetToBytes } from 'viem/ens';
-import { ENS_V2, PAYMENT_RECORD, PaymentNameError, canonicalPaymentProfile, normalizePaymentName, paymentDestination, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, recheckPaymentNames, requiredPaymentNames, recheckRequiredPaymentNames, resolvePaymentName, samePaymentDestination, type PaymentNameSnapshot } from './index';
+import { ENS_V2, PAYMENT_RECORD, PaymentNameError, canonicalPaymentProfile, inspectPaymentEditorScope, normalizePaymentName, paymentDestination, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, recheckPaymentNames, requiredPaymentNames, recheckRequiredPaymentNames, resolvePaymentName, samePaymentDestination, type PaymentNameSnapshot } from './index';
 
 // Unit-test fixtures only. Production names always resolve through Sepolia RPC.
 const scalar = (value: number) => Uint8Array.from([...Array(31).fill(0), value]);
@@ -118,4 +118,24 @@ test('approval and submission require ENS coverage for every real compiled recip
   for (const changed of [{value: otherProfile}, {owner: editor}, {resolver: editor}, {value: null}, {expiry: 999n}, {implementation: editor}]) {
     await assert.rejects(recheckRequiredPaymentNames(fixture(changed).client, [snapshot], 1), PaymentNameError);
   }
+});
+
+
+test('permission comparison pins both concrete records to one observed block and preserves read failures', async () => {
+  const { client, calls } = fixture();
+  const result = await inspectPaymentEditorScope(client, 'alice.eth', editor);
+  assert.equal(result.paymentRecord, false);
+  assert.equal(result.websiteRecord, false);
+  assert.equal(result.blockNumber, '123');
+  const rights = calls.filter(call => call.args.functionName === 'hasRoles');
+  assert.equal(rights.length, 8);
+  assert.ok(rights.every(call => call.args.blockNumber === 123n));
+  assert.notEqual(rights[3].args.args[0], rights[7].args.args[0]);
+  const broken = fixture().client;
+  const read = broken.readContract.bind(broken);
+  broken.readContract = (async (args: any) => {
+    if (args.functionName === 'hasRoles') throw new Error('RPC offline');
+    return read(args);
+  }) as typeof broken.readContract;
+  await assert.rejects(inspectPaymentEditorScope(broken, 'alice.eth', editor), /RPC offline/);
 });

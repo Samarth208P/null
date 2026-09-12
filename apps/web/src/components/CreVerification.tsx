@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, FileUp } from 'lucide-react';
 import type { PublicDistributionBundle } from '@null-protocol/sdk';
 import { download } from '../lib/format';
@@ -9,15 +9,19 @@ export function CreVerification({ payroll, expected, onVerified }: { payroll: Cr
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const active = useRef(true), inFlight = useRef(false);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   async function importResult(file?: File) {
-    if (!file) return;
+    if (!file || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true); setError('');
     try {
       if (file.size > 100_000) throw new Error('The CRE result file is too large.');
       const result = await file.text();
+      if (!active.current) return;
       onVerified(verifyCreResult(result, payroll.batchId, expected), result);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not check the CRE result.'); }
-    finally { setBusy(false); if (input.current) input.current.value = ''; }
+    } catch (reason) { if (active.current) setError(reason instanceof Error ? reason.message : 'Could not check the CRE result.'); }
+    finally { inFlight.current = false; if (active.current) setBusy(false); if (input.current) input.current.value = ''; }
   }
   return <section aria-label="Chainlink CRE verification" className="section-block">
 
@@ -26,6 +30,6 @@ export function CreVerification({ payroll, expected, onVerified }: { payroll: Cr
     <div className="button-row"><Button variant="secondary" icon={Download} onClick={() => download(`null-cre-${payroll.batchId}.json`, JSON.stringify(payroll, null, 2))}>Export private input</Button><Button variant="secondary" icon={FileUp} busy={busy} onClick={() => input.current?.click()}>Import CRE result</Button></div>
     <input ref={input} type="file" accept=".json,application/json" hidden onChange={event => void importResult(event.target.files?.[0])} />
     <details className="progressive-details"><summary>Run the simulation locally</summary><p className="field-hint">In the project folder, run the command below with the input file’s path. Import the resulting payment-result.json file from the output directory printed by the command.</p><pre className="code-block">pnpm cre:simulate --input "PATH_TO_PRIVATE_INPUT.json"</pre></details>
-    {error && <p className="form-error" role="alert">{error}</p>}
+    {error && <div className="form-error" role="alert"><p>{error}</p><p>Review stays locked. Import the result for this exact draft. Nothing has been sent.</p></div>}
   </section>;
 }

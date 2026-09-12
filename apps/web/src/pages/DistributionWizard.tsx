@@ -27,6 +27,7 @@ export function DistributionWizard() {
   const setRows = (next: SetStateAction<RecipientRow[]>) => { setError(''); rowVersion.current++; setRowsState(next); setCompiled(undefined); setCreVerified(false); };
   const [payoutDrafts, setPayoutDrafts] = useState<PayoutDraft[]>([]);
   const completedBatches = useRef(0);
+  const paymentCompleted = useRef(false);
   const [creResults, setCreResults] = useState<Record<number, string>>({});
   const [creBatch, setCreBatch] = useState(0);
   const [payoutDraft, setPayoutDraft] = useState<PayoutDraft>();
@@ -156,7 +157,7 @@ export function DistributionWizard() {
         if (creBatch + 1 < payoutDrafts.length) { setCreBatch(creBatch + 1); setCrePayroll(payoutDrafts[creBatch + 1].creInput); }
         else { setCreVerified(true); setCrePayroll(undefined); }
       }} />}
-      {step === 2 && compiled && creRequired && creVerified && <Notice>CRE result matches. Local simulation only; no remote enclave attestation.</Notice>}
+      {step === 2 && compiled && creRequired && creVerified && <Notice>CRE checks passed: batch, network, pool and all eight encrypted envelopes match for each batch. Review is unlocked. Local simulation only; no remote enclave attestation.</Notice>}
       {step === 3 && compiled && <><div className="form-section-heading"><h2>Review your payment</h2><p>{store.mode === 'sandbox' ? 'Check the amount before completing this practice payment.' : 'Check recipients and amounts.'}</p></div><div className="review-amount"><span>{name}</span><strong>{money(total, true)}<small>USDC</small></strong></div><div className="review-recipients">{rows.map(row => <div key={row.id}><strong>{row.name}</strong><span>{money(parseAmount(row.amount), true)} USDC</span><small>{row.paymentName ? row.paymentName.name : 'Payment ID'} · {row.paymentName ? 'Checked on Sepolia' : 'Provided directly'}</small></div>)}</div><div className="detail-list"><KeyValue label="Payment type">{category}</KeyValue><KeyValue label="Pay from">{store.mode === 'sandbox' ? 'Practice funds' : 'Test network funds'}</KeyValue></div>{store.mode === 'sandbox' ? <label className="checkbox-field"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} /><span>This is a practice payment for this browser session. No real money moves and no organization approval is requested.</span></label> : <Notice tone="warning">Next: unlock funds and approve. Test USDC only.</Notice>}</>}
       {error && <div className="form-error" role="alert">{error}</div>}{busy && <p className="processing-status" role="status">{phase}</p>}
       <div className="wizard-actions"><Button variant="ghost" icon={ArrowLeft} disabled={busy} onClick={() => { setError(''); step === 0 ? store.navigate('distributions') : setStep(step - 1); }}>{step === 0 ? 'Cancel' : 'Back'}</Button>{step === 0 ? <Button onClick={() => { if (!name.trim()) { setError('Give this payment a name.'); return; } setError(''); setStep(1); }}>Add recipients<ArrowRight size={15} /></Button> : step === 1 ? <Button busy={busy} icon={ShieldCheck} onClick={() => void prepare()}>Check payment</Button> : step === 2 ? <Button disabled={creRequired && !creVerified} onClick={() => setStep(3)}>Review payment<ArrowRight size={15} /></Button> : store.mode === 'sandbox' ? <Button busy={busy} disabled={!acknowledged || total > store.treasury || creRequired && !creVerified} onClick={() => void publish()}>Complete practice payment<ArrowRight size={15} /></Button> : <Button disabled={creRequired && !creVerified} icon={ShieldCheck} onClick={() => { if (compiled && payoutDraft && (!creRequired || creVerified && creResult)) setLiveOperation({ kind: 'create_distribution', compiled, paymentNames: payoutDraft.paymentNames, draft: payoutDraft, compilation: creRequired ? { mode: 'cre-local-simulation', result: creResults[0]! } : { mode: 'local' }, batches: payoutDrafts.map((draft, index) => ({ draft, compilation: creRequired ? { mode: 'cre-local-simulation', result: creResults[index]! } : { mode: 'local' } })) }); }}>Send payout</Button>}</div></fieldset></div>
@@ -164,6 +165,7 @@ export function DistributionWizard() {
     </div>
     <LiveOperationLoader operation={liveOperation} onClose={() => {
       setLiveOperation(null);
+      if (paymentCompleted.current) { store.navigate('distributions'); return; }
       if (completedBatches.current > 0 && completedBatches.current < payoutDrafts.length) {
         setRows(rows.slice(completedBatches.current * 8)); setPayoutDrafts([]); setPayoutDraft(undefined); setStep(1); completedBatches.current = 0;
       }
@@ -175,7 +177,8 @@ export function DistributionWizard() {
     }} onConfirmed={result => {
       if (payoutDrafts.length > 1) store.removeDraft(id);
       else store.saveDistribution({ ...draft('Confirmed'), transactionHash: result.transactionHash });
-      store.toast('Payout confirmed on the test network.'); store.navigate('distributions');
+      paymentCompleted.current = true;
+      store.toast('Payout confirmed on the test network. Download its receipts, then choose Done.');
     }} />
   </>;
 }

@@ -1,3 +1,4 @@
+import { publicOperationReceipt } from '../apps/web/src/lib/operation-receipt.ts';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
@@ -52,12 +53,21 @@ try {
  async function tokenWrite(functionName:string,args:any[]){const hash=await wallet.writeContract({address:asset,abi:token.abi,functionName,args});assert.equal((await rpc.waitForTransactionReceipt({hash})).status,'success');}
  const balance=(address:`0x${string}`)=>rpc.readContract({address:asset,abi:token.abi,functionName:'balanceOf',args:[address]}) as Promise<bigint>;
  await tokenWrite('mint',[account.address,1_000_000n]);
- await client.registerPolicy({opening:policy,wallet,persistLocalPolicy:async()=>{},...progress});
+ const registration=await client.registerPolicy({opening:policy,wallet,persistLocalPolicy:async()=>{},...progress});
+ assert.ok(registration.transactionHash);
+ assert.deepEqual(await client.reconcilePolicyRegistration(registration.policyCommitment,registration.transactionHash),registration);
+ await assert.rejects(()=>client.reconcilePolicyRegistration(`0x${'01'.repeat(32)}`,registration.transactionHash!));
+ pass('activation reconciliation verifies the exact policy and never resubmits');
  const deposit=await client.prepareShield({amountAtomic:1_000_000n,policyCommitment:authPolicyCommitment(policy),acknowledgePublicDeposit:true,...progress});
  const funded=await client.submit(deposit,{mode:'wallet',wallet},progress);assert.equal(await balance(nullPool),1_000_000n);pass('deposit backed exactly by token balance');
  const compiled=await compileDistribution({context:client.context,recipients:[{employeeRef:'Local flow recipient',amountAtomic:600_000n,stealthMetaAddress:identity.profile.stealthMetaAddress}]});
  const payment=await client.prepareDistribution({compiled,treasuryNotes:[funded.note as OwnedTreasuryNote],authPolicy:policy,authorize,...progress});
  const paid=await client.submit(payment,{mode:'wallet',wallet},progress);assert.equal(paid.note.amountAtomic,400_000n);pass('organization-approved distribution and exact private change');
+ const publicReceipt=publicOperationReceipt(payment,paid,{approval:'imported',compilation:'local',protocolVersion:'0.2.0'});
+ assert.equal(publicReceipt.transactionHash,paid.transactionHash);assert.equal(publicReceipt.chainId,31337);
+ assert.equal(publicReceipt.workflow.approval,'imported');
+ await writeFile('.artifacts/local-public-payout-receipt.json',JSON.stringify(publicReceipt,null,2));
+ pass('public payout receipt matches genuine proof transaction and labels the local signer');
  const found=await client.discover({keys:identity.keys,...progress});assert.equal(found.length,1);assert.equal(found[0].amountAtomic,600_000n);
  const claim=await client.prepareClaim({allocation:found[0],...progress});await client.submit(claim,{mode:'wallet',wallet},progress);pass('stealth discovery and claim with real proof');
  const restored=await client.recoverPrivateNotes({keys:identity.keys});assert.equal(restored.length,1);assert.equal(restored[0].amountAtomic,600_000n);pass('recipient recovery from original keys and chain history');

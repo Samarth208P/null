@@ -1,10 +1,10 @@
 # Submission copy and judge questions
 
-Use only after checking [current readiness](SUBMISSION_READINESS.md). Replace pending evidence with actual receipt links; do not submit hypothetical transaction hashes or claim an unexecuted action.
+Use only after checking [current readiness](SUBMISSION_READINESS.md) and the [sponsor evidence walkthrough](SPONSOR_EVIDENCE.md). Replace pending evidence with actual receipt links; do not submit hypothetical transaction hashes or claim an unexecuted action.
 
 ## Short description
 
-NULL lets applications embed private ENS payouts with their own UI and local keys. Organizations provide ENS names and amounts; the toolkit resolves receiving keys and splits large jobs into funded, encrypted batches. Recipients discover and claim locally with Noir proofs. Integrators can sponsor public transactions or let organizations pay gas. ENSv2 supplies receiving identity, CRE checks compilation in local simulation, and the Privy adapter binds owner approval to the payout. Packages are workspace source, not a published managed service.
+NULL lets businesses pay contributors by ENS name without publishing a plaintext recipient-and-amount roster. Applications embed the TypeScript toolkit in their own UI. ENSv2 resolves recipient encryption keys and controls delegated updates; CRE compiles confidential payroll into encrypted entitlements in local simulation; the Privy adapter binds owner approval to the payout. Recipients discover and claim locally with Noir proofs. The npm developer preview is published as `@samarth208p/null-payouts@preview`. Deposits and withdrawals are public; NULL is an unaudited Sepolia prototype, and the complete Privy-approved payment demonstration remains pending.
 
 New v0.3 partial withdrawals preserve a private remainder and passed a local genuine-proof rehearsal with independent sponsored gas. They are not deployed on Sepolia; the current live pool supports whole-note exits. Make this distinction explicit in the demo.
 
@@ -22,13 +22,15 @@ Evidence: [implementation](ENS_INTEGRATION.md), [confirmed transactions](../depl
 
 NULL's real `handlerInTee` retrieves a payroll API secret, fetches authenticated payroll, validates recipients and atomic amounts, and compiles the eight encrypted envelopes used by the payment flow. The September 11 application export ran successfully through the actual CRE CLI; stale output was rejected and the matching result unlocked review. Only public encrypted results leave the handler. This is local simulation, with no remote TEE execution or attestation claim.
 
-Evidence: [workflow source](../services/cre-workflow/src/main.ts), [simulation receipt](../deployments/cre-simulation-2026-09-11.json), and [browser export receipt](../deployments/cre-ens-browser-2026-09-11.json).
+Evidence: [handler used by the recorded simulator](../cre-starter/payroll/workflow.ts), [shared compiler](../services/cre-workflow/src/compiler.ts), [simulation receipt](../deployments/cre-simulation-2026-09-11.json), and [browser export receipt](../deployments/cre-ens-browser-2026-09-11.json). The separate [service workflow](../services/cre-workflow/src/main.ts) is not evidence of a remotely deployed workflow.
 
 ## Privy — Best B2B financial product
 
 NULL uses a dedicated Privy organization wallet and owner quorum. The service verifies organization membership and the wallet's exact controls, issues an expiring session-bound intent ticket, and requests raw digest signing only after owner authorization. The signature binds the chain, pool and encrypted batch; the browser verifies it before building its proof. The current configuration is one owner with threshold one.
 
 **Evidence gap:** wallet/control verification and unsigned-request rejection passed, but the actual owner-approved financial payment remains pending. Do not replace this with login, identity-only signing, or the separate isolated-signer rehearsal. Add the completed owner-approved transaction before describing the payment as demonstrated.
+
+The B2B track permits a functional approval, treasury or wallet-administration workflow as well as a payment. A real controlled approval can therefore be relevant evidence, but NULL's payout narrative is strongest with its resulting confirmed payment. The separate Best financial flow track requires a completed functional financial flow. Confirm both against the [official Privy requirements](https://ethglobal.com/events/ethonline2026/prizes/privy).
 
 ## Questions to prepare for
 

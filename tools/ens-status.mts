@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { createPublicClient, http } from '../apps/web/node_modules/viem/_esm/index.js';
 import { sepolia } from '../apps/web/node_modules/viem/_esm/chains/index.js';
-import { inspectPaymentName, paymentEditorAccess, prepareProfileWrite, resolvePaymentName } from '../packages/ens/src/index.ts';
+import { inspectPaymentName, inspectPaymentEditorScope, paymentEditorAccess, prepareProfileWrite, resolvePaymentName } from '../packages/ens/src/index.ts';
 
 async function main() {
   const deployment = JSON.parse(await readFile('deployments/ens-sepolia.json', 'utf8'));
@@ -18,7 +18,10 @@ async function main() {
   assert.equal(recipient.owner.toLowerCase(), setup.wallet.toLowerCase());
   const access = await paymentEditorAccess(client, setup.name, setup.wallet);
   assert.ok(access.allowed && !access.broaderAccess);
+  const scope = await inspectPaymentEditorScope(client, setup.name, setup.wallet);
+  assert.equal(scope.paymentRecord, true);
+  assert.equal(scope.websiteRecord, false);
   await prepareProfileWrite(client, setup.name, primary.profile, setup.wallet, recipient.resolver);
-  console.log(JSON.stringify({chainId:11155111,checkedAt:new Date().toISOString(),block:primary.blockNumber,paymentName:primary.name,alias:alias.name,liveResolution:true,testEditorRevoked:true,privyRecipientName:recipient.name,privyWalletOwnsName:true,privyRecordAccess:'one name, one key',privyWriteEthCallPassed:true,recipientProfilePublished:!!recipient.value,transactionsSent:0},null,2));
+  console.log(JSON.stringify({chainId:11155111,checkedAt:new Date().toISOString(),block:primary.blockNumber,paymentName:primary.name,alias:alias.name,liveResolution:true,testEditorRevoked:true,privyRecipientName:recipient.name,privyWalletOwnsName:true,privyRecordAccess:'one name, one key',privyWriteEthCallPassed:true,recipientPermissionCheck:scope,recipientProfilePublished:!!recipient.value,transactionsSent:0},null,2));
 }
 try { await main(); } catch { console.error('Live ENS verification failed. Check Sepolia availability, ownership and current records before demonstrating the integration.'); process.exitCode = 1; }

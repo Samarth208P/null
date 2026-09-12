@@ -1,0 +1,24 @@
+{
+  "chainId": 11155111,
+  "checkedAt": "2026-09-12T10:58:49.963Z",
+  "block": "11688478",
+  "paymentName": "receive.nullpay2026.eth",
+  "alias": "pay.nullpay2026.eth",
+  "liveResolution": true,
+  "testEditorRevoked": true,
+  "privyRecipientName": "inbox.nullpay2026.eth",
+  "privyWalletOwnsName": true,
+  "privyRecordAccess": "one name, one key",
+  "privyWriteEthCallPassed": true,
+  "recipientPermissionCheck": {
+    "name": "inbox.nullpay2026.eth",
+    "resolver": "0x674be7717ed119C26c7f81dC1BE424fFb5AEf8b5",
+    "editor": "0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433",
+    "blockNumber": "11688479",
+    "paymentRecord": true,
+    "websiteRecord": false,
+    "broaderPaymentAccess": false
+  },
+  "recipientProfilePublished": false,
+  "transactionsSent": 0
+}

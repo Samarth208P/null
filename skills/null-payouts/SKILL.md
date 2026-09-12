@@ -5,7 +5,7 @@ description: Integrate the NULL TypeScript payout SDK into a browser application
 
 # Integrate NULL payouts
 
-Use the installed package's declarations as the API authority. This guide targets `@samarth208p/null-payouts@0.1.0-preview.1`, an MIT-licensed, unaudited testnet preview. Do not assume npm package versions are pool versions: the recorded public pool is Sepolia v0.2; partial withdrawals require v0.3, verified locally only at this release.
+Use the installed package's declarations as the API authority. This guide targets `@samarth208p/null-payouts@0.1.0-preview.2`, an MIT-licensed, unaudited testnet preview. Do not assume npm package versions are pool versions: the recorded public pool is Sepolia v0.2; partial withdrawals require v0.3, verified locally only at this release.
 
 ## Start with the host application
 
@@ -14,7 +14,7 @@ Inspect its framework, wallet/auth flow, environment handling, storage and exist
 Install the pinned preview with the host's package manager:
 
 ```sh
-npm install @samarth208p/null-payouts@0.1.0-preview.1
+npm install @samarth208p/null-payouts@0.1.0-preview.2
 ```
 
 The package ships ESM and TypeScript declarations. Preparation works in Node.js 22.16+. Default proving uses browser Workers; browser storage uses IndexedDB. In SSR frameworks instantiate the live client and access browser storage only on the client. In Vite use `worker: { format: 'es' }` and `build: { target: 'es2022' }`.

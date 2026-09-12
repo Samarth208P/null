@@ -85,7 +85,7 @@ async function main() {
     print({ credentialsAccepted: true, users: users.data?.map(user => ({ id: user.id })),
       organizationConfigured: Boolean(saved.PRIVY_ORGANIZATION_ENTITY_ID),
       walletConfigured: Boolean(saved.PRIVY_ORGANIZATION_WALLET_ID),
-      policyConfigured: Boolean(saved.PRIVY_ORGANIZATION_POLICY_IDS), controlMode: saved.PRIVY_ORGANIZATION_CONTROL_MODE || 'policies-and-quorum', approvalExecuted: false });
+      policyConfigured: Boolean(saved.PRIVY_ORGANIZATION_POLICY_IDS), controlMode: saved.PRIVY_ORGANIZATION_CONTROL_MODE || 'policies-and-quorum', approvalExecution: 'not-tracked' });
     return;
   }
   const members = (saved.PRIVY_ORGANIZATION_MEMBER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean);

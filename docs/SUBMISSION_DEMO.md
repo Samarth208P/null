@@ -1,6 +1,6 @@
 # NULL — human-narrated demo plan
 
-For the new toolkit narrative, begin with a host application importing `@null-protocol/payouts`: enter ENS names and amounts, show resolved destinations, then show actual approved payout receipts and local recipient discovery. Explain who sponsors gas. The public developer preparation example creates real ciphertext but sends no payment. Use the [v0.3 local proof receipt](PAYOUT_V3_VERIFICATION.md) to demonstrate partial withdrawal evidence until a matching public deployment exists; never splice it into footage implying the current Sepolia pool supports that feature. State that larger jobs have separate confirmations and partial progress, and that withdrawals expose their amount/address/timing.
+Use the [sponsor evidence walkthrough](SPONSOR_EVIDENCE.md) to prepare each scene. Lead with the reference app's v0.2 payout journey; briefly show the published `@samarth208p/null-payouts@preview` package to establish that applications can embed it. The internal workspace name is `@null-protocol/payouts`. Enter ENS names and amounts, show resolved destinations, then show actual approved payout receipts and local recipient discovery. Explain who pays gas. The public developer preparation example creates real ciphertext but sends no payment. Keep [v0.3 local proof evidence](PAYOUT_V3_VERIFICATION.md) for an optional clearly labeled appendix or Q&A; the main video should follow one payment on the public v0.2 pool. Larger jobs have separate confirmations and partial progress, and withdrawals expose their amount/address/timing.
 
 Aim for 3:15, using actual results. Record a 2–4 minute video at 720p or higher with your own spoken narration; do not use AI narration or speed up footage. Confirm the deadline and final upload constraints in the [official event requirements](https://ethglobal.com/events/ethonline2026/info/details). Keep private exports, backup contents, passwords and credentials off-screen.
 
@@ -16,7 +16,7 @@ Show the recipient's saved backup and linked `inbox.nullpay2026.eth` only after 
 
 “Every recipient needs an ENSv2 payment inbox. The resolver maps a public name to public payment keys, so the sender can encrypt an entitlement. A delegated wallet can update one text record on one name. A changed owner, resolver, or profile stops the payment for review.”
 
-Show one scoped permission and its revocation evidence. Explain that revoking editor access stops that editor changing future routing; it does not erase the profile or revoke already-issued funds. Names and linked profiles are public. Do not fund the `receive`/`pay` verification profiles as a substitute for the recipient's account.
+Show one scoped permission and its confirmed revocation evidence. Pair it with the read-only verification that the former editor cannot update the payment record; the recorded setup also exercised rejection of unrelated record changes. Label historical transactions and eth_call preflight accurately. Explain that revoking editor access stops that editor changing future routing; it does not erase the profile or revoke already-issued funds. Names and linked profiles are public. Do not fund the `receive`/`pay` verification profiles as a substitute for the recipient's account.
 
 ## 1:05–1:45 — CRE contributes to this payment
 
@@ -36,7 +36,7 @@ Do not call it multi-signer or present the isolated rehearsal signer as Privy. A
 
 ## 2:30–3:00 — Discover, claim, withdraw
 
-Show live indexed discovery, the recipient's claim, and the confirmed withdrawal with explorer links. Explain that claims prove membership against the global accumulator without naming the source batch, while withdrawals publicly reveal the destination and amount. Existing funds remain accessible with recovery keys even if the ENS name expires.
+Show live indexed discovery, the recipient's claim, and the confirmed withdrawal with explorer links. Save **Download transaction receipts** from each confirmation dialog before closing; the payout now stays on its confirmation screen until Done. The export excludes private note and recovery data and labels approval/compilation sources as app-observed, not independently attested. Explain that claims prove membership against the global accumulator without naming the source batch, while withdrawals publicly reveal the destination and amount. Existing funds remain accessible with recovery keys even if the ENS name expires.
 
 ## 3:00–3:15 — Evidence and close
 

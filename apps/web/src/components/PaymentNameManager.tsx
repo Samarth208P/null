@@ -2,15 +2,16 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { createWalletClient, custom, encodeFunctionData, getAddress, type Address, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { sepolia } from 'viem/chains';
-import { Check, Copy, ExternalLink, Globe2 } from 'lucide-react';
-import { ENS_CHAIN_ID, PaymentNameError, inspectPaymentName, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, resolvePaymentName, type PaymentNameSnapshot } from '@null-protocol/ens';
+import { Check, Copy, Download, ExternalLink, Globe2 } from 'lucide-react';
+import { ENS_CHAIN_ID, PaymentNameError, inspectPaymentEditorScope, inspectPaymentName, paymentEditorAccess, preparePaymentDelegate, prepareProfileWrite, profileFingerprint, resolvePaymentName, type PaymentNameSnapshot } from '@null-protocol/ens';
 import { config } from '../lib/config';
 import { ensClient } from '../lib/ens';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { useAccount } from '../lib/account';
 import { clearPendingNameUpdate, readPendingNameUpdate, savePendingNameUpdate, type PendingNameUpdate } from '../lib/ens-pending';
-import { Button, Notice } from './ui';
+import { Button, KeyValue, Notice } from './ui';
+import { download } from '../lib/format';
 
 type Connection = () => Promise<WalletClient>;
 function PrivyNames() {
@@ -50,11 +51,12 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
   const [hash, setHash] = useState<Hex | undefined>(savedUpdate?.hash);
   const [pending, setPending] = useState(!!savedUpdate);
   const [walletAddress, setWalletAddress] = useState<Address>();
+  const [scope, setScope] = useState<Awaited<ReturnType<typeof inspectPaymentEditorScope>>>();
   const revision = useRef(0), inFlight = useRef(false);
   useEffect(() => () => { revision.current++; }, []);
   async function run(work: (version: number) => Promise<void>) {
     if (inFlight.current) return;
-    inFlight.current = true; const version = revision.current; setBusy(true); setError(''); setStatus('');
+    inFlight.current = true; const version = revision.current; setBusy(true); setError(''); setStatus(''); setScope(undefined);
     try { await work(version); }
     catch (reason) { if (version === revision.current) setError(reason instanceof PaymentNameError ? reason.message : 'This step was not confirmed. Check your wallet and connection, then try again.'); }
     finally { inFlight.current = false; if (version === revision.current) setBusy(false); }
@@ -139,8 +141,16 @@ function NameManager({ connect, walletControl }: { connect: Connection; walletCo
         <Button disabled={!consent || pending} busy={busy} onClick={() => void run(version => write('profile', version))}>Link my Payment ID</Button>
       </>}
       <details className="name-permissions"><summary>Payment record access</summary><p>Allow another wallet to update only this name’s Payment ID.</p><p className="field-hint">Only trust an editor who may redirect future payments. Name ownership and other records are unchanged.</p>
-        <label className="field">Editor wallet address<input value={editor} maxLength={42} disabled={busy || pending} onChange={event => { setEditor(event.target.value); setStatus(''); setError(''); }} placeholder="0x…" spellCheck={false} autoComplete="off" /></label>
-        <div className="button-row"><Button variant="secondary" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim())} busy={busy} onClick={() => void run(version => write('grant', version))}>Grant record access</Button><Button variant="ghost" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(version => write('revoke', version))}>Remove record access</Button><Button variant="ghost" disabled={!/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(async version => { const access = await paymentEditorAccess(ensClient, checked.name, getAddress(editor.trim())); if (version === revision.current) setStatus(access.broaderAccess ? 'This wallet has broader permissions on the resolver.' : access.allowed ? 'This wallet has access to this payment record.' : 'This wallet has no access to this payment record.'); })}>Check access</Button></div>
+        <label className="field">Editor wallet address<input value={editor} maxLength={42} disabled={busy || pending} onChange={event => { setEditor(event.target.value); setScope(undefined); setStatus(''); setError(''); }} placeholder="0x…" spellCheck={false} autoComplete="off" /></label>
+        <div className="button-row"><Button variant="secondary" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim())} busy={busy} onClick={() => void run(version => write('grant', version))}>Grant record access</Button><Button variant="ghost" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(version => write('revoke', version))}>Remove record access</Button><Button variant="ghost" disabled={!/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(async version => { const result = await inspectPaymentEditorScope(ensClient, checked.name, getAddress(editor.trim())); if (version === revision.current) setScope(result); })}>Check access</Button></div>
+        {scope && scope.name === checked.name && scope.editor.toLowerCase() === editor.trim().toLowerCase() && <div className="section-block" role="status">
+          <h3>Current editor permissions</h3>
+          <KeyValue label="NULL payment record">{scope.paymentRecord ? 'Can update' : 'Cannot update'}</KeyValue>
+          <KeyValue label="Website record (url)">{scope.websiteRecord ? 'Can update' : 'Cannot update'}</KeyValue>
+          <p className="field-hint">Read from Sepolia at block {scope.blockNumber}. These checks cover the two named text records. No transaction was sent; existing payments are unchanged.</p>
+          {scope.broaderPaymentAccess && <Notice tone="warning">This wallet has broader payment-record permissions. Removing one grant may leave other access in place.</Notice>}
+          <Button variant="ghost" icon={Download} onClick={() => download('null-ens-permissions.json', JSON.stringify({ schema: 'null.ens-permissions.v1', chainId: ENS_CHAIN_ID, ...scope, transactionsSent: 0 }, null, 2))}>Download permission check</Button>
+        </div>}
       </details>
     </div>}
     {walletAddress && <p className="field-hint">Signing wallet: <code>{walletAddress}</code></p>}

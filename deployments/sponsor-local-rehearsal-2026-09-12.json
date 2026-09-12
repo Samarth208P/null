@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "chainId": 31337,
+  "localOnly": true,
+  "privyOwnerApproval": false,
+  "publicChainPayment": false,
+  "completed": true,
+  "checks": [
+    "activation reconciliation verifies the exact policy and never resubmits",
+    "deposit backed exactly by token balance",
+    "organization-approved distribution and exact private change",
+    "public payout receipt matches genuine proof transaction and labels the local signer",
+    "stealth discovery and claim with real proof",
+    "recipient recovery from original keys and chain history",
+    "funds backup recovers collected notes without the original Payment ID",
+    "recipient substitution rejected by deployed proof verifier",
+    "failed transfer leaves note unspent and funds recoverable",
+    "independent relayer broadcasts without recipient gas funding",
+    "withdrawal paid exact amount and removed spent balance after recovery",
+    "old funds backup cannot restore a withdrawn balance",
+    "withdrawal reconciles from public history without a returned transaction hash",
+    "double withdrawal rejected by client and contract",
+    "treasury exit cannot bypass organization approval",
+    "approved treasury refund and zero remaining pool liabilities",
+    "full conservation: 1 USDC deposited = 0.6 received + 0.4 refunded"
+  ],
+  "payoutReceipt": {
+    "schema": "null.public-operation-receipt.v1",
+    "chainId": 31337,
+    "protocolVersion": "0.2.0",
+    "pool": "0x9e7ede3d172637a6593254df62d024fb01eb1171",
+    "method": "createDistribution",
+    "transactionHash": "0xc64056f5e1a87272e543e86441cabc868ef2e87349d8e4bee22052afb9308c87",
+    "blockNumber": "21",
+    "blockHash": "0x9a87e0d7bda91c952371f37b201d793f8a7319956c7f420dbcde2fe9bd1295cd",
+    "gasUsed": "5702129",
+    "status": "confirmed",
+    "calldataHash": "0x3def3ee8630939f5bcd6fefc236ac4dcb43df35d9b0dc820e8d89ba869c0bd85",
+    "distributionCommitment": "0x14c26c97de887daa864cf6f258015528eab64d81b76c3bfb25f9eba12b44a3f7",
+    "workflow": {
+      "recordedBy": "local-client",
+      "approval": "imported",
+      "compilation": "local",
+      "remoteAttestationVerified": false
+    }
+  },
+  "realProofs": true,
+  "reproduce": "pnpm test:flow"
+}

@@ -1,12 +1,22 @@
 # ETHOnline 2026 submission readiness
 
-Updated September 11, 2026. This is an unaudited Sepolia prototype. Successful source checks, local simulation, historical transaction receipts, and real owner actions are recorded separately.
+Updated September 12, 2026. This is an unaudited Sepolia prototype. Successful source checks, local simulation, historical transaction receipts, and real owner actions are recorded separately. Start with the [sponsor evidence walkthrough](SPONSOR_EVIDENCE.md) for the focused submission sequence.
 
 ## Embeddable toolkit update
 
 The working implementation now includes an ENS-first source SDK and own-UI example, larger sequential payout jobs, a public developer preparation page, ENS during account setup, wallet/sponsor transport choice, and a new v0.3 partial-withdrawal circuit/pool/client. The [local genuine-proof rehearsal](PAYOUT_V3_VERIFICATION.md) completed with exact change recovery, sponsored gas, adversarial cases and zero remaining liabilities. SDK interruption/planning tests passed. This local evidence does not upgrade Sepolia or complete the Privy financial demo.
 
-Before presenting the new product as live: publish matching source, deploy/verify v0.3 and its artifacts, run a public owner-approved payment, and demonstrate a host app paying by ENS followed by a chosen-amount withdrawal. Packages remain unpublished source. Jobs are non-atomic with no automatic resume after reload. High proof gas, operational sponsorship limits and correlation risks remain material weaknesses. A focused, truthful demonstration is stronger evidence than a claimed winning percentage.
+The npm developer preview is published as `@samarth208p/null-payouts@0.1.0-preview.1`; internal workspace packages retain their `@null-protocol/*` names. Use the existing v0.2 deployment for the main sponsor demonstration and complete its owner-approved payment. Public chosen-amount withdrawals would additionally require deploying/verifying v0.3 and its artifacts, updating the dependent services, and a fresh public rehearsal. That upgrade is not a prerequisite for presenting the demonstrated v0.2 scope. Jobs are non-atomic with no automatic resume after reload. High proof gas, operational sponsorship limits and correlation risks remain material weaknesses.
+
+## September 12 review
+
+The later implementation pass completed the local signing surface: visible organization setup, backup-before-activation, existing-transaction activation checks, two-record ENS permission inspection/downloads, guarded CRE imports and confirmed public receipt exports. The payout dialog stays open after confirmation so receipts can be saved. The owner requested to sign later; follow [the prepared rehearsal](OWNER_REHEARSAL.md).
+
+Validation passed 34 submission tests, 13 payout/job tests, workspace typechecks, production build and 17 assertions in the [genuine-proof local v0.2 rehearsal](../deployments/sponsor-local-rehearsal-2026-09-12.json). That rehearsal included exact activation reconciliation, a public receipt from the real local transaction, deposit, distribution, discovery, claim, withdrawal, treasury refund and zero remaining liabilities. It used an isolated signer on chain 31337, not Privy or Sepolia funds. The [fresh CRE simulation](../deployments/cre-simulation-2026-09-12.json) passed, and live Privy wallet controls again rejected an unsigned challenge with HTTP 401. Local web/API/relayer health probes passed. Interactive browser QA remains unavailable; the mechanical UI detector reported no findings. None of these actions recorded human narration or deployed the new source publicly.
+
+Workspace typechecks, the production build and 51 selected tests passed, including real Noir withdrawal-circuit execution. The npm registry returned `0.1.0-preview.1`, and remote Git HEAD matched checkout `5c866f7` before these documentation edits. The public app returned HTTP 200 and its manifest reported v0.2.0 with no partial-withdrawal verifier. These checks did not execute a new Privy payment, CRE simulation or public-chain proof flow. Interactive browser control was unavailable; saved UI captures are historical evidence.
+
+A subsequent [read-only ENS status run](../deployments/ens-status-2026-09-12.json) at 10:58 UTC verified live primary/alias resolution, revoked test-editor access, the Privy wallet's inbox ownership and one-record permission, and a successful write preflight. The new permission comparison confirmed that wallet has payment-record permission and no website-record permission. The recipient payment profile was still unpublished. No transaction was sent.
 
 ## Current decision
 
@@ -38,7 +48,7 @@ Historical full-flow evidence remains in [payment-flow-sepolia-v2.json](../deplo
 
 Production deployment `6aa3c2a2f2baaeb953c29c25` passed verification at **2026-09-11 08:59 UTC**. The [release evidence](../deployments/submission-release-2026-09-11.json) records matching local/hosted ENS assets, all four circuit checksums, the canonical pool manifest, JSON `401 NULL_SESSION_REQUIRED`, JSON function health, and rejected foreign origins. The first asset-only attempt omitted the function because of a relative path; the verified replacement includes it. Use the corrected absolute-path command in [Netlify instructions](NETLIFY_SUBMISSION.md).
 
-This was a working-tree deployment based on commit `24c3cdd`; no commit or Git push was made. Deployment does not publish the modified source to GitHub. Ensure the exact demonstrated source is pushed before submitting.
+That historical release was a working-tree deployment based on commit `24c3cdd`. A subsequent September 12 read verified remote Git HEAD matched local `5c866f7`; the source is no longer accurately described as entirely unpushed. This does not by itself prove every hosted asset matches that commit. Publish subsequent changes and verify the final demonstrated release before submitting.
 
 ## Remaining submission gates
 
