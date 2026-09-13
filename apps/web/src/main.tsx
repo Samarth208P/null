@@ -4,6 +4,7 @@ import { Developers } from './pages/Developers';
 import { EntryLayout } from './components/EntryLayout';
 import './styles.css';
 import './soft-outline.css';
+import './payment-flow.css';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

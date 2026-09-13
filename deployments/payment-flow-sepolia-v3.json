@@ -1,0 +1,125 @@
+{
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "pool": "0x17A41574900ca3120562Ae5616559EceebA74E36",
+  "funder": "0x523FF8d1Ce8A64690Bf592d73DF62AAB9FFdF434",
+  "testUsdc": "0.1",
+  "partialWithdrawal": {
+    "transactionHash": "0x78a62c699a2548d53a5902f00c1c7c4c1bde5912a92ac36ef1f5035f3fbddb39",
+    "withdrawnAtomic": "25000",
+    "privateChangeAtomic": "35000",
+    "recovered": true
+  },
+  "maxGasBudgetWei": "40000000000000000",
+  "combinedDeploymentRehearsalCapEth": "0.085",
+  "testEthAvailable": "823096206869074418",
+  "testUsdcAtomicAvailable": "120000000",
+  "withdrawalsAvailable": true,
+  "authorization": "local isolated rehearsal signer; not a Privy approval",
+  "broadcast": true,
+  "startedAt": "2026-09-13T10:54:04.426Z",
+  "steps": [
+    {
+      "hash": "0x0b67893515e214353429ae6c85b0fd69940e4edd6b62e1518ae8930d50d1a29f",
+      "purpose": "register-policy"
+    },
+    {
+      "hash": "0x4109b9604abb8c0a2b4eabb2bb0bbabd3069ac96f3341246af5f19eee20afc21",
+      "purpose": "approval"
+    },
+    {
+      "hash": "0xf21c21a0dc6cc015849fa6fd751c4501b5f51660c57cce9e249626b7a348cfef",
+      "purpose": "shield"
+    },
+    {
+      "hash": "0x74c75d56899baa5d13e45b30ac3fe85f8c9fdfa88c401b84ee544eea86601c63",
+      "purpose": "createDistribution"
+    },
+    {
+      "hash": "0xbae1ef257174ea9d3d00f644f983f7c0165d7188eaefb23f9629fa3e4c896d15",
+      "purpose": "claim"
+    },
+    {
+      "hash": "0x78a62c699a2548d53a5902f00c1c7c4c1bde5912a92ac36ef1f5035f3fbddb39",
+      "purpose": "withdrawPartial"
+    },
+    {
+      "hash": "0x4a266d00c8b6f9b466c436b4d404b7e17024867e60d8cefedf4aeb829c8d62ba",
+      "purpose": "withdraw"
+    },
+    {
+      "hash": "0x19e947f8727700e496ce7baee56a055125452de5def2b521bc6d3df198f25860",
+      "purpose": "withdraw"
+    }
+  ],
+  "completed": true,
+  "resumeScope": "Reconciled all saved transactions before resuming only the treasury refund; combined deployment and rehearsal cap unchanged.",
+  "gasSpentWei": "36042722236796306",
+  "receipts": [
+    {
+      "hash": "0x0b67893515e214353429ae6c85b0fd69940e4edd6b62e1518ae8930d50d1a29f",
+      "blockNumber": 11695442,
+      "gasUsed": "1550280",
+      "effectiveGasPrice": "1079306091"
+    },
+    {
+      "hash": "0x4109b9604abb8c0a2b4eabb2bb0bbabd3069ac96f3341246af5f19eee20afc21",
+      "blockNumber": 11695446,
+      "gasUsed": "55437",
+      "effectiveGasPrice": "1188047711"
+    },
+    {
+      "hash": "0xf21c21a0dc6cc015849fa6fd751c4501b5f51660c57cce9e249626b7a348cfef",
+      "blockNumber": 11695449,
+      "gasUsed": "5145581",
+      "effectiveGasPrice": "1055006497"
+    },
+    {
+      "hash": "0x74c75d56899baa5d13e45b30ac3fe85f8c9fdfa88c401b84ee544eea86601c63",
+      "blockNumber": 11695457,
+      "gasUsed": "6990584",
+      "effectiveGasPrice": "1154030362"
+    },
+    {
+      "hash": "0xbae1ef257174ea9d3d00f644f983f7c0165d7188eaefb23f9629fa3e4c896d15",
+      "blockNumber": 11695464,
+      "gasUsed": "5142557",
+      "effectiveGasPrice": "1157511434"
+    },
+    {
+      "hash": "0x78a62c699a2548d53a5902f00c1c7c4c1bde5912a92ac36ef1f5035f3fbddb39",
+      "blockNumber": 11695470,
+      "gasUsed": "4979492",
+      "effectiveGasPrice": "1180695522"
+    },
+    {
+      "hash": "0x4a266d00c8b6f9b466c436b4d404b7e17024867e60d8cefedf4aeb829c8d62ba",
+      "blockNumber": 11695478,
+      "gasUsed": "4013952",
+      "effectiveGasPrice": "1098598479"
+    },
+    {
+      "hash": "0x19e947f8727700e496ce7baee56a055125452de5def2b521bc6d3df198f25860",
+      "blockNumber": 11695501,
+      "gasUsed": "4009344",
+      "effectiveGasPrice": "1138867661"
+    }
+  ],
+  "checks": [
+    "0.1 test USDC deposited",
+    "0.06 privately allocated and claimed",
+    "original recipient keys recover the claimed note",
+    "0.06 withdrawn exactly",
+    "spent note excluded from recovery",
+    "missing transaction hash reconciled from public history",
+    "duplicate withdrawal rejected",
+    "0.04 refunded with treasury signature",
+    "full 0.1 token balance restored; pool empty",
+    "0.025 chosen withdrawal with exact 0.035 private change",
+    "private remainder recovered from saved checkpoints",
+    "remaining 0.035 withdrawn exactly"
+  ],
+  "privacyScope": "Functional test using an isolated signer and one funded broadcaster. Public entry and exit are visible; this is not a Privy owner approval or an anonymity claim.",
+  "recoveryVerified": true,
+  "finishedAt": "2026-09-13T11:06:57.007Z"
+}

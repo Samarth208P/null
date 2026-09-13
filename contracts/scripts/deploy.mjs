@@ -16,6 +16,9 @@ const { privateKeyToAccount } = await import(pathToFileURL(requireContracts.reso
 const { poseidonContract } = requireContracts('circomlibjs');
 const readJson = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
 const sha = bytes => '0x' + createHash('sha256').update(bytes).digest('hex');
+const partial = process.argv.includes('--v3');
+const release = partial ? 'partial-withdrawals-v3' : 'withdrawals-v2';
+const poolContract = partial ? 'NullPoolV3' : 'NullPool';
 const artifacts = readJson('circuits/target/manifest.json');
 const integrity = readJson('contracts/artifacts/build-integrity.json');
 if (artifacts.status !== 'generated' || artifacts.verifierTarget !== 'evm' || !integrity.qualifiedArtifacts)
@@ -52,6 +55,7 @@ function artifact(name) {
   return value;
 }
 const names = { shield: 'ShieldVerifier', create_distribution: 'CreateDistributionVerifier', claim: 'ClaimVerifier', withdraw: 'WithdrawVerifier' };
+if (partial) names.withdraw_partial = 'PartialWithdrawVerifier';
 const compiled = {};
 for (const [kind, name] of Object.entries(names)) {
   const expected = artifacts.circuits[kind];
@@ -63,7 +67,7 @@ for (const [kind, name] of Object.entries(names)) {
   ]) if (sha(readFileSync(resolve(root, path))) !== hash) throw new Error(`Circuit artifact mismatch: ${path}.`);
   compiled[name] = artifact(name);
 }
-for (const name of ['NullAuthRegistry', 'NullPool']) compiled[name] = artifact(name);
+for (const name of ['NullAuthRegistry', poolContract]) compiled[name] = artifact(name);
 
 // Deduplicate only compiler-identical library instructions and ABIs. Metadata records
 // each source FQN separately; the deployed representative and every alias are retained.
@@ -106,10 +110,10 @@ function link(contract, addresses, runtime = false) {
   if (!/^0x[0-9a-fA-F]+$/.test(code)) throw new Error('Deployment bytecode contains unresolved library references.');
   return code;
 }
-const output = resolve(root, `deployments/${chainId}-withdrawals-v2.json`);
-const journalPath = resolve(root, `.artifacts/deployment-${chainId}-withdrawals-v2.json`);
+const output = resolve(root, `deployments/${chainId}-${release}.json`);
+const journalPath = resolve(root, `.artifacts/deployment-${chainId}-${release}.json`);
 const fingerprint = sha(JSON.stringify({ chainId, asset, deployer: account.address, integrity, artifacts }));
-const journal = existsSync(journalPath) ? readJson(`.artifacts/deployment-${chainId}-withdrawals-v2.json`) :
+const journal = existsSync(journalPath) ? readJson(`.artifacts/deployment-${chainId}-${release}.json`) :
   { fingerprint, chainId, deployer: account.address, steps: [] };
 if (journal.fingerprint !== fingerprint) throw new Error('Deployment journal belongs to a different wallet/build/configuration. Preserve it and resolve the mismatch.');
 const latestNonce = await publicClient.getTransactionCount({ address: account.address, blockTag: 'latest' });
@@ -124,7 +128,8 @@ const steps = [
   { id: 'createDistributionVerifier', ...compiled.CreateDistributionVerifier },
   { id: 'claimVerifier', ...compiled.ClaimVerifier },
   { id: 'withdrawVerifier', ...compiled.WithdrawVerifier },
-  { id: 'nullPool', ...compiled.NullPool, args: a => [asset, a.poseidon3, a.nullAuthRegistry, a.shieldVerifier, a.createDistributionVerifier, a.claimVerifier, a.withdrawVerifier] },
+  ...(partial ? [{ id: 'partialWithdrawVerifier', ...compiled.PartialWithdrawVerifier }] : []),
+  { id: 'nullPool', ...compiled[poolContract], args: a => [asset, a.poseidon3, a.nullAuthRegistry, a.shieldVerifier, a.createDistributionVerifier, a.claimVerifier, a.withdrawVerifier, ...(partial ? [a.partialWithdrawVerifier] : [])] },
 ];
 const addresses = Object.fromEntries(steps.map((step, i) => [step.id, getContractAddress({ from: account.address, nonce: BigInt(startNonce + i) })]));
 for (const [i, step] of steps.entries()) {
@@ -155,7 +160,7 @@ const plan = { mode: 'deployment-plan', chainId, asset, deployer: account.addres
   steps: steps.map(step => ({ name: step.id, address: step.address, nonce: step.nonce, gasAllowance: step.gasAllowance.toString(), runtimeCodeHash: keccak256(step.expectedRuntime), confirmed: Boolean(journal.steps.find(saved => saved.id === step.id)?.receipt) })),
   libraryAliases, warning: 'Unaudited testnet prototype with public withdrawals. Contract deployment does not validate the Privy-approved production flow.' };
 mkdirSync(resolve(root, '.artifacts'), { recursive: true });
-writeFileSync(resolve(root, `.artifacts/deployment-plan-${chainId}.json`), JSON.stringify(plan, null, 2) + '\n');
+writeFileSync(resolve(root, `.artifacts/deployment-plan-${chainId}-${release}.json`), JSON.stringify(plan, null, 2) + '\n');
 process.stdout.write(JSON.stringify(plan, null, 2) + '\n');
 if (!process.argv.includes('--broadcast')) process.exit(0);
 if (existsSync(output) && (journal.steps.length !== steps.length || remaining.length))
@@ -243,13 +248,14 @@ for (const step of steps) {
   process.stdout.write(`Confirmed ${step.id}: ${step.address}\n`);
 }
 const manifest = readJson('deployments/sepolia.template.json');
-manifest.protocolVersion = '0.2.0'; manifest.security.withdrawalsImplemented = true;
+manifest.protocolVersion = partial ? '0.3.0' : '0.2.0'; manifest.security.withdrawalsImplemented = true;
+manifest.security.partialWithdrawalsImplemented = partial;
 manifest.status = 'deployed'; manifest.chainId = chainId;
 manifest.deploymentBlock = Math.min(...journal.steps.map(step => step.receipt.blockNumber));
 manifest.asset.address = asset; manifest.codeHashes.asset = keccak256(assetCode);
-manifest.contracts = Object.fromEntries(['nullPool', 'nullAuthRegistry', 'poseidon3', 'shieldVerifier', 'createDistributionVerifier', 'claimVerifier', 'withdrawVerifier'].map(name => [name, addresses[name]]));
+manifest.contracts = Object.fromEntries(['nullPool', 'nullAuthRegistry', 'poseidon3', 'shieldVerifier', 'createDistributionVerifier', 'claimVerifier', 'withdrawVerifier', ...(partial ? ['partialWithdrawVerifier'] : [])].map(name => [name, addresses[name]]));
 for (const name of Object.keys(manifest.contracts)) manifest.codeHashes[name] = journal.steps.find(step => step.id === name).codeHash;
-manifest.build.circuitArtifacts = artifacts.circuits;
+manifest.build.circuitArtifacts = Object.fromEntries(Object.keys(names).map(kind => [kind, artifacts.circuits[kind]]));
 manifest.build.gitCommit = process.env.NULL_GIT_COMMIT ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 manifest.build.solidityIntegritySha256 = sha(readFileSync(resolve(root, 'contracts/artifacts/build-integrity.json')));
 manifest.build.workingTreeDirty = Boolean(execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim());
@@ -257,18 +263,18 @@ manifest.libraries = Object.fromEntries(Object.entries(libraryAliases).map(([fqn
 manifest.transactions = journal.steps.map(({ id, address, hash, receipt }) => ({ name: id, address, hash, ...receipt }));
 // Verify constructor bindings against the real chain before publishing a live manifest.
 for (const [name, expected] of Object.entries({ ASSET: asset, HASHER: addresses.poseidon3, AUTH_REGISTRY: addresses.nullAuthRegistry,
-  shieldVerifier: addresses.shieldVerifier, createDistributionVerifier: addresses.createDistributionVerifier, claimVerifier: addresses.claimVerifier, withdrawVerifier: addresses.withdrawVerifier })) {
-  const actual = await publicClient.readContract({ address: addresses.nullPool, abi: compiled.NullPool.abi, functionName: name });
+  shieldVerifier: addresses.shieldVerifier, createDistributionVerifier: addresses.createDistributionVerifier, claimVerifier: addresses.claimVerifier, withdrawVerifier: addresses.withdrawVerifier, ...(partial ? { partialWithdrawVerifier: addresses.partialWithdrawVerifier } : {}) })) {
+  const actual = await publicClient.readContract({ address: addresses.nullPool, abi: compiled[poolContract].abi, functionName: name });
   if (getAddress(actual) !== expected) throw new Error(`Pool constructor binding mismatch: ${name}.`);
 }
 if (getAddress(await publicClient.readContract({ address: addresses.nullAuthRegistry, abi: compiled.NullAuthRegistry.abi, functionName: 'HASHER' })) !== addresses.poseidon3)
   throw new Error('Registry hasher mismatch.');
-for (const name of ['shieldVerifier', 'createDistributionVerifier', 'claimVerifier', 'withdrawVerifier']) {
-  const actual = await publicClient.readContract({ address: addresses.nullPool, abi: compiled.NullPool.abi, functionName: `${name}CodeHash` });
+for (const name of ['shieldVerifier', 'createDistributionVerifier', 'claimVerifier', 'withdrawVerifier', ...(partial ? ['partialWithdrawVerifier'] : [])]) {
+  const actual = await publicClient.readContract({ address: addresses.nullPool, abi: compiled[poolContract].abi, functionName: `${name}CodeHash` });
   if (actual !== manifest.codeHashes[name]) throw new Error(`Immutable verifier code hash mismatch: ${name}.`);
 }
 if (existsSync(output)) {
-  const previous = readJson(`deployments/${chainId}-withdrawals-v2.json`);
+  const previous = readJson(`deployments/${chainId}-${release}.json`);
   for (const field of ['status', 'chainId', 'deploymentBlock', 'asset', 'contracts', 'codeHashes', 'libraries', 'transactions'])
     if (JSON.stringify(previous[field]) !== JSON.stringify(manifest[field])) throw new Error(`Existing manifest differs from confirmed deployment: ${field}.`);
   if (JSON.stringify(previous.build.circuitArtifacts) !== JSON.stringify(manifest.build.circuitArtifacts)) throw new Error('Existing manifest artifact mismatch.');
@@ -277,6 +283,6 @@ copyFileSync(output, resolve(root, 'apps/web/public/deployment.json'));
 for (const kind of Object.keys(names)) copyFileSync(resolve(root, `circuits/target/${kind}.json`), resolve(root, `apps/web/public/circuits/${kind}.json`));
 copyFileSync(resolve(root, 'circuits/target/manifest.json'), resolve(root, 'apps/web/public/circuits/manifest.json'));
 // Keep the browser's public RPC setting. Deployment URLs can carry credentials in paths.
-updateRootEnv({ NULL_POOL_ADDRESS: addresses.nullPool, NULL_MANIFEST_PATH: `deployments/${chainId}-withdrawals-v2.json`,
-  VITE_POOL_ADDRESS: addresses.nullPool, VITE_DEPLOYMENT_MANIFEST_URL: '/deployment.json' });
+updateRootEnv({ NULL_POOL_ADDRESS: addresses.nullPool, NULL_MANIFEST_PATH: `deployments/${chainId}-${release}.json`,
+  VITE_POOL_ADDRESS: addresses.nullPool, VITE_DEPLOYMENT_BLOCK: String(manifest.deploymentBlock), VITE_DEPLOYMENT_MANIFEST_URL: '/deployment.json' });
 process.stdout.write(`Deployment manifest written to ${output}; public artifacts and root .env synchronized. Restart Vite.\n`);

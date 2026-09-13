@@ -179,6 +179,10 @@ fieldset.wizard-surface { border: 0; margin: 0; min-width: 0; }
   --raised-small: 4px 4px 9px #cbd3dc, -4px -4px 9px #ffffff;
   --inset: inset 3px 3px 7px #cdd5de, inset -3px -3px 7px #ffffff;
   --primary-shadow: 4px 5px 10px #c4ccd5, -3px -3px 8px #ffffff;
+  --menu-shadow: 8px 12px 28px #20252b26;
+  --scrollbar-track: var(--surface);
+  --scrollbar-thumb: var(--line-strong);
+  --scrollbar-thumb-hover: var(--secondary);
 }
 
 body { background: var(--bg); color: var(--ink); }
@@ -189,7 +193,25 @@ strong { font-weight: 550; }
 ::selection { color: #fff; background: #365976; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 input, textarea { caret-color: var(--primary-ink); }
-* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+/* One scrollbar treatment for pages, dialogs, tables, code and option lists. */
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+@supports selector(::-webkit-scrollbar) {
+  /* Non-auto standard values override WebKit pseudo-elements in Chromium. */
+  * { scrollbar-width: auto; scrollbar-color: auto; }
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; box-shadow: var(--inset); }
+  ::-webkit-scrollbar-thumb { min-height: 36px; min-width: 36px; border: 3px solid var(--scrollbar-track); border-radius: 10px; background: var(--scrollbar-thumb); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+  ::-webkit-scrollbar-thumb:active { background: var(--primary-ink); }
+  ::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
+  ::-webkit-scrollbar-button { display: none; }
+}
+@media (forced-colors: active) {
+  * { scrollbar-color: auto; scrollbar-width: auto; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: Canvas; box-shadow: none; }
+  ::-webkit-scrollbar-thumb { background: ButtonText; border-color: Canvas; }
+  ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background: Highlight; }
+}
 .button { min-height: 38px; padding: 8px 17px; border-radius: 10px; font-size: 13px; font-weight: 500; }
 .button-primary { color: #fff; background: var(--primary); }
 .button-primary:hover:not(:disabled) { background: #343e48; }
@@ -323,7 +345,7 @@ tbody tr:hover { background: #e5eaf0; }
 .help-text, .field-hint { font-size: 12px; line-height: 1.8; }
 .form-error { font-size: 13px; color: var(--danger); background: var(--danger-bg); border-radius: 8px; padding: 14px 16px; }
 .processing-status { color: var(--primary-ink); font-size: 13px; }
-.modal { padding: 30px; border-radius: 12px; background: #edf0f3; border: 1px solid #ccd3da; }
+.modal { --modal-padding: 30px; border-radius: 12px; background: #edf0f3; border: 1px solid #ccd3da; }
 .modal::backdrop { background: rgb(6 6 12 / 68%); }
 .modal-heading h2 { font-size: 24px; font-weight: 450; }
 .modal-heading p, .modal-copy { font-size: 13px; line-height: 1.8; }
@@ -498,7 +520,7 @@ tbody tr:hover { background: #e5eaf0; }
   .recipient-editor .field input, .modal .field input { font-size: 16px; min-height: 44px; }
   .recipient-editor .mono-input { font-size: 16px !important; }
   .field small { font-size: 12px; }
-  .modal { padding: 25px; }
+  .modal { --modal-padding: 25px; }
   .modal-actions > .button { min-height: 44px; font-size: 13px; }
   .inbox-profile { padding: 22px; }
   .inbox-profile strong { font-size: 14px; }
@@ -560,10 +582,11 @@ tbody tr:hover { background: #e5eaf0; }
 .account-menu-identity { padding: 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .account-menu-identity small { display: block; color: var(--muted); margin-bottom: 5px; }
 .account-menu-identity strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
-.account-menu-panel > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; text-align: left; border-radius: 7px; color: var(--ink); font-size: 13px; }
+.account-menu-panel > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; text-align: left; border-radius: 8px; color: var(--ink); font-size: 13px; }
 .account-menu-panel > button:hover { background: var(--surface-hover); }
+.account-menu-panel > button:focus-visible { outline-offset: -2px; }
 .account-menu-panel > button > svg { color: var(--primary-ink); }
-.account-menu-panel > .account-sign-out { color: var(--danger); border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; margin-top: 6px; }
+.account-menu-panel > .account-sign-out { color: var(--danger); border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 6px; }
 .account-menu-panel > .account-sign-out > svg { color: inherit; }
 
 /* Keep primary tasks legible when names, filters, and viewports vary. */
@@ -679,9 +702,30 @@ td { padding-block: 20px; }
 .notice-info { background: #e5ebf0; color: #334453; }
 .notice-warning { border-color: #cfb88f; }
 .notice-success { border-color: #a3c4b2; }
-.modal { background: var(--surface); border: 1px solid #fff; box-shadow: 12px 18px 50px #20252b40; border-radius: 18px; }
+.modal {
+  --modal-max-height: calc(100dvh - 40px);
+  --modal-scroll-inset: 8px;
+  max-height: var(--modal-max-height);
+  padding: var(--modal-scroll-inset);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid #fff;
+  box-shadow: 12px 18px 50px #20252b40;
+  border-radius: 18px;
+}
+/* Keep the scroll track inside the rounded frame, including on short screens. */
+.modal-scroll {
+  max-height: calc(var(--modal-max-height) - 2 * var(--modal-scroll-inset) - 2px);
+  padding: calc(var(--modal-padding) - var(--modal-scroll-inset))
+    calc(var(--modal-inline-padding, var(--modal-padding)) - var(--modal-scroll-inset))
+    max(0px, calc(var(--modal-bottom-padding, var(--modal-padding)) - var(--modal-scroll-inset)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-radius: 10px;
+}
 .modal::backdrop { background: #20252b70; }
-.account-menu-panel { border: 1px solid var(--line); box-shadow: 8px 12px 28px #20252b26; }
+.account-menu-panel { border: 1px solid var(--line); box-shadow: var(--menu-shadow); max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
 .settings-fields { min-width: 0; }
 .settings-section { gap: 36px; }
 .recovery-setting { border-radius: 12px; }
@@ -769,4 +813,146 @@ td { padding-block: 20px; }
 @media (max-width: 760px) {
   .heading-action { max-width: 100%; }
   .heading-action .button-row { flex-wrap: wrap; }
+}
+
+/* Native selects retain labels, keyboard navigation, validation and form values.
+   Browsers with base-select also render the picker in the Soft Outline material. */
+:root {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2349545f' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m20 6-11 11-5-5'/%3E%3C/svg%3E");
+}
+select:not([multiple]):not([size]),
+.field select:not([multiple]):not([size]),
+.environment-select select {
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 12px 42px 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--select-chevron) right 14px center / 16px 16px no-repeat var(--surface);
+  box-shadow: var(--inset);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  cursor: pointer;
+}
+select:hover:not(:disabled) { border-color: var(--secondary); }
+select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+select:disabled, .field select:disabled {
+  color: var(--muted);
+  background-color: var(--surface-hover);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+select[aria-invalid="true"] { border-color: var(--danger); }
+select option, select optgroup { color: var(--ink); background: var(--surface); }
+select option:disabled { color: var(--muted); }
+
+@supports (appearance: base-select) and selector(::picker(select)) {
+  select:not([multiple]):not([size]),
+  .field select:not([multiple]):not([size]),
+  .environment-select select {
+    appearance: base-select;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-inline: 14px;
+    background-image: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+    margin-block: 8px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--menu-shadow);
+    font: inherit;
+    inline-size: anchor-size(self-inline);
+    max-inline-size: calc(100vw - 24px);
+    max-block-size: min(320px, 60dvh);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+  select::picker-icon {
+    content: "";
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin-inline-start: auto;
+    background: var(--secondary);
+    mask: var(--select-chevron) center / contain no-repeat;
+  }
+  select:open { border-color: var(--focus); }
+  select:open::picker-icon { transform: rotate(180deg); }
+  select:not([multiple]):not([size]) option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  select option:checked { color: var(--primary-ink); background: var(--primary-soft); font-weight: 550; }
+  select option:hover:not(:disabled) { background: var(--surface-hover); }
+  select option:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; background: var(--surface-hover); }
+  select option::checkmark {
+    content: "";
+    order: 1;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin-inline-start: auto;
+    background: currentColor;
+    mask: var(--select-check) center / contain no-repeat;
+  }
+  select option:disabled { color: var(--muted); background: var(--surface); cursor: not-allowed; }
+  /* The picker's scrollbar belongs to its pseudo-element, not to the select. */
+  @supports selector(select::picker(select)::-webkit-scrollbar) {
+    select:not([multiple]):not([size])::picker(select) { scrollbar-width: auto; scrollbar-color: auto; }
+    select::picker(select)::-webkit-scrollbar { width: 12px; height: 12px; }
+    select::picker(select)::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; box-shadow: var(--inset); }
+    select::picker(select)::-webkit-scrollbar-thumb { min-height: 36px; min-width: 36px; border: 3px solid var(--scrollbar-track); border-radius: 10px; background: var(--scrollbar-thumb); }
+    select::picker(select)::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+    select::picker(select)::-webkit-scrollbar-thumb:active { background: var(--primary-ink); }
+    select::picker(select)::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
+    select::picker(select)::-webkit-scrollbar-button { display: none; }
+  }
+}
+.account-menu-trigger[aria-expanded="true"] { box-shadow: var(--inset); }
+.account-menu-trigger[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+@media (max-width: 760px) {
+  select:not([multiple]):not([size]), .field select:not([multiple]):not([size]) { font-size: 16px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  select::picker-icon, .account-menu-trigger > svg:last-child { transition: transform var(--motion-feedback) var(--motion-ease); }
+  select option { transition: background-color var(--motion-feedback) var(--motion-ease); }
+}
+@media (forced-colors: active) {
+  select:not([multiple]):not([size]), .field select:not([multiple]):not([size]), .environment-select select {
+    appearance: auto;
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+  select:disabled, .field select:disabled { color: GrayText; border-color: GrayText; }
+  select:not([multiple]):not([size])::picker(select) { appearance: auto; }
 }

@@ -71,7 +71,7 @@ export function LiveBalanceRecovery({ open, onClose, onRecovered, identityKeys }
     setManifest(undefined); setManifestError(''); setError(''); setSummary(undefined); setArchiveMessage('');
     void (async () => {
       try {
-        const url = new URL(import.meta.env.VITE_DEPLOYMENT_MANIFEST_URL || '/deployment.json', window.location.origin);
+        const url = new URL(config.manifestUrl, window.location.origin);
         const response = await fetch(url, { signal: controller.signal, credentials: 'omit', redirect: 'error', cache: 'no-store' });
         if (!response.ok) throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'The test network settings could not be loaded.');
         const text = await response.text();

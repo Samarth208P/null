@@ -2,7 +2,7 @@
 
 **September 11 toolkit update:** no new browser/Netlify variable is required for the SDK homepage or ENS preparation. The standalone relayer gained optional server-only `RELAYER_MAX_GAS`; its unchanged 3,000,000 default is too low for several proof transactions. The local v0.3 rehearsal used 10,000,000.
 
-The public deployment remains v0.2. Partial withdrawals require a new v0.3 pool/fifth verifier, matching artifacts, manifest/address configuration, indexer/relayer updates and a fresh rehearsal. Existing commands below still target v0.2. Do not change its manifest to imply an upgrade. Commit/review the demonstrated source before releasing the web build. See [v0.3 verification](PAYOUT_V3_VERIFICATION.md).
+The active reference deployment is the fresh Sepolia v0.3 pool with five verifiers. Its canonical release record is `deployments/11155111-partial-withdrawals-v3.json`. The commands below explicitly select v0.3; keep the complete artifact set and journal together. See [verification evidence](PAYOUT_V3_VERIFICATION.md).
 
 This setup deploys the contracts to Ethereum Sepolia and runs the web app and relayer on your own computer. All local configuration is in one private root `.env`; no website hosting is required. Confirmed transactions and current execution evidence belong in [implementation status](IMPLEMENTATION_STATUS.md). Contract deployment and local service configuration do not establish a working proof/payment flow or a live Privy/CRE integration. See [free defaults and optional integration limits](FREE_SEPOLIA.md).
 
@@ -17,12 +17,12 @@ pnpm circuits:build
 pnpm build:contracts
 ```
 
-The circuit command runs `node tools/build-circuits.mjs --verifiers`. It compiles all three Noir circuits and generates their actual ZK-enabled EVM verification keys and Solidity verifiers. Verifier generation can require substantial memory and download public SRS data. The Solidity command runs `node contracts/scripts/build.mjs` and regenerates ABIs and `@null-protocol/contracts` exports.
+The circuit command runs `node tools/build-circuits.mjs --verifiers`. It compiles all five Noir circuits and generates their actual ZK-enabled EVM verification keys and Solidity verifiers. Verifier generation can require substantial memory and download public SRS data. The Solidity command runs `node contracts/scripts/build.mjs` and regenerates ABIs and `@null-protocol/contracts` exports.
 
 Preserve these outputs as one reviewed set:
 
-- `circuits/target/{shield,create_distribution,claim}.json`, their `.vk` files, and `circuits/target/manifest.json`.
-- `contracts/src/generated/{ShieldVerifier,CreateDistributionVerifier,ClaimVerifier}.sol`.
+- `circuits/target/{shield,create_distribution,claim,withdraw,withdraw_partial}.json`, their `.vk` files, and `circuits/target/manifest.json`.
+- `contracts/src/generated/{ShieldVerifier,CreateDistributionVerifier,ClaimVerifier,WithdrawVerifier,PartialWithdrawVerifier}.sol`.
 - `contracts/artifacts/`, including `build-integrity.json`, and `contracts/abi/`.
 
 The Solidity integrity record includes source-qualified artifacts and library link references. This preserves distinct generated libraries with the same name; deployment resolves those references and deduplicates only matching library instructions and ABIs.
@@ -54,22 +54,22 @@ The deployment commands load root `.env` automatically. Existing shell variables
 The plan reads the RPC, checks chain/asset configuration, artifact integrity and library links, and prints a conservative funding allowance based on the current RPC fee quote without broadcasting:
 
 ```sh
-pnpm deploy:plan
+pnpm deploy:v3:plan
 ```
 
-The allowance is not an exact cost; every send gets a fresh RPC gas estimate and fee check. The plan is saved to `.artifacts/deployment-plan-11155111.json`. Fund the displayed public address with the indicated amount of Sepolia ETH, then run:
+The allowance is not an exact cost; every send gets a fresh RPC gas estimate and fee check. The plan is saved to `.artifacts/deployment-plan-11155111-partial-withdrawals-v3.json`. Fund the displayed public address with the indicated amount of Sepolia ETH, then run:
 
 ```sh
-pnpm deploy:sepolia
+pnpm deploy:v3:sepolia
 ```
 
-The current build needs eight deployments: Poseidon, two deduplicated verifier libraries, the authorization registry, three generated verifiers, and the pool. The command records signed transactions and receipts in `.artifacts/deployment-11155111.json` so the same command can resume an interrupted deployment with the same wallet/build. Preserve this journal. It waits for confirmations, records runtime hashes, checks pool bindings, and writes **`deployments/11155111.json`** for Sepolia (or `deployments/31337.json` locally). It refuses to overwrite an existing manifest. It does not approve tokens, shield funds, fund the deployer, or deploy a faucet asset onto a public chain.
+The current build needs ten deployments: Poseidon, two deduplicated verifier libraries, the authorization registry, five generated verifiers, and the pool. The command records signed transactions and receipts in `.artifacts/deployment-11155111-partial-withdrawals-v3.json` so the same command can resume an interrupted deployment with the same wallet/build. Preserve this journal. It waits for confirmations, records runtime hashes, checks pool bindings, and writes **`deployments/11155111-partial-withdrawals-v3.json`** for Sepolia (or `deployments/31337-partial-withdrawals-v3.json` locally). It refuses to overwrite an existing manifest. It does not approve tokens, shield funds, fund the deployer, or deploy a faucet asset onto a public chain.
 
-Keep [sepolia.template.json](../deployments/sepolia.template.json) as an unconfigured example. Use the numeric-chain manifest produced by the script for downstream configuration. Its deployment block starts early enough to replay the authorization registry history as well as the pool.
+Keep [sepolia.template.json](../deployments/sepolia.template.json) as an unconfigured example. Use the chain-and-release manifest produced by the script for downstream configuration. Its deployment block starts early enough to replay the authorization registry history as well as the pool.
 
 ## 3. Synchronize the local browser artifacts
 
-Before any broadcast, the deployment script simulates all eight constructors using RPC state overrides and computes a gas allowance with a 20% margin. It requires an RPC that supports state overrides for `eth_call` and `eth_estimateGas`; the default PublicNode endpoint was verified. Actual deployed runtime must match both constructor simulation and linked compiler output. Repeating the deployment command with a matching completed journal and manifest can finish an interrupted browser synchronization without redeploying contracts.
+Before any broadcast, the deployment script simulates all ten constructors using RPC state overrides and computes a gas allowance with a 20% margin. It requires an RPC that supports state overrides for `eth_call` and `eth_estimateGas`; the default PublicNode endpoint was verified. Actual deployed runtime must match both constructor simulation and linked compiler output. Repeating the deployment command with a matching completed journal and manifest can finish an interrupted browser synchronization without redeploying contracts.
 
 After successful deployment, the command copies the actual manifest to `apps/web/public/deployment.json`, synchronizes matching circuit JSONs and artifact manifest into `apps/web/public/circuits/`, and updates the pool and manifest settings in root `.env`. The deployment block comes from the manifest. The app defaults to Sepolia in code. The script preserves the browser's public RPC instead of copying a deployment RPC that might contain credentials. Restart Vite. Public proving artifacts do not contain recipient secrets.
 
@@ -77,9 +77,9 @@ Vite reads the root `.env` and exposes only the `VITE_` values listed in [the ca
 
 | Browser value | Meaning |
 | --- | --- |
-| `VITE_DEPLOYMENT_MANIFEST_URL` | Reviewed deployed manifest URL; defaults to `/deployment.json` |
+| `VITE_DEPLOYMENT_MANIFEST_URL` | Compatibility setting; the fresh reference app pins `/deployment.json` |
 | `VITE_RPC_URL` | Public RPC URL without private server credentials |
-| `VITE_POOL_ADDRESS` | Pool address matching the actual manifest; discovery reads the deployment block from that manifest |
+| `VITE_POOL_ADDRESS` | Compatibility setting; the reference app takes the address directly from its compiled deployment manifest |
 | `VITE_CONFIRMATIONS` | Confirmation threshold; never represent unconfirmed events as final |
 | `VITE_GRAPH_URL` | Optional public Graph query endpoint |
 | `VITE_RELAYER_URL` | Optional configured relay base URL |
@@ -113,7 +113,7 @@ pnpm dev:all                # Start the local web app and relayer together
 
 Follow [the treasury guide](../tools/TREASURY.md) to import the private policy file and use `pnpm treasury:sign` for an exact reviewed distribution intent. The signer key and recovery values remain in root `.env`; private policy/signature files remain under `.artifacts`. Registration and relay funding do not shield or distribute tokens.
 
-Relayer setup writes its separate key, RPC, local endpoint, and allowed origins into root `.env`. Use `NULL_MANIFEST_PATH=deployments/11155111.json`. `pnpm relayer` starts only the service at `127.0.0.1:8787`; read [relay configuration and calldata export](../services/relayer/README.md). Its health endpoint checks configuration and deployment readiness, not a completed payment. Wallet submission remains available with the same proof and deployment checks.
+Relayer setup writes its separate key, RPC, local endpoint, and allowed origins into root `.env`. Use `NULL_MANIFEST_PATH=deployments/11155111-partial-withdrawals-v3.json`. `pnpm relayer` starts only the service at `127.0.0.1:8787`; read [relay configuration and calldata export](../services/relayer/README.md). Its health endpoint checks configuration and deployment readiness, not a completed payment. Wallet submission remains available with the same proof and deployment checks.
 
 Privy remains optional. If enabling it, follow [organization service setup](../services/organization/README.md) for app credentials, wallet, owner quorum, policies, threshold, and member DIDs, then run `pnpm organization`. Membership grants access to request approval; the actual quorum and policies decide whether an intent can be signed. Empty credentials do not enable this integration.
 
@@ -122,7 +122,7 @@ Privy remains optional. If enabling it, follow [organization service setup](../s
 RPC discovery works independently of Graph. For a Graph deployment, first generate the actual manifest from the deployed contract record:
 
 ```sh
-pnpm --filter @null-protocol/subgraph prepare:manifest --manifest ../deployments/11155111.json
+pnpm --filter @null-protocol/subgraph prepare:manifest --manifest ../deployments/11155111-partial-withdrawals-v3.json
 pnpm --filter @null-protocol/subgraph codegen
 pnpm --filter @null-protocol/subgraph build
 ```

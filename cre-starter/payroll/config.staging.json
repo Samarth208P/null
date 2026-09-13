@@ -1,7 +1,7 @@
 {
   "simulationOnly": true,
   "chainId": "11155111",
-  "poolAddress": "0x734da58C285D211e7C0ad904f522c221c982447E",
+  "poolAddress": "0x17A41574900ca3120562Ae5616559EceebA74E36",
   "payrollBaseUrl": "http://127.0.0.1:8791/batches",
   "payrollApiSecretId": "PAYROLL_API_TOKEN"
 }

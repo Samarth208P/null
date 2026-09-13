@@ -1,0 +1,207 @@
+{
+  "network": "isolated localhost",
+  "chainId": 31337,
+  "realProofs": true,
+  "privyApproval": false,
+  "checks": [
+    "deposit backed exactly by token balance",
+    "organization-approved distribution and exact private change",
+    "stealth discovery and claim with real proof",
+    "recipient recovery from original keys and chain history",
+    "funds backup recovers collected notes without the original Payment ID",
+    "partial withdrawal: exact public amount, hidden change, sponsor-funded gas, encrypted recovery, no double spend, no recipient or amount substitution",
+    "recipient substitution rejected by deployed proof verifier",
+    "failed transfer leaves note unspent and funds recoverable",
+    "independent relayer broadcasts without recipient gas funding",
+    "withdrawal paid exact amount and removed spent balance after recovery",
+    "old funds backup cannot restore a withdrawn balance",
+    "withdrawal reconciles from public history without a returned transaction hash",
+    "double withdrawal rejected by client and contract",
+    "treasury exit cannot bypass organization approval",
+    "approved treasury refund and zero remaining pool liabilities",
+    "full conservation: 1 USDC deposited = 0.6 received + 0.4 refunded"
+  ],
+  "transactions": [
+    {
+      "action": "deploy",
+      "hash": "0x1c131cceb77cf37f04965644c57765c2215598da0adc28f36a8b43f993d6c0f3"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xd0ece4e15836b202045126ce1f12eb22e7ae83a6dc3253d6a3f814cb8576e03a"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x82e04a6a1b9606855b605c651f1de0708669ba555d94b9be8e0f0be6c51c2a4c"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x401e154363577c0bc0e467285ffb89f4106710eb0b700bc38b09f0afb0711f64"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x35dda064f2ee2e0dd39796360c0b75ccb6ece4b01bd2e2e07d7e38beb0847f6e"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x020ba986cf733439276a8c5b1cd421717e341e91f8297ee4fea157b85201365c"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xc51a475207616dd06a14b8b71e90d6cb3cb3f1c3bf9ead9a976d1dd56fa802e3"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x955fabff382631442c716d0307112fd8cb4a54a558f8f04619f97f6ed05364c4"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xfc781cd8bdd476593418cda442c30eeb8c64e4b04176d1a9abdb53e606091aab"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xbcff27906a7769c51a1f29df472f53881dc209a945f5e533f04b8dc70180e229"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xedcba4bbd89d5fd37ca7f2a32ac61a1e20e771fdb62c0977db0858b32bd78d8d"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xae08fa20573014f1799807433d9a02f91b9ea68b8f25c3e864b46a914cee5829"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xc5affa6f1466fa0b56de1982299726be8ca31ff60d870b6216b8949c2fd16c5e"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x14ffec465f52c7ce607cff696a48ccedaadf8d98a4f8aef57c6cc043b6d16841"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xeeb92d798ae390f86a75888211d4e1d3f785bcce7a39ef0998c90919c8808958"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xe7c373e3e101c6123df37eb2d43ffaeaa744dc8ca8a34c6854c70913a43f91dd"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x93b0bc3d14315cc84c51163c0dc71a49eb6886a59bd063f01ae1ea116a01543d"
+    },
+    {
+      "action": "deploy",
+      "hash": "0x452e8b8cdea34f67b068f50b4c05b6ab1cca29c97a9f7237076d2b18e7bfe820"
+    },
+    {
+      "action": "deploy",
+      "hash": "0xd561a632edb24b21d89753c2e486772076fb23ac7c391e26a182088bd82899de"
+    },
+    {
+      "hash": "0x1a2c468d031a1b561d5cd5609f31c0331cc37a7865ee666496a0f39d60054f8e",
+      "purpose": "register-policy",
+      "gasUsed": "1550280"
+    },
+    {
+      "hash": "0x7eba7c1543c5d8719768edb9962dffb451d3c0011c4424a015291f7881ca5671",
+      "purpose": "approval",
+      "gasUsed": "44249"
+    },
+    {
+      "hash": "0xd09785c37b26a626814b5c6c6c33520c7ef1663baa72e3ad8d1e55370e0f5ad4",
+      "purpose": "shield",
+      "gasUsed": "4001168"
+    },
+    {
+      "hash": "0x8fbda2f694bd62c0b32f5a654197840c3f1f133b1d1620fa53b65173fe1e2f3b",
+      "purpose": "createDistribution",
+      "gasUsed": "5701733"
+    },
+    {
+      "hash": "0xd581469bbfdf6862913d8c642d261e04e0f1e3ca4e96f1456b8a8ed943d70c77",
+      "purpose": "claim",
+      "gasUsed": "3887198"
+    },
+    {
+      "hash": "0xa2c8ac9bb2dc090d0bb0f52721446cd63fbc2c823300771670945fba183bc0eb",
+      "purpose": "withdrawPartial",
+      "gasUsed": "3792805"
+    },
+    {
+      "hash": "0xcba26b56d767cdb7fefb1e231122dd6a99acb70df2f6944a2161d0d3c90ea618",
+      "purpose": "withdraw",
+      "gasUsed": "2745557"
+    },
+    {
+      "hash": "0x83c4a5f70921c2d4f9f7985c6884edd77b2d381ec177caef609e5a21b6ea4bcb",
+      "purpose": "withdraw",
+      "gasUsed": "2757845"
+    }
+  ],
+  "completed": true,
+  "buildIntegrity": {
+    "src/generated/ClaimVerifier.sol": "0x94c61fc5eda9d0fa634885f5c7e2336bd1bd5b2a11150e7cddbedda3c1e854dc",
+    "src/generated/CreateDistributionVerifier.sol": "0xbad1fb420e40e42fc9d5df6f3c259faeb4c0ec49d3b2f24a0e81f11519f3db87",
+    "src/generated/PartialWithdrawVerifier.sol": "0x7f149523c189a48755160dc3f059ec4007d7562990583f69ecbaed6fbb058697",
+    "src/generated/ShieldVerifier.sol": "0xc9285a23a724161b2dab6678d9b1bb98f46150a86e774f2943b4ba0de55c0f0e",
+    "src/generated/WithdrawVerifier.sol": "0xb49fce8efd35b79570b8c37d79864a2f6a82598155214cdc9f3dd9650e83f402",
+    "src/interfaces/IERC20.sol": "0x61bb01c7b3446f29416ee39e350c779132a7516542b40b14fa32cb62e974c793",
+    "src/interfaces/IPoseidon3.sol": "0xbcd36bd415d028060400b498d351dbf796ef085a6a583d24c440c4fc94f2e4d2",
+    "src/interfaces/IVerifier.sol": "0xc51095a1f84dcc1cc92d3841cbfd87cdcb61a7a8e75c753c902b37f37be5fa5b",
+    "src/libraries/Domains.sol": "0xcc81f53e015f0eca7d1051665ca5a32cd01fd18971ea207ccd452f625bd31b6f",
+    "src/libraries/IncrementalTree.sol": "0x20c7c7c0e9ef1cb07877d17efff66ed141771c5ca7be15d22471143a9f3b27a9",
+    "src/mocks/MockUSDC.sol": "0xcca9e6c54f6d85c5c91de5f2b11d2319632f5bb068edabe6087415f3a9f4d6ee",
+    "src/NullAuthRegistry.sol": "0x8f7b05c54d07634e32003ea6161ebc86f52f15045d532a8c771d280cdb224df3",
+    "src/NullPool.sol": "0x14c055f97be3ce77f2aec662c8f5e80bc43ba5cd6f9d2bc5f030ec99dd80dfd1",
+    "src/NullPoolV3.sol": "0x9f93510210bd7772bc1186af3c790e273a70327f78a0abea5ef260565be7d87a",
+    "src/verifiers/UnavailableVerifier.sol": "0x81a6d73d04075dc2d3a7c05c818c0d84d4989f4bcf0f825b3e0d5eb102e519ee"
+  },
+  "circuitArtifacts": {
+    "shield": {
+      "url": "/circuits/shield.json",
+      "sha256": "0x8c96ab11442794364f464463ef5e77b827c06607bf4e5382f383938cc9ea4d9d",
+      "verificationKeySha256": "0x9a162f74783ddd90d4843c0dc60cec3ef11a34b8378a38afa7fd01831c3510d2",
+      "verifierSourceSha256": "0xc9285a23a724161b2dab6678d9b1bb98f46150a86e774f2943b4ba0de55c0f0e",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "create_distribution": {
+      "url": "/circuits/create_distribution.json",
+      "sha256": "0xe9b5140c2e50cc3771dbd1af6bafdb9b8638ea28cad685ecbc6e59955f4ecc16",
+      "verificationKeySha256": "0x78d6f7496963fe4a08d53f99f893ec1028e585c3468e786c4358d832039a4852",
+      "verifierSourceSha256": "0xbad1fb420e40e42fc9d5df6f3c259faeb4c0ec49d3b2f24a0e81f11519f3db87",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "claim": {
+      "url": "/circuits/claim.json",
+      "sha256": "0x2c1fa766cb9e64f2fd48e591bc5aad346f50f93f3e87e5e01e529a79447991a9",
+      "verificationKeySha256": "0xa15e3694b4dace0f0b172cebbec6d232ca132dfe534ad5111ebfc22585942a30",
+      "verifierSourceSha256": "0x94c61fc5eda9d0fa634885f5c7e2336bd1bd5b2a11150e7cddbedda3c1e854dc",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "withdraw": {
+      "url": "/circuits/withdraw.json",
+      "sha256": "0x3cd04a082036d6509add317dd52224bb602ff3399bd18133ba74de2e49ab4d10",
+      "verificationKeySha256": "0xfdf11c4ae853cf72a795bed10781aaddf606537de28a8b764ce93877df71d610",
+      "verifierSourceSha256": "0xb49fce8efd35b79570b8c37d79864a2f6a82598155214cdc9f3dd9650e83f402",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    },
+    "withdraw_partial": {
+      "url": "/circuits/withdraw_partial.json",
+      "sha256": "0xe205d9399ad92369db10e8323b39d6b4ebcb96d4b6e6b91767a17cba79498f35",
+      "verificationKeySha256": "0x66b98bbf67794924e8480dba7aef35566933c15097ba493a79a072e5469bfc2e",
+      "verifierSourceSha256": "0x7f149523c189a48755160dc3f059ec4007d7562990583f69ecbaed6fbb058697",
+      "noirVersion": "1.0.0-beta.22",
+      "backendVersion": "5.0.0-nightly.20260522",
+      "verifierTarget": "evm"
+    }
+  }
+}

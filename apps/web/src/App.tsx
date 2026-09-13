@@ -7,6 +7,7 @@ import { AccountProvider, useAccount } from './lib/account';
 import { resolveRoute } from './lib/account-profile';
 import { WalletConnection } from './components/WalletConnection';
 import { SignIn, ChooseAccount } from './components/Onboarding';
+import { EnsAccessGate } from './components/EnsAccessGate';
 import { Overview, Distributions } from './pages/Overview';
 import { DistributionWizard } from './pages/DistributionWizard';
 import { Treasury } from './pages/Treasury';
@@ -26,7 +27,7 @@ export function App() {
 }
 function AccountFlow() {
   const account = useAccount();
-  return !account.profile || account.choosingType ? <ChooseAccount /> : <WorkspaceApp />;
+  return !account.profile || account.choosingType ? <ChooseAccount /> : <EnsAccessGate><WorkspaceApp /></EnsAccessGate>;
 }
 function WorkspaceApp() {
   const { profile, storageWarning } = useAccount(); const store = useStore();

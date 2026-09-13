@@ -4,7 +4,7 @@ NULL can be distributed as one `@samarth208p/null-payouts` package. The build co
 
 Published September 12, 2026: [`@samarth208p/null-payouts@0.1.0-preview.2`](https://www.npmjs.com/package/@samarth208p/null-payouts/v/0.1.0-preview.2), MIT licensed, public access, `preview` tag. See the [release evidence](../deployments/submission-release-2026-09-12.json) for registry and deployment verification.
 
-This checkout builds `0.1.0-preview.2`. It adds exact policy-registration transaction reconciliation to the client and ENS payment-versus-website permission inspection at one pinned block. The reference application adds public receipt exports, backup-before-activation, guarded CRE imports and the owner rehearsal guide. The app and Privy server adapter are separate from the npm tarball. The public pool remains Sepolia v0.2.
+This checkout builds the next release, `0.1.0-preview.3`. Its packaged documentation targets the fresh Sepolia v0.3 deployment and the completed real-proof partial-withdrawal and private-change recovery rehearsal. The reference application adds explicit withdrawal amounts, remaining-balance updates, ENS entry checks and session continuity. The app and Privy server adapter are separate from the npm tarball; the package does not deploy contracts or migrate funds.
 
 ```sh
 npm install @samarth208p/null-payouts@preview
@@ -16,10 +16,10 @@ npm install @samarth208p/null-payouts@preview
 pnpm pack:npm
 ```
 
-This creates `dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz`. From another project:
+This creates `dist/npm/samarth208p-null-payouts-0.1.0-preview.3.tgz`. From another project:
 
 ```sh
-npm install /absolute/path/to/null/dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz
+npm install /absolute/path/to/null/dist/npm/samarth208p-null-payouts-0.1.0-preview.3.tgz
 ```
 
 Use ordinary JavaScript or TypeScript imports:
@@ -62,7 +62,7 @@ The owner selected MIT for this release. The root license is included in the tar
 After those decisions, rebuild and test the exact release, authenticate with the owning npm account, and publish the reviewed tarball:
 
 ```sh
-npm publish ./dist/npm/samarth208p-null-payouts-0.1.0-preview.2.tgz --access public --tag preview
+npm publish ./dist/npm/samarth208p-null-payouts-0.1.0-preview.3.tgz --access public --tag preview
 ```
 
 The intended consumer command after successful publication is:

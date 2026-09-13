@@ -5,7 +5,7 @@ description: Integrate the NULL TypeScript payout SDK into a browser application
 
 # Integrate NULL payouts
 
-Use the installed package's declarations as the API authority. This guide targets `@samarth208p/null-payouts@0.1.0-preview.2`, an MIT-licensed, unaudited testnet preview. Do not assume npm package versions are pool versions: the recorded public pool is Sepolia v0.2; partial withdrawals require v0.3, verified locally only at this release.
+Use the installed package's declarations as the API authority. This guide targets `@samarth208p/null-payouts@0.1.0-preview.2`, an MIT-licensed, unaudited testnet preview. Do not assume npm package versions are pool versions: the active reference pool is Sepolia v0.3 with chosen-amount withdrawals and private change. Use the published deployment manifest and all five matching artifacts; do not assume every host has upgraded.
 
 ## Start with the host application
 

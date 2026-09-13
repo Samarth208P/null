@@ -9,6 +9,7 @@ import { Badge, Button, KeyValue, Notice, PageHeader } from '../components/ui';
 
 import { LiveOperationLoader, type LiveOperationInput } from '../components/LiveOperationLoader';
 import { CreVerification } from '../components/CreVerification';
+import { useWorkspaceAccess } from '../components/EnsAccessGate';
 import type { CrePayrollExport } from '../lib/cre';
 import { PaymentDestination } from '../components/PaymentDestination';
 import { PaymentNameError, paymentDestination, recheckPaymentNames, requiredPaymentNames } from '@null-protocol/ens';
@@ -19,6 +20,7 @@ import { resolvePayoutJobRecipients } from '@null-protocol/payouts/jobs';
 const steps = ['Details', 'People', 'Check', 'Review'];
 const preparationCheckError = 'The payment did not pass its safety check. Nothing was sent. Prepare it again to continue.';
 export function DistributionWizard() {
+  const access = useWorkspaceAccess();
   const store = useStore(); const existing = store.distributions.find(item => item.id === store.editingId);
   const [id] = useState(existing?.id || crypto.randomUUID());
   const [step, setStep] = useState(0); const [name, setName] = useState(existing?.name || ''); const [category, setCategory] = useState(existing?.category || 'Payroll');
@@ -100,6 +102,7 @@ export function DistributionWizard() {
     setBusy(true); setError(''); setPhase('Preparing payment…'); setCreVerified(false); setCrePayroll(undefined); setPayoutDraft(undefined); setPayoutDrafts([]); setCreResult(undefined); setCreResults({}); setCreBatch(0);
     const entropy = randomBytes(32);
     try {
+      await access.verify();
       setPhase('Checking recipient names on Sepolia…');
       if (store.mode === 'sandbox') await recheckPaymentNames(ensClient, rows.flatMap(row => row.paymentName ? [row.paymentName] : []));
       setPhase('Preparing payment…');

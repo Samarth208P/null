@@ -17,7 +17,7 @@ export function Recovery({ open, onClose, initialMode = 'export', continueSetup 
         if (password.length < 12) throw new Error('Choose a password with at least 12 characters.');
         const encrypted = await encryptRecovery(store.identity.keys, password);
         download('null-encrypted-recovery.json', encrypted);
-        store.markIdentityBackedUp();
+        await store.markIdentityBackedUp();
         if (persist) { try { await saveVault(encrypted); } catch { store.toast('Backup downloaded, but could not also be saved in this browser. Keep the downloaded file.'); close(); return; } }
         store.toast('Backup downloaded. Keep your password in a separate safe place.');
       } else {
@@ -25,7 +25,7 @@ export function Recovery({ open, onClose, initialMode = 'export', continueSetup 
         const encrypted = file ? await file.text() : await loadVault();
         if (!encrypted) throw new Error('No backup is saved in this browser. Choose your downloaded backup file.');
         const keys = await decryptRecovery(encrypted, password);
-        store.setIdentity({ keys, profile: profileFromKeys(keys) });
+        await store.setIdentity({ keys, profile: profileFromKeys(keys) });
         store.toast('Payment ID restored. Check your inbox for payments.');
       }
       close();
@@ -57,7 +57,7 @@ export function Recovery({ open, onClose, initialMode = 'export', continueSetup 
       <label className="field">Repeat password<input type="password" autoComplete="new-password" value={repeat} onChange={event => setRepeat(event.target.value)} /></label>
       <label className="checkbox-field"><input type="checkbox" checked={persist} onChange={event => setPersist(event.target.checked)} /><span>Also save a password-protected copy in this browser.</span></label>
     </>}
-    <details className="progressive-details"><summary>What does this backup save?</summary><p>This saves access to your Payment ID. Signing in alone does not restore it. Practice payments and drafts reset when you reload. Your funds backup is separate, under Restore balance.</p></details>
+    <details className="progressive-details"><summary>What does this backup save?</summary><p>This saves access to your Payment ID. Your inbox stays available when you refresh this tab. After signing out, closing the browser session, or changing devices, restore your backup. Practice payments and drafts reset when you reload. Your funds backup is separate, under Restore balance.</p></details>
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="modal-actions"><Button variant="secondary" disabled={busy} onClick={close}>Cancel</Button><Button busy={busy} icon={mode === 'export' ? Download : KeyRound} onClick={() => void submit()}>{mode === 'export' ? continueSetup ? 'Download and continue' : 'Download backup' : 'Restore backup'}</Button></div>
   </Modal>;

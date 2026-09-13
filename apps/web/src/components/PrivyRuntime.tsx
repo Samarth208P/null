@@ -3,6 +3,7 @@ import { PrivyProvider, usePrivy, useLogin, useModalStatus, useWallets } from '@
 import { sepolia } from 'viem/chains';
 import { config } from '../lib/config';
 import { SessionContext } from '../lib/session';
+import { identitySession } from '../lib/identity-session';
 
 export function PrivyRuntime({ children }: { children: ReactNode }) {
   return <PrivyProvider appId={config.privyAppId!} config={{ loginMethods: ['email', 'wallet'], defaultChain: sepolia, supportedChains: [sepolia], embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } }, appearance: { theme: 'light', accentColor: '#20252b', logo: '/logo.svg' } }}><SessionBridge>{children}</SessionBridge></PrivyProvider>;
@@ -16,7 +17,7 @@ function SessionBridge({ children }: { children: ReactNode }) {
   const { login } = useLogin({ onComplete: () => setError(''), onError: code => setError(code === 'exited_auth_flow' ? '' : 'Sign-in was not completed. Please try again.') });
   async function signOut() {
     setSigningOut(true); setError('');
-    try { await logout(); window.location.hash = ''; }
+    try { if (user?.id) await identitySession.clear(user.id); await logout(); window.location.hash = ''; }
     catch { setError('We could not sign you out. Please try again.'); }
     finally { setSigningOut(false); }
   }

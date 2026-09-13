@@ -89,7 +89,7 @@ components:
 
 NULL combines crisp Outline structure with the stronger neumorphic treatment approved by the user: pale gray material, charcoal type, raised surfaces, and inset controls. Financial information stays compact and legible, with generous gutters and clear next actions. Authentication, inbox, funds, dialogs, and settings share this light visual system.
 
-The current authority is `apps/web/src/soft-outline.css`, imported after the structural and responsive `styles.css` by `main.tsx`. The outgoing Mercury stylesheet is replaced. `docs/DESIGN_REFERENCE.md` is a historical reference, not current design authority. Durable product commitments remain in `PRODUCT.md`.
+The current authority is `apps/web/src/soft-outline.css`, imported after the structural and responsive `styles.css` by `main.tsx`. The later `payment-flow.css` adds scoped payment-dialog and ENS-entry patterns within Soft Outline. The outgoing Mercury stylesheet is replaced. `docs/DESIGN_REFERENCE.md` is a historical reference, not current design authority. Durable product commitments remain in `PRODUCT.md`.
 
 **Key Characteristics:**
 
@@ -110,6 +110,8 @@ Use locally hosted variable Inter with the frontmatter fallbacks. Main headings 
 
 Financial values use tabular numerals. The main balance uses 40px/500, reducing to 36px at mobile and 34px below 480px. Addresses and code retain `SFMono-Regular`, Consolas, `Liberation Mono`, monospace. The NULL wordmark uses 21px Inter at weight 650.
 
+Payment dialogs have a scoped hierarchy: dialog title (22px), amount (32px/550), From/To names (16px/550), and current-step title (20px/550). At 600px and below the amount becomes 28px, names 14px, and current-step title 18px. The six-step rail uses compact 11px labels, reducing to 10px on mobile; the adjacent status block repeats the current step in larger text. Supporting instructions use 13px with 1.7 line height, and metadata uses 12px. These observed payment sizes supplement the global hierarchy only within `payment-flow.css`; they do not replace the frontmatter type scale.
+
 ## Layout
 
 The desktop shell has a 224px sidebar, a 72px utility bar, and content capped at 1480px with 38px top padding and 40px horizontal gutters. At 1200px gutters reduce to 30px. The overview treasury spans the content width, with balance information on the left and a divided ledger on the right; compact draft continuation follows below. At 1080px the ledger stacks below the balance and the distribution wizard becomes one column.
@@ -117,6 +119,8 @@ The desktop shell has a 224px sidebar, a 72px utility bar, and content capped at
 At 760px navigation becomes a 260px dismissible drawer, the utility bar is 68px tall, and content uses 28px top padding and 20px gutters. Below 480px gutters reduce to 18px. Panels generally use 24–32px insets, reducing to 22px for treasury, draft, and wizard panels on small screens. Tables and filter tabs scroll locally where needed.
 
 Entry panels center vertically when space permits and scroll on short screens. Sign-in is at most 480px wide; account setup is at most 512px. Left-aligned content uses 44px desktop padding, 32px on mobile, and 30px 24px below 480px. The brand remains at the upper left.
+
+The payment dialog is at most 720px wide, with 28px top and 32px horizontal padding and a viewport-bound scroll area. Its action row stays visible at the bottom. At 600px and below, the dialog leaves 10px outer gutters and uses 22px top and 20px horizontal padding. From and To stack as separate labeled rows; full names wrap, and the connecting arrow disappears. The six-step rail stays horizontal above the current-step block. The ENS-link entry panel extends the existing entry layout to at most 640px, retaining normal document scrolling and wrapping setup labels.
 
 ## Elevation & Depth
 
@@ -128,6 +132,8 @@ The user's explicit Outline plus stronger Neumorphism direction is a deliberate 
 - `--primary-shadow`: `4px 5px 10px #c4ccd5, -3px -3px 8px #ffffff`; charcoal and danger actions.
 
 Tables remain flat with dividers. Dialogs use a separate diffuse shadow and translucent charcoal backdrop; toasts use charcoal with white text. Keep short functional motion and preserve the existing reduced-motion and keyboard-focus safeguards. Exact overlay and motion values are in `.impeccable/design.json`.
+
+Payment dialogs scope a native backdrop with a dark translucent fill and 9px blur. Their current-step block uses a quiet tonal inset; uncertainty uses the existing warning surface and explicit text. Blur is confined to the workspace behind the dialog, and forced-colors mode removes it.
 
 ## Shapes
 
@@ -145,6 +151,14 @@ The developer entry extends this existing system with a fluid 36–60px hero hea
 - **Panels and tables:** shared raised surfaces group treasury, drafts, wizard, inbox, funds, and entry tasks. Flat tables use dividers, hover feedback, and tabular amounts. Unavailable balances remain explicit, and masking covers related totals.
 - **Entry and accounts:** real Privy authentication leads to labeled individual/organization options. Selected options use charcoal outlines and inset depth. Organization naming is progressively revealed. Preserve the encrypted recovery explanation and authorization boundaries.
 - **Dialogs and settings:** use shared fields, semantic status text, inset recovery content, and raised actions. Keep Ethereum Sepolia identification, local-versus-confirmed publication wording, and technical disclosure accurate.
+
+### Payment progress and ENS entry
+
+Payment progress places the tabular amount and payment visibility label above the From/To route, six real stages, and a prominent current-step instruction. Completed stages use labeled green checks; the current stage uses a charcoal numbered circle and `aria-current`. The status block announces changes politely. Keep recipient lists and technical explanations behind native disclosures. Network confirmation, preparation completion, and an uncertain result need distinct wording; the selected wallet or payment service determines the submission instruction and fee-payer explanation. Claim receipts clearly identify the private NULL balance as the destination and preserve the separate withdrawal action.
+
+Current-step headings move into place by only 3px over 180ms while remaining visible. Active work uses an indeterminate 2px line rather than a percentage. Reduced motion removes both animations and makes the line static. The native payment dialog preserves focus behavior, yields to the wallet portal when necessary, and returns to the same operation state.
+
+ENS entry uses the existing labeled inset fields, raised verification and recovery actions, an outlined status row, and optional wallet details. Show the namespace suffix alongside short names and allow complete names to wrap. A fresh successful link check opens the workspace directly; the entry surface does not add a second Open action. Keep unavailable checks and recovery paths visible. Detailed payment-state and entry requirements belong in `.impeccable/surfaces/payment-flow.md`.
 
 ## Do's and Don'ts
 

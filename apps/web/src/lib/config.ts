@@ -1,3 +1,5 @@
+import deployment from '../../public/deployment.json';
+
 const configuredRelayerUrl = import.meta.env.VITE_RELAYER_URL as string | undefined;
 // A production visitor cannot reach the development machine's relayer.
 const localRelayer = configuredRelayerUrl && /^https?:\/\/(localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::|\/|$)/i.test(configuredRelayerUrl);
@@ -12,7 +14,8 @@ export const config = {
   rpcUrls: [...new Set([rpcUrl, ...rpcFallbacks.split(',').map(url => url.trim()).filter(Boolean)])],
   graphUrl: import.meta.env.VITE_GRAPH_URL as string | undefined,
   relayerUrl: import.meta.env.PROD && localRelayer ? undefined : configuredRelayerUrl,
-  poolAddress: import.meta.env.VITE_POOL_ADDRESS as `0x${string}` | undefined,
+  poolAddress: deployment.contracts.nullPool as `0x${string}`,
+  manifestUrl: '/deployment.json',
   confirmations: Math.max(1, Number(import.meta.env.VITE_CONFIRMATIONS || '3')),
 };
 

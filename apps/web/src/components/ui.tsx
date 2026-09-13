@@ -17,14 +17,28 @@ export function EmptyState({ icon: Icon, title, description, action }: { icon: L
 export function Notice({ children, tone = 'info', icon: Icon = ShieldCheck }: { children: ReactNode; tone?: 'info' | 'warning' | 'success'; icon?: LucideIcon }) {
   return <div className={`notice notice-${tone}`}><Icon size={18} /><div>{children}</div></div>;
 }
-export function Modal({ title, description, open, onClose, children, wide = false }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Modal({ title, description, open, onClose, children, wide = false, className = '' }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; wide?: boolean; className?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const { walletModalOpen = false } = useSession();
   const titleId = useId(); const descriptionId = useId();
   // A native modal makes portals elsewhere in the document inert, regardless of
   // z-index. Yield the top layer to Privy without unmounting the in-progress form.
-  useLayoutEffect(() => { if (open && !walletModalOpen && !dialog.current?.open) dialog.current?.showModal(); else if ((!open || walletModalOpen) && dialog.current?.open) dialog.current.close(); }, [open, walletModalOpen]);
-  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={`modal ${wide ? 'modal-wide' : ''}`} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); } }}><div className="modal-heading"><div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Close dialog"><X size={20} /></button></div>{children}</dialog>;
+  useLayoutEffect(() => {
+    if (open && !walletModalOpen && !dialog.current?.open) {
+      dialog.current?.showModal();
+      // Browsers may focus a scroll container before its controls. Keep the
+      // previous close-button default when no field received autofocus.
+      if (document.activeElement === dialog.current?.firstElementChild) {
+        dialog.current?.querySelector<HTMLButtonElement>('.modal-heading button')?.focus({ preventScroll: true });
+      }
+    } else if ((!open || walletModalOpen) && dialog.current?.open) dialog.current.close();
+  }, [open, walletModalOpen]);
+  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={`modal ${wide ? 'modal-wide' : ''} ${className}`} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); } }}>
+    <div className="modal-scroll" tabIndex={-1}>
+      <div className="modal-heading"><div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Close dialog"><X size={20} /></button></div>
+      {children}
+    </div>
+  </dialog>;
 }
 export function CopyButton({ value, onCopy }: { value: string; onCopy?: () => void }) {
   return <button className="icon-button" title="Copy public value" aria-label="Copy public value" onClick={async () => { try { await navigator.clipboard.writeText(value); onCopy?.(); } catch { /* Selection is available even when clipboard permission is denied. */ } }}><Copy size={14} /></button>;

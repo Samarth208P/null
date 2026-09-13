@@ -2,7 +2,7 @@
 
 Embed ENS-based private payouts in your application. Bring your UI, wallet connection, organization authorizer, and encrypted local recovery. NULL provides recipient resolution, encrypted payout preparation, proof orchestration, discovery, and transaction reconciliation.
 
-This is an **unaudited testnet preview**. The public deployment recorded in the repository is Sepolia v0.2. Partial withdrawals require the separately deployed v0.3 pool; v0.3 currently has local real-proof verification only. Installing this package does not deploy or upgrade a pool.
+This is an **unaudited testnet preview**. The active reference deployment is the fresh Sepolia v0.3 pool, verified with a complete real-proof payment, partial withdrawal, private-change recovery and treasury refund. Use the matching deployment manifest and all five circuit artifacts. Installing this package does not deploy or upgrade a pool.
 
 ## Install
 
@@ -12,7 +12,7 @@ Install the public developer preview:
 npm install @samarth208p/null-payouts@preview
 ```
 
-For source development, `pnpm pack:npm` builds a local tarball that can also be installed with `npm install /absolute/path/to/samarth208p-null-payouts-0.1.0-preview.2.tgz`.
+For source development, `pnpm pack:npm` builds a local tarball that can also be installed with `npm install /absolute/path/to/samarth208p-null-payouts-0.1.0-preview.3.tgz`.
 
 Requires Node.js 22.16+ for Node use. Ships ESM JavaScript and TypeScript declarations. Preparation can run in Node; local recovery, browser workers, and the default proof client require a browser application and bundler. CommonJS `require` is not supported.
 

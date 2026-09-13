@@ -12,21 +12,24 @@ import { privateKeyToAccount, generatePrivateKey } from '../apps/web/node_module
 import { sepolia } from '../apps/web/node_modules/viem/_esm/chains/index.js';
 
 Object.assign(globalThis,{Worker:ProofWorker});
-const path = '.artifacts/sepolia-withdrawal-rehearsal.enc.json';
-const publicPath = '.artifacts/sepolia-withdrawal-rehearsal-receipt.json';
+const partial = process.argv.includes('--v3');
+const path = partial ? '.artifacts/sepolia-partial-withdrawal-rehearsal.enc.json' : '.artifacts/sepolia-withdrawal-rehearsal.enc.json';
+const publicPath = partial ? '.artifacts/sepolia-partial-withdrawal-rehearsal-receipt.json' : '.artifacts/sepolia-withdrawal-rehearsal-receipt.json';
 const amount = 100_000n; // 0.1 test USDC, returned through recipient withdrawal and treasury refund.
-const manifest = JSON.parse(await readFile('deployments/11155111-withdrawals-v2.json','utf8'));
+const manifest = JSON.parse(await readFile(partial ? 'deployments/11155111-partial-withdrawals-v3.json' : 'deployments/11155111-withdrawals-v2.json','utf8'));
 const deploymentSpent=manifest.transactions.reduce((sum:bigint,tx:any)=>sum+BigInt(tx.gasUsed)*BigInt(tx.effectiveGasPrice),0n);
-const maxFee=2_000_000_000n, combinedBudget=65_000_000_000_000_000n;
-// Explicitly authorized reallocation; the combined ceiling is stricter than 0.035 here.
-const budget=combinedBudget-deploymentSpent<35_000_000_000_000_000n?combinedBudget-deploymentSpent:35_000_000_000_000_000n;
+const maxFee=2_000_000_000n, combinedBudget=partial ? 85_000_000_000_000_000n : 65_000_000_000_000_000n;
+// v3 includes an additional proof transaction. Keep the entire deployment plus
+// rehearsal inside the same combined ceiling, including the final treasury refund.
+const rehearsalCap=partial?40_000_000_000_000_000n:35_000_000_000_000_000n;
+const budget=combinedBudget-deploymentSpent<rehearsalCap?combinedBudget-deploymentSpent:rehearsalCap;
 const saved = readRootEnv();
 const account = privateKeyToAccount(saved.NULL_DEPLOYER_PRIVATE_KEY as `0x${string}`);
 const rpc = createPublicClient({chain:sepolia,transport:http('https://ethereum-sepolia-rpc.publicnode.com',{timeout:25000,retryCount:1})});
 const rawWallet = createWalletClient({account,chain:sepolia,transport:http('https://ethereum-sepolia-rpc.publicnode.com',{timeout:25000,retryCount:0})});
 const tokenAbi = parseAbi(['function balanceOf(address) view returns(uint256)']);
 const balances = await Promise.all([rpc.getBalance({address:account.address}),rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]})]);
-const plan={network:'Ethereum Sepolia',chainId:11155111,pool:manifest.contracts.nullPool,funder:account.address,testUsdc:'0.1',maxGasBudgetWei:budget.toString(),combinedDeploymentRehearsalCapEth:'0.065',testEthAvailable:balances[0].toString(),testUsdcAtomicAvailable:balances[1].toString(),withdrawalsAvailable:true,authorization:'local isolated rehearsal signer; not a Privy approval',broadcast:process.argv.includes('--broadcast')};
+const plan={network:'Ethereum Sepolia',chainId:11155111,pool:manifest.contracts.nullPool,funder:account.address,testUsdc:'0.1',partialWithdrawal:partial,maxGasBudgetWei:budget.toString(),combinedDeploymentRehearsalCapEth:partial?'0.085':'0.065',testEthAvailable:balances[0].toString(),testUsdcAtomicAvailable:balances[1].toString(),withdrawalsAvailable:true,authorization:'local isolated rehearsal signer; not a Privy approval',broadcast:process.argv.includes('--broadcast')};
 console.log(JSON.stringify(plan,null,2));
 if(!process.argv.includes('--broadcast'))process.exit(0);
 if(balances[0]<budget || balances[1]<amount)throw Error('Insufficient test funds for this bounded rehearsal.');
@@ -60,7 +63,7 @@ const wallet={...rawWallet,sendTransaction:async(args:any)=>{
   state.signedTransactions.push({hash,serialized});await save();
   try{return await rpc.sendRawTransaction({serializedTransaction:serialized});}catch{throw Error('Submission uncertain; saved signed transaction must be reconciled before retrying.');}
 }};
-const server=createServer(async(req,res)=>{const kind=req.url?.match(/^\/circuits\/(shield|create_distribution|claim|withdraw)\.json$/)?.[1];if(!kind){res.writeHead(404).end();return;}try{res.setHeader('content-type','application/json');res.end(await readFile(`apps/web/public/circuits/${kind}.json`));}catch{res.writeHead(500).end();}});
+const server=createServer(async(req,res)=>{const kind=req.url?.match(/^\/circuits\/(shield|create_distribution|claim|withdraw|withdraw_partial)\.json$/)?.[1];if(!kind){res.writeHead(404).end();return;}try{res.setHeader('content-type','application/json');res.end(await readFile(`apps/web/public/circuits/${kind}.json`));}catch{res.writeHead(500).end();}});
 await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
 const artifactBaseUrl=`http://127.0.0.1:${(server.address() as any).port}`;
 const context={chainId:11155111n,poolAddress:manifest.contracts.nullPool};
@@ -70,6 +73,8 @@ const priorKeys=state.recipientKeys as {spend:`0x${string}`;view:`0x${string}`}|
 const keys={spendPrivateKey:fromHex(priorKeys?.spend??generatePrivateKey()),viewPrivateKey:fromHex(priorKeys?.view??generatePrivateKey())};
 state.signer=signer;state.policy=policy;state.recipientKeys={spend:toHex(keys.spendPrivateKey),view:toHex(keys.viewPrivateKey)};await save();
 const evidence:{steps:unknown[];[key:string]:unknown}=resumeRefund?JSON.parse(await readFile(publicPath,'utf8')):{...plan,startedAt:new Date().toISOString(),steps:[],completed:false};
+evidence.maxGasBudgetWei=budget.toString();
+if(resumeRefund)evidence.resumeScope='Reconciled all saved transactions before resuming only the treasury refund; combined deployment and rehearsal cap unchanged.';
 const initialTokens=BigInt(evidence.testUsdcAtomicAvailable as string);
 const live=new NullLiveClient({manifest,rpcUrls:['https://ethereum-sepolia-rpc.publicnode.com'],artifactBaseUrl,confirmations:3,receiptTimeoutMs:180000,maxGas:10_000_000n,persistLocalSecret:async cp=>{state.checkpoints.push(cp);await save();}});
 const progress={onProgress:(stage:string)=>console.log(stage),onTransactionSubmitted:async(tx:unknown)=>{evidence.steps.push(tx);await writeFile(publicPath,JSON.stringify(evidence,null,2));}};
@@ -89,10 +94,24 @@ try {
  await live.submit(claim,{mode:'wallet',wallet:wallet as any},progress);
  const restoredNotes=await live.recoverPrivateNotes({keys});
  assert.equal(restoredNotes.length,1);assert.equal(restoredNotes[0].amountAtomic,60_000n);
+ if(partial){
+   const chosen=await live.prepareWithdrawal({note:restoredNotes[0],recipient:account.address,amountAtomic:25_000n,acknowledgePublicWithdrawal:true,...progress});
+   assert.equal(chosen.publicOperation.method,'withdrawPartial');
+   const before=await rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]});
+   const result=await live.submit(chosen,{mode:'wallet',wallet:wallet as any},progress);
+   assert.equal(result.withdrawal?.amountAtomic,25_000n);assert.equal(result.note.amountAtomic,35_000n);
+   assert.equal(await rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]}),before+25_000n);
+   const remainder=await live.recoverPrivateNotes({keys,checkpoints:state.checkpoints});
+   assert.equal(remainder.length,1);assert.equal(remainder[0].amountAtomic,35_000n);
+   assert.equal((await live.reconcile(chosen)).status,'confirmed');
+   await assert.rejects(()=>live.submit(chosen,{mode:'wallet',wallet:wallet as any}));
+   restoredNotes[0]=remainder[0];
+   evidence.partialWithdrawal={transactionHash:result.transactionHash,withdrawnAtomic:'25000',privateChangeAtomic:'35000',recovered:true};
+ }
  const withdrawal=await live.prepareWithdrawal({note:restoredNotes[0],recipient:account.address,acknowledgePublicWithdrawal:true,...progress});
  const recipientBefore=await rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]});
  await live.submit(withdrawal,{mode:'wallet',wallet:wallet as any},progress);
- assert.equal(await rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]}),recipientBefore+60_000n);
+ assert.equal(await rpc.readContract({address:manifest.asset.address,abi:tokenAbi,functionName:'balanceOf',args:[account.address]}),recipientBefore+(partial?35_000n:60_000n));
  assert.equal((await live.recoverPrivateNotes({keys})).length,0);
  assert.equal((await live.reconcile(withdrawal,undefined)).status,'confirmed');
  await assert.rejects(()=>live.submit(withdrawal,{mode:'wallet',wallet:wallet as any}));
@@ -109,6 +128,7 @@ try {
  for(const tx of state.signedTransactions){const receipt=await rpc.getTransactionReceipt({hash:tx.hash as `0x${string}`});assert.equal(receipt.status,'success');totalGas+=receipt.gasUsed*receipt.effectiveGasPrice;receipts.push({hash:tx.hash,blockNumber:Number(receipt.blockNumber),gasUsed:receipt.gasUsed.toString(),effectiveGasPrice:receipt.effectiveGasPrice.toString()});}
  assert.ok(totalGas<=budget);evidence.gasSpentWei=totalGas.toString();evidence.receipts=receipts;
  evidence.checks=['0.1 test USDC deposited','0.06 privately allocated and claimed','original recipient keys recover the claimed note','0.06 withdrawn exactly','spent note excluded from recovery','missing transaction hash reconciled from public history','duplicate withdrawal rejected','0.04 refunded with treasury signature','full 0.1 token balance restored; pool empty'];
+ if(partial)evidence.checks.push('0.025 chosen withdrawal with exact 0.035 private change','private remainder recovered from saved checkpoints','remaining 0.035 withdrawn exactly');
  evidence.privacyScope='Functional test using an isolated signer and one funded broadcaster. Public entry and exit are visible; this is not a Privy owner approval or an anonymity claim.';
  const encrypted=JSON.parse(await readFile(path,'utf8'));const decipher=createDecipheriv('aes-256-gcm',sealKey,Buffer.from(encrypted.nonce,'hex'));decipher.setAAD(Buffer.from('NULL Sepolia withdrawal rehearsal v1'));decipher.setAuthTag(Buffer.from(encrypted.tag,'hex'));const restored=parse(Buffer.concat([decipher.update(Buffer.from(encrypted.ciphertext,'hex')),decipher.final()]).toString('utf8'));
  if(restored.checkpoints.filter((cp:SecretCheckpoint)=>cp.phase==='confirmed').length<5)throw Error('Recovery verification failed.');

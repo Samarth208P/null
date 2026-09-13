@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PayoutDraft } from '@null-protocol/payouts';
 import { PayoutClient, type ApprovePayoutOptions } from '@null-protocol/payouts/client';
-import { planWithdrawal, type WithdrawalStep } from '@null-protocol/payouts/withdrawals';
+import { type WithdrawalStep } from '@null-protocol/payouts/withdrawals';
 import { useAuthorizationSignature, usePrivy, useWallets } from '@privy-io/react-auth';
 import { createWalletClient, custom, getAddress, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { publicKeyToAddress } from 'viem/accounts';
@@ -13,7 +13,7 @@ import {
 } from '@null-protocol/client';
 import { authorizeOrganizationDistribution, identifyOrganizationSigner, type AuthorizationRequest } from '@null-protocol/auth';
 import {
-  NullError, parseAmount, authPolicyCommitment, fromHex, secp256k1, toHex, deriveField, randomBytes, utf8,
+  NullError, parseAmount, noteNullifier, authPolicyCommitment, fromHex, secp256k1, toHex, deriveField, randomBytes, utf8,
   type AuthPolicyOpening, type CompiledDistribution, type DiscoveredAllocation,
 } from '@null-protocol/sdk';
 import { config } from '../lib/config';
@@ -30,6 +30,12 @@ import { useEnsIdentities } from '../lib/use-ens-identity';
 import { ensIdentityLabel, ensIdentityOption, recheckEnsAddress, type EnsAddress } from '../lib/ens-identity';
 import { EnsIdentity } from './EnsIdentity';
 import { EnsAddressInput } from './EnsAddressInput';
+import { PaymentProgress } from './PaymentProgress';
+import { paymentCompletionDetail } from '../lib/payment-progress';
+import { useWorkspaceAccess } from './EnsAccessGate';
+import { withdrawalAmountState } from '../lib/withdrawal-amount';
+import { WithdrawalAmountField } from './WithdrawalAmountField';
+import { organizationEndpoint as organizationUrl } from '../lib/organization-endpoint';
 
 export type LiveOperationRequest = { kind: 'withdraw'; treasury: boolean } | { kind: 'shield'; amountAtomic: bigint } |
   { kind: 'claim'; allocation: DiscoveredAllocation } |
@@ -53,14 +59,11 @@ const stageCopy: Record<OperationStage, string> = {
   deployment: 'Checking the connection…', history: 'Checking your balance and payment history…',
   authorization: 'Waiting for organization approval…', 'saving-recovery': 'Saving your encrypted funds backup…',
   loading: 'Getting ready…', witness: 'Preparing payment details…',
-  proving: 'Preparing your payment securely…', complete: 'Ready for your review. Nothing has been sent.',
+  proving: 'Preparing your payment securely…', complete: 'Preparation complete.',
   approval: 'Approve access to this amount in your wallet…', simulating: 'Checking that this payment can go through…',
   submitting: 'Sending your request…', confirming: 'Waiting for confirmation…',
   confirmed: 'Confirmed on the test network.',
 };
-const configuredOrganizationUrl = import.meta.env.VITE_ORGANIZATION_URL as string | undefined;
-// Production uses the colocated Netlify API when a local development URL is saved.
-const organizationUrl = import.meta.env.PROD && (!configuredOrganizationUrl || /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(configuredOrganizationUrl)) ? window.location.origin : configuredOrganizationUrl;
 
 function chainDefinition(id: number) {
   return { id, name: id === 11155111 ? 'Sepolia' : 'Local development', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [config.rpcUrl] } } };
@@ -158,6 +161,8 @@ function errorCopy(reason: unknown): string {
 function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfirmed, bridge }: LiveOperationProps & { bridge: WalletBridge }) {
   const workspaceStore = useStore();
   const account = useAccount();
+  const access = useWorkspaceAccess();
+  useEffect(() => { access.setOperationOpen(true); return () => access.setOperationOpen(false); }, [access.setOperationOpen]);
   const [privateNotes, setPrivateNotes] = useState<OwnedPrivateNote[]>([]);
   const [withdrawalNoteId, setWithdrawalNoteId] = useState('');
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
@@ -218,9 +223,10 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   const treasuryOperation = operation.kind === 'shield' || operation.kind === 'create_distribution' || operation.kind === 'withdraw' && operation.treasury;
   const withdrawalNotes = treasuryOperation ? notes : privateNotes;
   const balanceWithdrawal = operation.kind === 'withdraw' && !operation.treasury && !!manifest?.security.partialWithdrawalsImplemented;
+  const withdrawalPreview = useMemo(() => withdrawalAmountState(privateNotes, withdrawalAmount), [privateNotes, withdrawalAmount]);
   const withdrawalNote = balanceWithdrawal ? privateNotes[0] : withdrawalNotes.find(note => note.commitment === withdrawalNoteId);
   const amountAtomic = operation.kind === 'shield' ? operation.amountAtomic : operation.kind === 'claim'
-    ? operation.allocation.amountAtomic : operation.kind === 'withdraw' ? withdrawalAmount ? displayAmount(withdrawalAmount) : balanceWithdrawal ? privateNotes.reduce((sum, note) => sum + note.amountAtomic, 0n) : withdrawalNote?.amountAtomic ?? 0n : operation.batches?.reduce((total, batch) => total + batch.draft.summary.totalAmountAtomic, 0n) ?? operation.compiled.totalAmount;
+    ? operation.allocation.amountAtomic : operation.kind === 'withdraw' ? balanceWithdrawal ? withdrawalPreview.amount : withdrawalAmount ? displayAmount(withdrawalAmount) : withdrawalNote?.amountAtomic ?? 0n : operation.batches?.reduce((total, batch) => total + batch.draft.summary.totalAmountAtomic, 0n) ?? operation.compiled.totalAmount;
   const proofOptions = () => ({ signal: controller.current?.signal, onProgress: setStage,
     onTransactionSubmitted: ({ hash, purpose }: { hash: Hex; purpose: string }) => {
       if (purpose === 'register-policy') setPolicyTransaction(hash);
@@ -233,9 +239,9 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     const abort = new AbortController();
     setManifestError('');
     let url: URL;
-    try { url = new URL(import.meta.env.VITE_DEPLOYMENT_MANIFEST_URL || '/deployment.json', window.location.origin); }
+    try { url = new URL(config.manifestUrl, window.location.origin); }
     catch { setManifestError('The test network setup is incomplete. Ask your administrator to check it.'); return () => abort.abort(); }
-    void fetch(url, { signal: abort.signal, credentials: 'omit', redirect: 'error' }).then(async response => {
+    void fetch(url, { signal: abort.signal, credentials: 'omit', redirect: 'error', cache: 'no-store' }).then(async response => {
       if (!response.ok) throw new Error('manifest');
       const value = await response.json() as DeploymentManifest;
       validateDeploymentManifest(value);
@@ -331,9 +337,11 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   }
   async function exportRecovery() {
     if (!vault) return;
+    setStage('saving-recovery');
     download('null-encrypted-live-recovery.json', await vault.exportEncrypted());
     if (policy) setPolicyBackup(authPolicyCommitment(policy));
     if (prepared) setBackupSaved(true);
+    setStage(prepared ? 'complete' : undefined);
   }
   async function registerPolicy() {
     if (!client || !vault || !policy) return;
@@ -349,6 +357,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
         throw reason;
       }
     }
+    await access.verify(policyAddress);
     const connected = await connect();
     const activated = await client.registerPolicy({ opening: policy, wallet: connected, persistLocalPolicy: vault.persistLocalPolicy, ...proofOptions() });
     setActivatedPolicy(activated.policyCommitment);
@@ -370,6 +379,13 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     } catch { setReceiptError('The transaction is confirmed, but its shareable receipt could not be prepared. Keep the explorer link.'); }
   }
   async function refreshConfirmedFunds(result: ConfirmedOperation) {
+    if (operation.kind === 'withdraw' && !operation.treasury && result.withdrawal) {
+      const source = [...privateNotes, ...withdrawalSteps.current.map(step => step.note)].find(note => noteNullifier(note.commitment, note.ownerNullifierKey) === result.withdrawal!.nullifier);
+      if (source) {
+        const change = result.note.commitment !== source.commitment && 'claimNullifier' in result.note ? result.note : undefined;
+        workspaceStore.recordPrivateWithdrawal(source.commitment, change ? { id: change.commitment, commitment: change.commitment, amount: change.amountAtomic, allocationId: change.claimNullifier, createdAt: new Date().toISOString() } : undefined);
+      }
+    }
     const label = operation.kind === 'shield' ? 'Funds added' : operation.kind === 'create_distribution' ? 'Payment sent' : operation.kind === 'claim' ? 'Payment collected' : 'Withdrawal confirmed';
     workspaceStore.recordLiveActivity(result.transactionHash, label, operation.kind === 'shield' || operation.kind === 'withdraw' && operation.treasury ? 'shield' : operation.kind === 'create_distribution' ? 'distribution' : 'claim');
     if (!treasuryOperation || !vault || !client) return;
@@ -383,6 +399,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   }
   async function prepare() {
     if (!client) return;
+    await access.verify(treasuryOperation ? policyAddress : undefined);
     approvalSource.current = 'not-required';
     if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     let result: PreparedOperation;
@@ -392,7 +409,10 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     } else if (operation.kind === 'withdraw') {
       if (!withdrawalNote || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Select a note and acknowledge the public withdrawal.');
       if (recipientName) await recheckEnsAddress(ensClient, recipientName);
-      if (balanceWithdrawal && !withdrawalSteps.current.length) withdrawalSteps.current = planWithdrawal(privateNotes, withdrawalAmount ? parseAmount(withdrawalAmount) : amountAtomic);
+      if (balanceWithdrawal && !withdrawalSteps.current.length) {
+        if (withdrawalPreview.error) throw new NullError('NULL_AMOUNT_INVALID', withdrawalPreview.error);
+        withdrawalSteps.current = withdrawalPreview.steps;
+      }
       const step = withdrawalSteps.current[batchReceipts.current.length];
       result = await client.prepareWithdrawal({note:step?.note ?? withdrawalNote,recipient:getAddress(recipient.trim()),...(step ? {amountAtomic:step.amountAtomic} : withdrawalAmount ? {amountAtomic:parseAmount(withdrawalAmount)} : {}),acknowledgePublicWithdrawal:true,...proofOptions(),...(operation.treasury ? {authPolicy:policy,authorize:async (intent: Parameters<NonNullable<WithdrawalOptions['authorize']>>[0]) => {setManualIntent(intent);return new Promise<Hex>((resolve,reject)=>{pendingApproval.current={resolve,reject};});}} : {})});
     } else if (operation.kind === 'claim') {
@@ -410,13 +430,15 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
         },
       });
     }
-    rememberPrepared(result); setBackupSaved(false); setStage('complete');
+    await access.verify(treasuryOperation ? policyAddress : undefined);
+    rememberPrepared(result); setBackupSaved(false); setTransactionHash(undefined); setStage('complete');
   }
   async function approveWithOrganization() {
     if (!manualIntent || !policy || !bridge.authorize || approvalInFlight.current) return;
     approvalInFlight.current = true;
     setError(''); setApprovalBusy(true);
     try {
+      await access.verify(policyAddress);
       if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
       const signed = await bridge.authorize(manualIntent, policy);
       approvalSource.current = 'privy-owner';
@@ -429,6 +451,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     if (!/^0x[0-9a-fA-F]{128}$/.test(signature.trim())) { setError('This approval code could not be read. Copy the full code from your organization’s signing tool; it starts with 0x.'); return; }
     approvalInFlight.current = true; setApprovalBusy(true);
     try {
+      await access.verify(policyAddress);
       if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
       approvalSource.current = 'imported';
       pendingApproval.current?.resolve(signature.trim() as Hex); pendingApproval.current = undefined;
@@ -443,6 +466,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   }
   async function submit() {
     if (!prepared || !client || !backupSaved || uncertain) return;
+    await access.verify(treasuryOperation ? policyAddress : undefined);
     if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     setTransactionHash(undefined); setReconciliation('');
     try {
@@ -459,7 +483,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
         if (batchReceipts.current.length < withdrawalSteps.current.length) {
           const step = withdrawalSteps.current[batchReceipts.current.length];
           const next = await client.prepareWithdrawal({ ...step, recipient: getAddress(recipient.trim()), acknowledgePublicWithdrawal: true, ...proofOptions() });
-          approvalSource.current = 'not-required'; rememberPrepared(next); setBackupSaved(false);
+          approvalSource.current = 'not-required'; rememberPrepared(next); setBackupSaved(false); setTransactionHash(undefined);
           setStage('complete');
           setReconciliation('Save the updated funds backup, then confirm the next transfer. The completed transfer will not be repeated.');
           return;
@@ -475,7 +499,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
           const next = await payouts!.approve(batch.draft, { compilation: batch.compilation, treasuryNotes: available.slice(0, 2), authPolicy: policy!, ...proofOptions(),
             authorize: async intent => { setManualIntent(intent); return new Promise<Hex>((resolve, reject) => { pendingApproval.current = { resolve, reject }; }); },
           });
-          rememberPrepared(next); setBackupSaved(false);
+          rememberPrepared(next); setBackupSaved(false); setTransactionHash(undefined);
           setStage('complete');
           setReconciliation('Save the updated funds backup, then confirm the next batch. Completed batches will not be repeated.');
           return;
@@ -524,49 +548,56 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     }
   }
 
-  const title = operation.kind === 'shield' ? 'Add funds' : operation.kind === 'claim' ? 'Collect payment' : operation.kind === 'withdraw' ? 'Withdraw funds' : 'Send payment';
-  return <Modal title={title} description="Review the details before you confirm." open={open} onClose={close} wide>
+  const title = operation.kind === 'shield' ? 'Add funds' : operation.kind === 'claim' ? 'Collect payment' : operation.kind === 'withdraw' ? 'Withdraw funds' : 'Send private payment';
+  const paymentRecipients = operation.kind === 'create_distribution' ? (operation.batches ?? [{ draft: operation.draft }]).flatMap(batch => batch.draft.paymentNames.map((row, index) => ({ name: row.name, amount: workspaceStore.hideBalances ? '••••' : money(BigInt(batch.draft.creInput.recipients[index].amountAtomic), true) }))) : undefined;
+  const senderName = walletIdentities.get(wallet?.account?.address ?? selectedWallet);
+  const gasWalletName = senderName.status === 'verified' ? senderName.name : undefined;
+  const fromName = operation.kind === 'claim' ? 'Private payment' : operation.kind === 'shield' ? gasWalletName ?? 'Choose your funding wallet' : access.linked.name;
+  const toName = operation.kind === 'create_distribution' ? paymentRecipients?.length === 1 ? paymentRecipients[0].name : `${paymentRecipients?.length ?? operation.paymentNames.length} ENS recipients` : operation.kind === 'withdraw' ? recipientName?.name ?? (recipient ? short(recipient) : 'Choose a receiving wallet') : access.linked.name;
+  return <Modal title={title} open={open} onClose={close} wide className="payment-modal">
+    <PaymentProgress kind={operation.kind} amount={workspaceStore.hideBalances ? '••••••' : money(amountAtomic, true)} from={fromName} to={toName} recipients={paymentRecipients} gasWallet={gasWalletName}
+      cre={operation.kind === 'create_distribution' && operation.compilation.mode === 'cre-local-simulation'} batch={operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1 ? `Batch ${batchProgress + 1} of ${operation.batches.length}` : undefined}
+      state={{ unlocked: !!client, prepared: !!prepared, backupSaved, confirmed: !!confirmed, busy, approvalNeeded: !!manualIntent, uncertain, submitted: !!transactionHash, stage, transport }} />
     {operation.kind === 'create_distribution' && operation.batches && operation.batches.length > 1 && <Notice>{batchProgress} of {operation.batches.length} private batches confirmed. Your wallet may request an approval for each batch. Completed batches are not rolled back if a later batch fails.</Notice>}
-    {operation.kind === 'withdraw' && !withdrawalNote ? <p className="field-hint">Your withdrawal amount will appear after you unlock your funds and choose a note.</p> : <div className="claim-amount">{money(amountAtomic, true)}<span>USDC</span></div>}
+    {operation.kind === 'withdraw' && !client && <p className="field-hint">Unlock your funds to check the available balance and choose how much to withdraw.</p>}
     {manifestError ? <Notice tone="warning">{manifestError}<p>Nothing has been sent.</p></Notice>
       : !manifest ? <p className="processing-status" role="status">Checking the connection…</p>
       : <>
-        <div className="detail-list"><KeyValue label="Mode"><Badge tone="warning">Test network</Badge></KeyValue></div>
         {operation.kind === 'shield' && <Notice tone="warning">Your wallet and the amount you add are public. Adding funds close to payment time may help others link them. Use test funds only.</Notice>}
-        {operation.kind !== 'shield' && <Notice>Test USDC only. Your network provider can see when you connect.</Notice>}
         {!client ? <>
           <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>First time? Choose a password with at least 12 characters. Returning? Use your existing funds backup password. Only your encrypted backup is saved in this browser.</small></label>
           <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
-          {!confirmed && <>
+          {!confirmed && !busy && !manualIntent && <details className="payment-wallet-options" open={!prepared}>
+            <summary>{wallet?.account ? 'Sending wallet and network fee' : 'Choose your sending wallet'}</summary>
             {!!bridge.walletChoices && bridge.walletChoices.length > 1 && <label className="field">Sending wallet<select value={selectedWallet} disabled={busy || uncertain} onChange={event => { setSelectedWallet(event.target.value); setWallet(undefined); setError(''); }}><option value="">Choose your funded wallet</option>{bridge.walletChoices.map((choice, index) => <option key={choice.address} value={choice.address}>{ensIdentityOption(walletIdentities.get(choice.address), `${choice.label} wallet ${index + 1}`)}</option>)}</select><small>{operation.kind === 'shield' ? 'Choose the wallet holding your test USDC and Sepolia ETH. Organization approval uses its separate signer.' : 'This wallet pays the Sepolia gas fee. Its address will be public.'}</small></label>}
             <div className="button-row"><Button variant="secondary" disabled={busy || uncertain} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? 'Change sending wallet' : 'Connect wallet'}</Button>{!prepared && <Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button>}</div>
             {wallet?.account && <KeyValue label="Connected sending wallet"><EnsIdentity address={wallet.account.address} hints={identityHints} fallback="Sending wallet" /></KeyValue>}
             {selectedWallet && !wallet?.account && <KeyValue label="Selected sending wallet"><EnsIdentity address={selectedWallet} hints={identityHints} fallback="Sending wallet" /></KeyValue>}
-          </>}
-          {!prepared && <>
+          </details>}
+          {!prepared && !busy && !manualIntent && <>
             <input ref={recoveryFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importRecovery(file)); }} />
             {treasuryOperation && <>
-              {(!policy || operation.kind === 'create_distribution' && selectedNotes.length === 0) && <p className="field-hint">Complete Organization setup to {policy ? 'choose which available funds to use.' : 'add your organization’s setup file before continuing.'}</p>}
               <section className="section-block" aria-label="Organization setup">
-              <h3>Organization setup</h3>
+              <details className="payment-organization-settings" open={!policy}><summary>{policy ? 'Organization setup and recovery' : 'Set up your organization'}</summary>
               <p className="field-hint">Connect your Privy organization, save its encrypted backup, then activate it on Sepolia. If this organization already exists, restore its funds backup first.</p>
               {policies.length > 0 && <label className="field">Organization identity<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); setActivatedPolicy(''); setPolicyTransaction(undefined); }}>{policies.map((item, index) => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>{ensIdentityLabel(organizationIdentities.get(policyAddresses[index]), 'Organization')} · Setup {index + 1}</option>; })}</select></label>}
               {policyAddress && <><KeyValue label="Organization signer"><EnsIdentity address={policyAddress} hints={identityHints} fallback="Organization" /></KeyValue><p className="field-hint"><a href="#/settings" onClick={event => { if (busy || uncertain) event.preventDefault(); else close(); }}>Manage organization ENS name</a></p><details className="progressive-details"><summary>Setup details</summary><span className="code-with-copy"><code>{selectedPolicy}</code><CopyButton value={selectedPolicy} /></span></details></>}
               {bridge.organizationKey && <p className="field-hint">Privy asks your organization owner to approve an identity-only signature. This identifies the signer and moves no funds.</p>}<div className="button-row">{bridge.organizationKey && <Button variant="secondary" disabled={busy} icon={ShieldCheck} onClick={() => void work(useOrganization)}>Use Privy organization</Button>}<Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import setup file</Button><Button variant="secondary" disabled={busy || !policy} icon={Download} onClick={() => void work(exportRecovery)}>Save organization backup</Button><Button variant="ghost" disabled={busy || !policy || policyBackup !== selectedPolicy || activatedPolicy === selectedPolicy} onClick={() => void work(registerPolicy)}>{policyTransaction ? 'Check activation' : 'Activate organization setup'}</Button></div>
               <input ref={policyFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importPolicy(file)); }} />
+              {policy && <p className="field-hint" role="status">{activatedPolicy === selectedPolicy ? 'Organization setup is active on Sepolia.' : policyBackup === selectedPolicy ? 'Backup exported. Keep it safe before activating a new setup.' : 'Keep an encrypted copy of this organization setup.'}</p>}
+              {policyTransaction && <p className="field-hint"><ExternalLink href={`https://sepolia.etherscan.io/tx/${policyTransaction}`}>View organization activation</ExternalLink></p>}
+              </details>
               {operation.kind === 'create_distribution' && <>
+                <h3>Available funds</h3>
                 <p className="field-hint">Choose one or two available balances to cover this payment. Any money left over stays in your funds.</p>
                 {notes.filter(note => note.policyCommitment === selectedPolicy).length === 0 && <Notice tone="warning">No available funds were found for this organization. Restore its encrypted funds backup or add test funds first.</Notice>}
                 {notes.filter(note => note.policyCommitment === selectedPolicy).map(note => <label className="checkbox-field" key={note.commitment}><input type="checkbox" checked={selectedNotes.includes(note.commitment)} disabled={busy || (!selectedNotes.includes(note.commitment) && selectedNotes.length >= 2)} onChange={event => setSelectedNotes(values => event.target.checked ? [...values, note.commitment] : values.filter(value => value !== note.commitment))} /><span>{money(note.amountAtomic, true)} USDC · <code>{short(note.commitment, 5)}</code></span></label>)}
               </>}
-              {policy && <p className="field-hint" role="status">{activatedPolicy === selectedPolicy ? 'Organization setup is active on Sepolia.' : policyBackup === selectedPolicy ? 'Backup downloaded. Activate this setup or check its existing activation.' : 'Download the encrypted organization backup before activation.'}</p>}
-              {policyTransaction && <p className="field-hint"><ExternalLink href={`https://sepolia.etherscan.io/tx/${policyTransaction}`}>View organization activation</ExternalLink></p>}
             </section></>}
             {operation.kind === 'withdraw' && <div className="section-block">
-              {balanceWithdrawal ? <KeyValue label="Available private balance">{money(privateNotes.reduce((sum, note) => sum + note.amountAtomic, 0n), true)} USDC</KeyValue> : <label className="field">Funds to withdraw<select value={withdrawalNoteId} disabled={busy || !!prepared} onChange={event => {setWithdrawalNoteId(event.target.value); setWithdrawalAmount(''); const chosen=withdrawalNotes.find(note=>note.commitment===event.target.value);if(chosen && 'policyCommitment' in chosen)setSelectedPolicy(chosen.policyCommitment);}}><option value="">Choose a note</option>{withdrawalNotes.map((note,index)=><option key={note.commitment} value={note.commitment}>{money(note.amountAtomic,true)} USDC · Note {index+1}</option>)}</select><small>This deployed pool supports full-note withdrawals. Partial recipient withdrawals require the v0.3 pool.</small></label>}
-              {balanceWithdrawal && <label className="field">Amount to withdraw<input value={withdrawalAmount} disabled={busy || !!prepared || batchProgress > 0} inputMode="decimal" placeholder="Leave empty to withdraw the available balance" onChange={event => { withdrawalSteps.current = []; setWithdrawalAmount(event.target.value); }} /><small>The remainder stays private. Several received notes may need several public transfers. Save an updated funds backup for the remainder.</small></label>}
-              {balanceWithdrawal && withdrawalSteps.current.length > 1 && <Notice>{batchProgress} of {withdrawalSteps.current.length} transfers confirmed. Your wallet may ask for each transfer. This withdrawal is not atomic.</Notice>}
+              {!balanceWithdrawal && <label className="field">Funds to withdraw<select value={withdrawalNoteId} disabled={busy || !!prepared} onChange={event => {setWithdrawalNoteId(event.target.value); setWithdrawalAmount(''); const chosen=withdrawalNotes.find(note=>note.commitment===event.target.value);if(chosen && 'policyCommitment' in chosen)setSelectedPolicy(chosen.policyCommitment);}}><option value="">Choose a note</option>{withdrawalNotes.map((note,index)=><option key={note.commitment} value={note.commitment}>{money(note.amountAtomic,true)} USDC · Note {index+1}</option>)}</select><small>This deployed pool supports full-note withdrawals. Partial recipient withdrawals require the v0.3 pool.</small></label>}
+              {balanceWithdrawal && <WithdrawalAmountField value={withdrawalAmount} state={withdrawalPreview} hidden={workspaceStore.hideBalances} disabled={busy || !!prepared || batchProgress > 0} onChange={value => { withdrawalSteps.current = []; setWithdrawalAmount(value); }} />}
               {!withdrawalNotes.length && <Notice>No available notes. Restore your Payment ID or funds backup first.</Notice>}
               <EnsAddressInput label="Receiving wallet" allowAddress disabled={busy || !!prepared || batchProgress > 0} onChange={(address, name) => { setRecipient(address); setRecipientName(name); setAcknowledged(false); }} />
               <Notice tone="warning">The receiving address and amount become public. A known address, timing or wallet used to pay gas can link your activity. A relayer hides your gas-paying wallet, not this public exit.</Notice>
@@ -580,12 +611,12 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
             {!bridge.authorize && <p className="field-hint">Open Advanced approval to download a request for your administrator, then paste the approval they provide.</p>}
             <details><summary>Advanced approval</summary><p className="field-hint">Use an approval from your organization’s signing tool for this payment only.</p><KeyValue label="Approval reference"><span className="code-with-copy"><code>{short(manualIntent.digest)}</code><CopyButton value={manualIntent.digest} /></span></KeyValue><label className="field">Approval code<input value={signature} disabled={approvalBusy} onChange={event => setSignature(event.target.value)} spellCheck={false} autoComplete="off" placeholder="Paste the full approval code, starting with 0x" /><small>The signing tool must return a 64-byte compact signature for the raw approval digest.</small></label><div className="button-row"><Button variant="secondary" icon={Download} onClick={() => download('null-public-approval-intent.json', JSON.stringify({ digest: manualIntent.digest, publicInputs: manualIntent.publicInputs }, null, 2))}>Download approval request</Button><Button disabled={approvalBusy} onClick={importSignature}>Use this approval</Button></div></details>
           </div>}
-          {prepared && !confirmed && <div className="section-block">
-            <h3>Save funds backup before confirming</h3>{operation.kind === 'withdraw' && prepared && <KeyValue label="Receiving wallet"><EnsIdentity address={`0x${BigInt(prepared.publicOperation.publicInputs[6]!).toString(16).padStart(40,'0')}`} hints={recipientName ? [recipientName.name] : []} fallback="Receiving wallet" /></KeyValue>}<div className="detail-list"><KeyValue label="Action">{title}</KeyValue><KeyValue label="Funds backup"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
+          {prepared && !confirmed && !busy && <div className="section-block payment-backup-step">
+            <h3>Save funds backup before confirming</h3>{operation.kind === 'withdraw' && prepared && <KeyValue label="Receiving wallet"><EnsIdentity address={`0x${BigInt(prepared.publicOperation.publicInputs[6]!).toString(16).padStart(40,'0')}`} hints={recipientName ? [recipientName.name] : []} fallback="Receiving wallet" /></KeyValue>}<div className="detail-list"><KeyValue label="Action">{title}</KeyValue>{operation.kind === 'withdraw' && <KeyValue label="This transfer">{workspaceStore.hideBalances ? '••••••' : money(BigInt(prepared.publicOperation.publicInputs[7]), true)} USDC</KeyValue>}{prepared.publicOperation.method === 'withdrawPartial' && <KeyValue label="Private change from this payment">{workspaceStore.hideBalances ? '••••••' : money(prepared.recovery.amountAtomic, true)} USDC</KeyValue>}<KeyValue label="Funds backup"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
             <Button variant="secondary" icon={Download} disabled={busy} onClick={() => void work(exportRecovery)}>Download funds backup</Button><p className="field-hint">This file is encrypted. Keep it and your password in separate safe places. You need them to recover your funds on another device.</p>
             <label className="field">Send through<select value={transport} disabled={busy || uncertain} onChange={event => setTransport(event.target.value as 'relay' | 'wallet')}><option value="wallet">My connected wallet</option>{config.relayerUrl && operation.kind !== 'shield' && <option value="relay">Payment sending service</option>}</select><small>{transport === 'wallet' ? 'Your sending wallet and the time you send are public.' : 'The service can see this request and when you send it. It cannot change who receives the payment.'}</small></label>
           </div>}
-          {confirmed && <Notice tone={confirmed.localRecoverySaved ? 'success' : 'warning'} icon={Check}><strong>{operation.kind === 'shield' ? 'Funds added on the test network.' : operation.kind === 'claim' ? 'Payment collected on the test network.' : operation.kind === 'withdraw' ? 'Withdrawal confirmed on the test network.' : 'Payment sent on the test network.'}</strong><p>{confirmed.withdrawal ? 'Tokens arrived at the reviewed receiving address.' : confirmed.localRecoverySaved ? 'Your encrypted funds backup has been updated with this payment.' : 'The payment succeeded, but the funds backup on this device could not be updated. Keep the file you saved before sending; it can still be used to recover your funds.'}</p><Button variant="ghost" icon={Download} onClick={() => void work(exportRecovery)}>Download funds backup</Button></Notice>}
+          {confirmed && <Notice tone={confirmed.localRecoverySaved ? 'success' : 'warning'} icon={Check}><strong>{operation.kind === 'shield' ? 'Funds added on the test network.' : operation.kind === 'claim' ? 'Payment collected on the test network.' : operation.kind === 'withdraw' ? 'Withdrawal confirmed on the test network.' : 'Payment sent on the test network.'}</strong><p>{!confirmed.localRecoverySaved ? 'The transaction succeeded, but this device could not update its funds backup. Keep the backup saved before sending and restore it before another withdrawal.' : confirmed.withdrawal ? 'Tokens arrived at the reviewed receiving address. Any remainder stays in your private balance; keep the updated funds backup.' : confirmed.localRecoverySaved ? 'Your encrypted funds backup has been updated with this payment.' : 'The payment succeeded, but the funds backup on this device could not be updated. Keep the file you saved before sending; it can still be used to recover your funds.'}</p><Button variant="ghost" icon={Download} onClick={() => void work(exportRecovery)}>Download funds backup</Button></Notice>}
           {publicReceipts.length > 0 && <section className="section-block" aria-label="Confirmed transaction receipts">
             <h3>Transaction receipts</h3>
             <p className="field-hint">Contains confirmed transaction references and public workflow details. It excludes payment names, private amounts, keys and approval signatures. Approval and compilation sources are recorded by this app, not independently attested.</p>
@@ -598,8 +629,8 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
           {transactionHash && <p className="field-hint">{manifest.chainId === 11155111 ? <ExternalLink href={`https://sepolia.etherscan.io/tx/${transactionHash}`}>View submitted transaction</ExternalLink> : <code>{transactionHash}</code>}</p>}
         </>}
       </>}
-    {stage && <p className="processing-status" role="status" aria-live="polite">{stageCopy[stage]}</p>}
+    {stage && <p className="payment-stage-detail">{stage === 'complete' ? paymentCompletionDetail(!!confirmed, batchProgress) : stageCopy[stage]}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="modal-actions"><Button variant="secondary" onClick={close}>{confirmed ? 'Done' : busy ? 'Close' : 'Cancel'}</Button>{client && !prepared && <Button busy={busy} disabled={treasuryOperation && !policy || operation.kind === 'shield' && !acknowledged || operation.kind === 'withdraw' && (!withdrawalNote || !acknowledged || !/^0x[0-9a-fA-F]{40}$/.test(recipient.trim()))} icon={ShieldCheck} onClick={() => void work(prepare)}>Prepare payment</Button>}{prepared && !confirmed && <Button busy={busy} disabled={!backupSaved || uncertain} icon={ShieldCheck} onClick={() => void work(submit)}>{operation.kind === 'shield' ? 'Confirm add funds' : operation.kind === 'claim' ? 'Confirm collection' : operation.kind === 'withdraw' ? 'Confirm withdrawal' : 'Confirm payment'}</Button>}</div>
+    <div className="modal-actions"><Button variant="secondary" disabled={busy && !manualIntent} onClick={close}>{confirmed ? 'Done' : 'Cancel'}</Button>{client && !prepared && !manualIntent && !busy && <Button disabled={treasuryOperation && !policy || operation.kind === 'create_distribution' && !selectedNotes.length || operation.kind === 'shield' && !acknowledged || operation.kind === 'withdraw' && (!withdrawalNote || !acknowledged || balanceWithdrawal && !!withdrawalPreview.error || !/^0x[0-9a-fA-F]{40}$/.test(recipient.trim()))} icon={ShieldCheck} onClick={() => void work(prepare)}>{operation.kind === 'claim' ? 'Prepare collection' : operation.kind === 'withdraw' ? 'Prepare withdrawal' : 'Prepare payment'}</Button>}{prepared && !confirmed && !busy && <Button disabled={!backupSaved || uncertain} icon={ShieldCheck} onClick={() => void work(submit)}>{operation.kind === 'shield' ? 'Confirm add funds' : operation.kind === 'claim' ? 'Confirm collection' : operation.kind === 'withdraw' ? 'Confirm withdrawal' : 'Confirm payment'}</Button>}</div>
   </Modal>;
 }

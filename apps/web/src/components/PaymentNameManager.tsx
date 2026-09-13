@@ -55,7 +55,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const updateRef = useRef<PendingNameUpdate | undefined>(savedUpdate);
   const [name, setName] = useState(() => editablePaymentName(savedUpdate?.name ?? initialName ?? store.receivingName?.name ?? account.profile?.ensName ?? ''));
   const { showSuffix: showNameSuffix, completeName } = paymentNameInput(name);
-  const [checked, setChecked] = useState<Awaited<ReturnType<typeof inspectPaymentName>>>();
+  const [checked, setChecked] = useState<Awaited<ReturnType<typeof inspectPaymentName>> | undefined>(() => store.receivingName ? { ...store.receivingName, value: store.receivingName.profile } : undefined);
   const [linked, setLinked] = useState<PaymentNameSnapshot | undefined>(store.receivingName);
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false);
   const [error, setError] = useState(''), [status, setStatus] = useState('');
@@ -79,6 +79,8 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const ownerConnected = checked && wallets?.some(wallet => wallet.address.toLowerCase() === checked.owner.toLowerCase());
   const permissionIdentities = useEnsIdentities([...new Set([...(wallets ?? []).map(wallet => wallet.address), ...(checked ? [checked.owner] : [])])].map(address => ({ address, hints: checked ? [checked.name] : [] })));
   const setupStep = !checked || !walletAvailable ? 0 : !store.identityBackedUp ? 1 : 2;
+  const restoringExisting = !!checked?.value && checked.value !== store.identity.profile.stealthMetaAddress && !replaceExisting;
+  const checkingSavedName = !!account.profile?.ensName && !checked && !unassignedName && !error;
   useEffect(() => () => { revision.current++; }, []);
   useEffect(() => {
     if (previousIdentity.current === store.identity) return;
@@ -90,7 +92,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   // Discover only names whose current ownership and resolver access are verified.
   // This is read-only: a refresh must never publish a new receiving identity.
   useEffect(() => {
-    if (!walletsReady || !connectedWalletKey || pending) return;
+    if (!walletsReady || !connectedWalletKey || pending || linked) return;
     const key = connectedWalletKey + ':' + store.identity.profile.stealthMetaAddress;
     if (discoveryKey.current === key) return;
     let cancelled = false;
@@ -98,6 +100,9 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       if (cancelled || inFlight.current) return;
       discoveryKey.current = key;
       void run(async version => {
+        // A returning inbox already knows its name. Resolve that first instead
+        // of repeating assignment discovery and the three setup steps.
+        if (account.profile?.ensName) { await lookup(version, account.profile.ensName); return; }
         const names = await findAssigned(version);
         if (version !== revision.current || !names?.length) return;
         const preferred = names.includes(completeName) ? completeName : names.length === 1 ? names[0] : undefined;
@@ -105,7 +110,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       });
     });
     return () => { cancelled = true; };
-  }, [walletsReady, connectedWalletKey, store.identity, pending, busy]);
+  }, [walletsReady, connectedWalletKey, store.identity, pending, busy, linked]);
   async function run(work: (version: number) => Promise<unknown>) {
     if (inFlight.current) return;
     inFlight.current = true; const version = revision.current; setBusy(true); setError(''); setStatus(''); setScope(undefined);
@@ -231,7 +236,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     setWalletsChecked(false); setConsent(false); setStatus(''); setError(''); setHash(undefined);
   }
   return <div className="payment-name-manager">
-    {!linked && !pending && <ol className="inbox-setup-progress" aria-label="Inbox setup progress">
+    {!linked && !pending && !restoringExisting && !checkingSavedName && <ol className="inbox-setup-progress" aria-label="Inbox setup progress">
       {['Choose name', 'Save backup', 'Link name'].map((label, index) => <li key={label} aria-current={index === setupStep ? 'step' : undefined} className={index < setupStep ? 'complete' : ''}>
         <span aria-hidden="true">{index < setupStep ? <Check size={13} /> : index + 1}</span>{label}
       </li>)}
@@ -263,19 +268,19 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
         if (version !== revision.current) return;
         if (fresh.profile !== store.identity.profile.stealthMetaAddress) { setLinked(undefined); store.setReceivingName(undefined); throw new PaymentNameError('changed', 'This name’s Payment ID changed. Link it again before sharing.'); }
         await navigator.clipboard.writeText(fresh.name); setStatus('Payment name copied.');
-      })}>Copy ENS name</Button></> : busy && !chosenWallet ? null : !walletAvailable ? <div className="inbox-setup-action">
+      })}>Copy ENS name</Button></> : restoringExisting ? <div className="inbox-setup-action">
+        <h3>Your name is already linked</h3>
+        <p>Restore your encrypted backup to open your existing inbox. Your name is already set up; no new transaction is needed.</p>
+        <Button onClick={() => onRecovery('restore')}>Restore existing inbox</Button>
+        <p className="setup-restore"><button type="button" className="text-link" disabled={busy} onClick={() => setReplaceExisting(true)}>Use a new Payment ID instead</button></p>
+      </div> : busy && !chosenWallet ? null : !walletAvailable ? <div className="inbox-setup-action">
         <h3>{walletsChecked ? ownerConnected ? 'Payment permission needed' : 'Connect a wallet for this name' : 'Check your connected wallets'}</h3>
         <p>{walletsChecked ? ownerConnected ? 'Your wallet owns this name, but cannot update its Payment ID yet. Ask the resolver administrator to allow this wallet to update the NULL payment record, then check again.' : 'None of your connected wallets can update this name. Connect its owner or an authorized wallet, then check again.' : 'We need to confirm which wallet can update your name before continuing.'}</p>
         <KeyValue label="Name owner"><EnsIdentity address={checked.owner} hints={[checked.name]} fallback="Name owner" /></KeyValue>
         <div className="button-row">{onConnectWallet && <Button onClick={onConnectWallet} disabled={busy}>Connect another wallet</Button>}<Button variant={onConnectWallet ? 'secondary' : 'primary'} busy={busy} onClick={() => void run(lookup)}>Check wallets again</Button></div>
       </div> : <>
         <p className="name-wallet-ready"><Check size={14} />Wallet found. We’ll use it when you confirm.</p>
-        {checked.value && checked.value !== store.identity.profile.stealthMetaAddress && !replaceExisting ? <div className="inbox-setup-action">
-          <h3>Your name is already linked</h3>
-          <p>We found your existing inbox on Sepolia. Restore its encrypted backup to access the same payments after a refresh. No new transaction is needed.</p>
-          <Button onClick={() => onRecovery('restore')}>Restore existing inbox</Button>
-          <p className="setup-restore"><button type="button" className="text-link" disabled={busy} onClick={() => setReplaceExisting(true)}>Use a new Payment ID instead</button></p>
-        </div> : !store.identityBackedUp ? <div className="inbox-setup-action">
+        {!store.identityBackedUp ? <div className="inbox-setup-action">
           <h3>Save your inbox backup</h3>
           <p>This file keeps access to your payments if you change devices. Choose a password and save it once.</p>
           <Button icon={Download} onClick={() => onRecovery('export')}>Save backup and continue</Button>

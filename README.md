@@ -11,7 +11,7 @@ NULL is an embeddable TypeScript toolkit for private payouts on Ethereum. An org
 
 **Release state:** MIT-licensed npm developer preview: [`@samarth208p/null-payouts`](https://www.npmjs.com/package/@samarth208p/null-payouts), version `0.1.0-preview.2`. Install with `npm install @samarth208p/null-payouts@preview`; see the [npm integration guide](docs/NPM_PACKAGE.md). This is a toolkit, not a managed payout service. Lists larger than eight recipients become consecutive padded onchain batches, with separate approvals, receipts and partial progress. The reference app uses the same high-level payout API. Setup, funding and signing consent are still required; the current reference flow is not literally one click from an empty wallet.
 
-**Partial withdrawal status:** the new [v0.3 pool](contracts/src/NullPoolV3.sol), fifth Noir circuit, sponsor callback and private-change recovery passed a [complete local rehearsal with real proofs](docs/PAYOUT_V3_VERIFICATION.md). Recipients can plan an amount across multiple notes. The public Sepolia deployment remains v0.2, with full-note exits. The new version has not been deployed publicly, and existing funds do not automatically migrate.
+**Partial withdrawal status:** the fresh [Sepolia v0.3 pool](deployments/11155111-partial-withdrawals-v3.json) is the sole active reference-app deployment. Individuals choose a positive amount up to their recovered private balance, with six decimal places; the exact remainder stays private. Amounts spanning several notes use sequential transfers. All five verifiers and circuit artifacts are configured. See [verification evidence](docs/PAYOUT_V3_VERIFICATION.md).
 
 **Unaudited testnet prototype.** Deposits and withdrawals expose their wallet, amount and timing. ENS names and their linked public payment profiles are public. The sender knows its payroll. Current Chainlink evidence is **CRE CLI local simulation**, not remote enclave execution or attestation. The configured Privy control is **one owner, threshold one**; a completed owner-approved financial payment remains outstanding. See [privacy boundaries](docs/PRIVACY_GUARANTEES.md).
 
@@ -45,8 +45,8 @@ flowchart LR
 | [ENSv2](docs/ENS_INTEGRATION.md) | Required receiving names; hierarchical subnames, aliases, scoped text permissions, rotation and revocation | [Confirmed setup transactions](deployments/ens-sepolia.json); live reads and negative cases. The Privy recipient's profile publication still needs its owner. |
 | [Privy](services/organization/) | Authentication, embedded wallet, exact organization intent approval, session-bound single-use tickets | Live wallet/quorum checks and rejection of an unsigned request. One owner, threshold one; the full financial action still needs execution. |
 | [Chainlink CRE](services/cre-workflow/) | `handlerInTee`, authenticated private payroll fetch, deterministic envelope compilation | [September 12 successful receipt](deployments/cre-simulation-2026-09-12.json). Local simulation only. |
-| [Noir](circuits/) | Four UltraHonk circuits: shield, distribution, claim, withdrawal | [Recorded full Sepolia rehearsal](deployments/payment-flow-sepolia-v2.json) used genuine proofs and an isolated signer, not Privy owner approval. |
-| [The Graph](subgraph/) | Public event discovery with chain validation and RPC fallback | [Sepolia event subgraph](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.2.0). Substreams packaging is separate from live provider execution. |
+| [Noir](circuits/) | Five UltraHonk circuits: shield, distribution, claim, full and partial withdrawal | [Recorded full Sepolia rehearsal](deployments/payment-flow-sepolia-v3.json) used genuine proofs and an isolated signer, not Privy owner approval. |
+| [The Graph](subgraph/) | Public event discovery with chain validation and RPC fallback | [Sepolia event subgraph](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.3.0). Substreams packaging is separate from live provider execution. |
 
 ## Run locally
 
@@ -78,14 +78,15 @@ Ethereum Sepolia, chain 11155111. The [canonical manifest](apps/web/public/deplo
 
 | Contract | Address |
 | --- | --- |
-| [NullPool](contracts/src/NullPool.sol) | [`0x734da58C285D211e7C0ad904f522c221c982447E`](https://sepolia.etherscan.io/address/0x734da58C285D211e7C0ad904f522c221c982447E) |
-| [NullAuthRegistry](contracts/src/NullAuthRegistry.sol) | [`0x1e63c593467ff8A6C62fE0339Baa337e534cAdf3`](https://sepolia.etherscan.io/address/0x1e63c593467ff8A6C62fE0339Baa337e534cAdf3) |
-| Shield verifier | `0x9ca1b1C3136765416Ae94ABc9A4E1DD85f136BC9` |
-| Distribution verifier | `0xaC3dA21269B41Cbee27EA032511BdD69df878283` |
-| Claim verifier | `0x4b892eae179488B545a7A4d2Dd3f5D8D939E1bE6` |
-| Withdraw verifier | `0x8b165Ea996a77f58Fe0109cce07403dAc73793d9` |
+| [NullPoolV3](contracts/src/NullPoolV3.sol) | [`0x17A41574900ca3120562Ae5616559EceebA74E36`](https://sepolia.etherscan.io/address/0x17A41574900ca3120562Ae5616559EceebA74E36) |
+| [NullAuthRegistry](contracts/src/NullAuthRegistry.sol) | [`0x126ec72460f84f8DDC7A81aCE153982373b92DE9`](https://sepolia.etherscan.io/address/0x126ec72460f84f8DDC7A81aCE153982373b92DE9) |
+| Shield verifier | [`0x3637802C52421Cadb6420d2A529515E3A1bD9aAF`](https://sepolia.etherscan.io/address/0x3637802C52421Cadb6420d2A529515E3A1bD9aAF) |
+| Distribution verifier | [`0x016Cd5EB253e57a507432a24CE71F919DE503040`](https://sepolia.etherscan.io/address/0x016Cd5EB253e57a507432a24CE71F919DE503040) |
+| Claim verifier | [`0x4b1a60aC45E08503Be4660956Cb48E90ac2A9257`](https://sepolia.etherscan.io/address/0x4b1a60aC45E08503Be4660956Cb48E90ac2A9257) |
+| Full withdrawal verifier | [`0xa7605191B82657B3e91cA198cBb0f32ce2503A22`](https://sepolia.etherscan.io/address/0xa7605191B82657B3e91cA198cBb0f32ce2503A22) |
+| Partial withdrawal verifier | [`0x8Ff182757c668973FA243A2BB630dC755Eb6057F`](https://sepolia.etherscan.io/address/0x8Ff182757c668973FA243A2BB630dC755Eb6057F) |
 
-The [payment rehearsal](deployments/payment-flow-sepolia-v2.json) records deposit → distribution → discovery → claim → withdrawal → treasury refund. It returned the 0.1 test USDC used in that rehearsal. Those historical receipts are not evidence of a newly executed Privy payment.
+The [September 13 payment rehearsal](deployments/payment-flow-sepolia-v3.json) records deposit → distribution → discovery → claim → 0.025-USDC withdrawal → recovery and withdrawal of 0.035-USDC private change → 0.04-USDC treasury refund. It returned all 0.1 test USDC and left the pool empty. The isolated signer test does not represent a Privy owner approval.
 
 ## Repository map
 
@@ -98,7 +99,7 @@ The [payment rehearsal](deployments/payment-flow-sepolia-v2.json) records deposi
 | [packages/client](packages/client/) | Chain orchestration, discovery, receipt reconciliation |
 | [packages/auth](packages/auth/), [services/organization](services/organization/) | Privy organization approval and API |
 | [packages/wallet](packages/wallet/), [prover](packages/prover/) | Encrypted recovery and local proving |
-| [contracts](contracts/), [circuits](circuits/) | Four deployed v0.2 circuits, new local v0.3 partial-withdrawal circuit and pool |
+| [contracts](contracts/), [circuits](circuits/) | Five deployed v0.3 circuits and the fresh partial-withdrawal pool |
 | [services/cre-workflow](services/cre-workflow/), [cre-starter](cre-starter/) | Shared payroll compiler and CRE simulator |
 | [subgraph](subgraph/), [substreams/private-payments](substreams/private-payments/) | Event indexing and separate stream module |
 

@@ -1,0 +1,61 @@
+{
+  "releasedAt": "2026-09-13T11:10:39.099Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa6842031cf6b29611956ad",
+  "immutableUrl": "https://6aa6842031cf6b29611956ad--null-protocol.netlify.app",
+  "pool": "0x17A41574900ca3120562Ae5616559EceebA74E36",
+  "protocolVersion": "0.3.0",
+  "manifest": "deployments/11155111-partial-withdrawals-v3.json",
+  "paymentReceipt": "deployments/payment-flow-sepolia-v3.json",
+  "hosting": {
+    "checkedAt": "2026-09-13T11:09:29.845Z",
+    "url": "https://null-protocol.netlify.app",
+    "pool": "0x17A41574900ca3120562Ae5616559EceebA74E36",
+    "version": "0.3.0",
+    "entry": "/assets/index-BtWZF-VP.js",
+    "artifacts": [
+      {
+        "kind": "shield",
+        "bytes": 151650,
+        "sha256": "0x8c96ab11442794364f464463ef5e77b827c06607bf4e5382f383938cc9ea4d9d"
+      },
+      {
+        "kind": "create_distribution",
+        "bytes": 4233256,
+        "sha256": "0xe9b5140c2e50cc3771dbd1af6bafdb9b8638ea28cad685ecbc6e59955f4ecc16"
+      },
+      {
+        "kind": "claim",
+        "bytes": 1332390,
+        "sha256": "0x2c1fa766cb9e64f2fd48e591bc5aad346f50f93f3e87e5e01e529a79447991a9"
+      },
+      {
+        "kind": "withdraw",
+        "bytes": 1971655,
+        "sha256": "0x3cd04a082036d6509add317dd52224bb602ff3399bd18133ba74de2e49ab4d10"
+      },
+      {
+        "kind": "withdraw_partial",
+        "bytes": 1031696,
+        "sha256": "0xe205d9399ad92369db10e8323b39d6b4ebcb96d4b6e6b91767a17cba79498f35"
+      }
+    ],
+    "organizationUnauthenticatedStatus": 401,
+    "scope": "static release, artifact integrity and organization API availability",
+    "passed": true
+  },
+  "validation": {
+    "workspaceTypecheck": true,
+    "productionBuild": true,
+    "submissionTests": 79,
+    "payoutTests": 13,
+    "focusedWithdrawalTests": 8,
+    "realProofLocalFlow": true,
+    "sepoliaPartialWithdrawalAndRecovery": true,
+    "sepoliaPoolEmptyAfterRefund": true,
+    "desktopAndMobileAmountUi": true,
+    "hiddenBalanceReviewFixResolved": true,
+    "productionBrowser": "Existing authenticated session reached the ENS linking screen; organization wallet details loaded; no console errors observed.",
+    "privyOwnerApprovedPayment": false
+  }
+}

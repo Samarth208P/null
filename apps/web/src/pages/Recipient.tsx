@@ -86,7 +86,7 @@ export function PrivateInbox() {
       } else {
         if (!config.poolAddress) throw new Error('The test network is not ready. Open Settings to check the connection.');
         const {NullLiveClient,validateDeploymentManifest} = await import('@null-protocol/client');
-        const response = await fetch(import.meta.env.VITE_DEPLOYMENT_MANIFEST_URL || '/deployment.json', {credentials:'omit',redirect:'error',signal:AbortSignal.timeout(15_000)});
+        const response = await fetch(config.manifestUrl, {credentials:'omit',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15_000)});
         if (!response.ok) throw new Error('Deployment unavailable');
         const manifest = await response.json(); validateDeploymentManifest(manifest);
         if (manifest.chainId !== Number(config.chainId) || manifest.contracts.nullPool.toLowerCase() !== config.poolAddress.toLowerCase()) throw new Error('Deployment mismatch');
@@ -153,7 +153,7 @@ export function PrivateInbox() {
         <div className="modal-actions"><Button variant="secondary" onClick={() => setSelected(null)}>Keep in inbox</Button><Button busy={claiming} icon={LockKeyhole} onClick={() => { if (selected.source === 'local') claim(); else { setLiveOperation({ kind: 'claim', allocation: selected }); setSelected(null); } }}>{selected.source === 'local' ? 'Collect payment' : 'Continue'}</Button></div>
       </>}
     </Modal>
-    <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={result => { if ('claimNullifier' in result.note) store.addNote({ id: crypto.randomUUID(), amount: result.note.amountAtomic, commitment: result.note.commitment, allocationId: result.note.claimNullifier, createdAt: new Date().toISOString() }); store.toast('Payment collected. Confirmed by the test network.'); }} />
+    <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={result => { if ('claimNullifier' in result.note) store.addNote({ id: crypto.randomUUID(), amount: result.note.amountAtomic, commitment: result.note.commitment, allocationId: result.note.claimNullifier, createdAt: new Date().toISOString() }); store.toast('Collected into your private NULL balance. Withdraw to move USDC to your wallet.'); }} />
     <Recovery key={recovery || 'closed'} open={recovery !== null} initialMode={recovery || 'export'} continueSetup={store.mode === 'testnet' && !store.receivingName} onClose={() => setRecovery(null)} />
   </>;
 }
@@ -170,7 +170,7 @@ export function PrivateBalance() {
       <div className="balance-label"><span><LockKeyhole size={18} />Balance</span><Badge tone="purple">{store.mode === 'sandbox' ? 'Practice mode' : 'Test money'}</Badge></div>
       <div className="balance-value">{store.hideBalances ? '••••••' : money(total)}<span>USDC</span></div>
       <p>{store.notes.length} collected payment{store.notes.length !== 1 ? 's' : ''} in this session</p>
-      <p>{store.mode === 'testnet' ? 'Withdraw a collected payment to your wallet.' : 'Practice balances cannot be withdrawn.'}</p>
+      <p>{store.mode === 'testnet' ? 'USDC stays in the pool while it is in your private balance. Withdraw to transfer it to your wallet; the amount and destination become public.' : 'Practice balances cannot be withdrawn.'}</p>
       <div className="button-row">{store.mode === 'testnet' && <Button onClick={() => setWithdraw(true)} icon={ArrowUpRight}>Withdraw</Button>}<Button variant="secondary" onClick={() => store.navigate('inbox')}>Open inbox<ArrowRight size={15} /></Button></div>
     </div>
     <section className="section-block">
@@ -190,6 +190,6 @@ export function PrivateBalance() {
       <div className="button-row"><Button variant="secondary" icon={Download} onClick={() => setRecovery(true)}>Save backup</Button></div>
     </details>
     <Recovery key={recovery ? 'open' : 'closed'} open={recovery} onClose={() => setRecovery(false)} />
-    <LiveOperationLoader operation={withdraw ? {kind:'withdraw',treasury:false} : null} onClose={() => setWithdraw(false)} onConfirmed={result => {if(result.withdrawal){store.recordWithdrawal(result.note.commitment,result.withdrawal.amountAtomic,false);store.toast('Withdrawal confirmed. Tokens arrived at your receiving address.');}}} />
+    <LiveOperationLoader operation={withdraw ? {kind:'withdraw',treasury:false} : null} onClose={() => setWithdraw(false)} onConfirmed={result => {if(result.withdrawal)store.toast('Withdrawal confirmed. Your remaining private balance has been updated.');}} />
   </>;
 }

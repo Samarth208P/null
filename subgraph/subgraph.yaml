@@ -9,9 +9,9 @@ dataSources:
     name: NullPool
     network: sepolia
     source:
-      address: '0x734da58C285D211e7C0ad904f522c221c982447E'
+      address: '0x17A41574900ca3120562Ae5616559EceebA74E36'
       abi: NullPool
-      startBlock: 11659529
+      startBlock: 11695406
     context:
       chainId:
         type: BigInt
