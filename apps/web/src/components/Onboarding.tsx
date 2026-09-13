@@ -6,6 +6,7 @@ import { useStore } from '../lib/store';
 import { Button } from './ui';
 import { EntryLayout } from './EntryLayout';
 import { normalizePaymentName } from '@null-protocol/ens';
+import { editablePaymentName, paymentNameInput, paymentNameSuffix } from '../lib/ens-name-input';
 
 export function SignIn() {
   const session = useSession();
@@ -27,16 +28,19 @@ export function ChooseAccount() {
   const session = useSession(); const account = useAccount(); const store = useStore();
   const [type, setType] = useState<AccountType | null>(account.profile?.type || null);
   const [organizationName, setOrganizationName] = useState(account.profile?.organizationName || '');
-  const [ensName, setEnsName] = useState(account.profile?.ensName || '');
+  const [ensName, setEnsName] = useState(() => editablePaymentName(account.profile?.ensName || ''));
+  const { showSuffix, completeName } = paymentNameInput(ensName);
   const [error, setError] = useState(''); const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { document.title = 'Choose your account type · NULL'; heading.current?.focus(); }, []);
   function complete(event: FormEvent) {
     event.preventDefault();
     if (!type) { setError('Choose how you will use NULL.'); return; }
     if (type === 'organization' && !organizationName.trim()) { setError('Enter an organization name.'); return; }
-    let normalizedName: string;
-    try { normalizedName = normalizePaymentName(ensName); } catch { setError('Enter your complete ENS name, such as your-name.eth.'); return; }
-    account.updateProfile(type === 'organization' ? { type, organizationName: organizationName.trim(), ensName: normalizedName } : { type, ensName: normalizedName });
+    let normalizedName = account.profile?.ensName;
+    if (type === 'individual') {
+      try { normalizedName = normalizePaymentName(completeName); } catch { setError('Enter your assigned name, or paste a full ENS name you own.'); return; }
+    }
+    account.updateProfile(type === 'organization' ? { type, organizationName: organizationName.trim(), ...(normalizedName ? { ensName: normalizedName } : {}) } : { type, ensName: normalizedName });
     if (type === 'organization') store.setOrganization(organizationName.trim());
     store.navigate(type === 'organization' ? 'overview' : 'inbox');
   }
@@ -50,7 +54,10 @@ export function ChooseAccount() {
           <label className={`account-option ${type === 'organization' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="organization" checked={type === 'organization'} onChange={() => { setType('organization'); setError(''); }} /><Building2 size={22} strokeWidth={1.6} /><span><strong>Organization</strong><small>Pay people and manage funds</small></span></label>
         </fieldset>
         <div className={`organization-reveal ${type === 'organization' ? 'is-open' : ''}`} inert={type !== 'organization' || undefined} aria-hidden={type !== 'organization'}><div><div className="organization-setup-fields"><label className="field" htmlFor="onboarding-organization">Organization name<input id="onboarding-organization" name="organization" autoComplete="organization" value={organizationName} maxLength={50} required={type === 'organization'} disabled={type !== 'organization'} onChange={event => { setOrganizationName(event.target.value); setError(''); }} placeholder="e.g. Acme Studio" aria-describedby="organization-hint" /></label><p id="organization-hint" className="field-hint">Display name only. Sending requires organization approval.</p></div></div></div>
-        <label className="field">Your ENS payment name<input value={ensName} onChange={event => { setEnsName(event.target.value); setError(''); }} required autoComplete="off" spellCheck={false} placeholder="your-name.eth" /><small>ENS is your public payment identifier. Enter a Sepolia name you control. This step saves your choice; it does not register the name or publish keys. Link and verify it in your inbox after saving your encrypted backup.</small></label>
+        {type === 'individual' && <label className="field" htmlFor="onboarding-ens">Your ENS payment name
+          <span className="inbox-name-input"><input id="onboarding-ens" aria-label="Your ENS payment name" maxLength={512} value={ensName} onChange={event => { setEnsName(editablePaymentName(event.target.value)); setError(''); }} required autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name" aria-describedby="onboarding-ens-hint" />{showSuffix && <span className="inbox-name-suffix" aria-hidden="true">{paymentNameSuffix}</span>}</span>
+          <small id="onboarding-ens-hint">Use an assigned name, or paste a full ENS name you own. {completeName && <>Your payment name: <strong>{completeName}</strong>. </>}Next, we’ll check your wallet, save your backup and link the name. It is ready to receive only after that link is confirmed.</small>
+        </label>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <Button className="entry-continue" type="submit" disabled={!type}><span>Continue</span><ArrowRight size={17} /></Button>
       </form>

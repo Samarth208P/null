@@ -37,7 +37,7 @@ If artifact checks fail, follow the [deployment guide](DEPLOYMENT.md) to regener
 
 | Requirement | Default |
 | --- | --- |
-| RPC | [PublicNode's free Sepolia RPC](https://ethereum-sepolia-rpc.publicnode.com/), with no account or API key |
+| RPC | Reference app: `https://0xrpc.io/sep`, with PublicNode fallback. Deployment/CLI defaults still use [PublicNode](https://ethereum-sepolia-rpc.publicnode.com/). Neither default needs an API key. Every recovered balance is checked against the onchain roots. |
 | Asset | Existing Circle test USDC at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`, listed in [Circle's official documentation](https://developers.circle.com/gateway/quickstarts/unified-balance-evm) |
 | Test USDC funding | [Circle's free faucet](https://faucet.circle.com/); choose Ethereum Sepolia and the wallet that will make the public deposit |
 | Wallet | An installed browser wallet through the application's existing injected-wallet connection |

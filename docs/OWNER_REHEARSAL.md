@@ -2,6 +2,25 @@
 
 The software is prepared for the owner to sign. No owner-approved public payout is claimed yet. Use one real recipient and one payout throughout the recording; the synthetic CRE and local-chain tests are separate evidence.
 
+## Prepared two-account demo — September 13
+
+Use [the hosted reference app](https://null-protocol.netlify.app/#/demo) in two separate browser profiles, or two different browsers. Two normal tabs share the login and encrypted funds storage. Keep each profile open and save both accounts' encrypted backups before recording.
+
+| Role | Prepared account | What to do before recording |
+| --- | --- | --- |
+| Organization | Existing Privy owner account; funding wallet `0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433` | Choose Organization, name it **Demo Studio**, fund this wallet with **10 test USDC** and approximately **0.01 Sepolia ETH**, then complete Add funds for 10 USDC. |
+| Individual | MetaMask account `0xA888d19eD7AC6AbCb59DA2122085767613bC2FCB` | Choose Individual, enter **demo**; the field adds `.nullpay2026.eth`. Save the recipient backup and sign **Link name**. |
+
+The dedicated Privy organization approval wallet is `0x6567226D425c423b1A5765384Ae343aE5FDeB1d1`. It signs organization intents. The table identifies the separate wallet intended to make the public deposit; confirm that address in the Add funds dialog.
+
+The recipient owns **demo.nullpay2026.eth** and has permission scoped to its `null.paymentProfile` record. [Name assignment](https://sepolia.etherscan.io/tx/0x00c04c9ec5ea048a3fb9e19e52071684aa6f766960a0b0a72a6d76a3e02e1078) and [record permission](https://sepolia.etherscan.io/tx/0x08f69cce59676f6a836cde7aa3dadfbec7a1d9812244872d1461c65e22a61d3d) were confirmed. These are setup transactions; the recipient must still publish its own receiving profile. The former `inbox.nullpay2026.eth` assignment is retained for its original owner and is not this demo's destination.
+
+Suggested recording payment: **1 test USDC** to **demo.nullpay2026.eth**, from the prefunded 10 USDC organization balance. Prepare the name link, organization activation and deposit before filming. During filming, show the existing organization balance, prepare and approve the 1 USDC payout, switch to the recipient, collect it and show the public receipt evidence. A whole-note withdrawal of that received note is 1 USDC and public.
+
+For proof tabs, use **Download transaction receipts** from this actual payout and its claim/withdrawal, then open each exported transaction's Etherscan link. On distribution **Logs**, point to eight encrypted `EnvelopePublished` events. On claim calldata/logs, point to commitments, root and nullifier, with no explicit allocation amount or specific source-batch identifier. On withdrawal **Token Transfers**, point to the public destination and amount. The [shooting script](SUBMISSION_DEMO.md) has the exact narration and limitations. No payout hash exists until the owner signs and the transaction confirms.
+
+After the user's funding transfer, the organization funding wallet was checked at **50 test USDC and 0.1005 Sepolia ETH**. The recipient also has sufficient gas and tokens. These are wallet balances; the 10 USDC pool deposit, recipient profile publication and owner-approved payout still require the user's signatures. Refresh the hosted app before starting the repaired flow.
+
 ## Open the prepared app
 
 From the repository root, run `pnpm dev:all` if the services are not already running. Open [the local reference app](http://127.0.0.1:5173/#/demo). The organization API, relayer and configured payroll service start alongside the web app. This uses existing local configuration; no secret belongs in a screenshot or submission file.
@@ -10,8 +29,8 @@ The local reference app includes the local CRE and sending services. The [public
 
 ## Recipient: publish the actual receiving profile
 
-1. Sign in as the wallet that owns `inbox.nullpay2026.eth`. The last read-only check confirmed ownership and payment-record permission, with the profile still unpublished.
-2. Choose Individual and open Inbox. If returning to an existing Payment ID, choose **Restore backup** first. Otherwise enter `inbox.nullpay2026.eth` and choose **Continue**. NULL checks connected wallets and selects a permitted owner or editor automatically. If none can update the name, use **Connect another wallet**, then **Check wallets again**.
+1. Sign in as `0xA888d19eD7AC6AbCb59DA2122085767613bC2FCB`, which owns `demo.nullpay2026.eth`. The setup check confirmed ownership and payment-record permission, with the profile still unpublished.
+2. Choose Individual and open Inbox. If returning to an existing Payment ID, choose **Restore backup** first. Otherwise enter `demo` (the suffix is shown) or `demo.nullpay2026.eth` and choose **Continue**. NULL checks connected wallets and selects a permitted owner or editor automatically. If none can update the name, use **Connect another wallet**, then **Check wallets again**.
 3. Choose **Save backup and continue**, set a password and download the encrypted file. The same setup advances to **Link your name**. Review the public-record notice, consent and choose **Link name**. Approve the Sepolia record update in your wallet and wait for **Your inbox is ready**. An existing restored backup skips the save step; a new identity cannot recover payments addressed to old keys.
 4. Save the transaction link. After linking, open **Advanced: payment record access**, enter the wallet whose permissions you want to inspect and choose **Check access**. The two-record comparison reads Sepolia and offers **Download permission check**. It makes no changes. A revoked verification editor can be shown using the existing setup evidence; do not grant new access simply to get a screenshot.
 

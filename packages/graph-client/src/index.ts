@@ -158,7 +158,7 @@ export function createDiscoveryClient(config: DiscoveryConfig) {
       if (page.source === 'rpc') {
         for (let start = fromBlock; start <= toBlock; start += blockRange) {
           const end = start + blockRange - 1n < toBlock ? start + blockRange - 1n : toBlock;
-          const logs = await rpc.getLogs({ address: config.pool, fromBlock: start, toBlock: end });
+          const logs = await rpc.getLogs({ address: config.pool, events: nullPoolAbi.filter(item => item.type === 'event'), fromBlock: start, toBlock: end, strict: true });
           for (const log of logs) {
             if (log.removed || log.blockNumber === null || !log.blockHash || !log.transactionHash || log.logIndex === null) continue;
             let event: { eventName: string; args: Record<string, unknown> };

@@ -90,7 +90,7 @@ export function PrivateInbox() {
         if (!response.ok) throw new Error('Deployment unavailable');
         const manifest = await response.json(); validateDeploymentManifest(manifest);
         if (manifest.chainId !== Number(config.chainId) || manifest.contracts.nullPool.toLowerCase() !== config.poolAddress.toLowerCase()) throw new Error('Deployment mismatch');
-        const client = new NullLiveClient({manifest,rpcUrls:[config.rpcUrl],graphUrl:config.graphUrl,artifactBaseUrl:window.location.origin,confirmations:config.confirmations,persistLocalSecret:async()=>{throw new Error('Inbox discovery is read-only');}});
+        const client = new NullLiveClient({manifest,rpcUrls:config.rpcUrls,graphUrl:config.graphUrl,artifactBaseUrl:window.location.origin,confirmations:config.confirmations,persistLocalSecret:async()=>{throw new Error('Inbox discovery is read-only');}});
         const found = await client.discover({keys:store.identity.keys,forceRpc:useAnotherConnection});
         result = found.filter(item => { if (item.spent) {item.stealthPrivateKey.fill(0);return false;} return true; });
       }

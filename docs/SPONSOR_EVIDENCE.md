@@ -69,7 +69,7 @@ Before execution, describe the approval flow as implemented with a pending owner
 4. Capture the ENS permission consequence and the CRE mismatch rejection. These short negative cases explain why the integrations matter.
 5. Add the video link and observed timestamps to the submission. Complete the team contribution disclosure, publish final source, and check every submitted link.
 
-Use the [3:15 recording plan](SUBMISSION_DEMO.md) and [submission wording](SUBMISSION_COPY.md). Give each sponsor a direct evidence link and the actual timestamp of its scene once the video exists. Do not invent timestamps or describe planned footage as recorded.
+Use the [three-minute shooting script](SUBMISSION_DEMO.md) and [submission wording](SUBMISSION_COPY.md). Give each sponsor a direct evidence link and the actual timestamp of its scene once the video exists. Do not invent timestamps or describe planned footage as recorded.
 
 ## Reproduce existing read-only and local checks
 

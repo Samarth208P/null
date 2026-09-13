@@ -73,7 +73,8 @@
 .name-input-row .button { flex-shrink: 0; }
 .inbox-name-input { display: flex; align-items: center; flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--inset); }
 .inbox-name-input:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
-.name-input-row .inbox-name-input input { width: 0; border: 0; background: transparent; box-shadow: none; outline: none; }
+.field .inbox-name-input input, .name-input-row .inbox-name-input input { flex: 1; min-width: 0; width: 0; border: 0; background: transparent; box-shadow: none; outline: none; }
+.field .inbox-name-input input:focus-visible, .name-input-row .inbox-name-input input:focus-visible { outline: none; }
 .inbox-name-suffix { flex-shrink: 0; padding-right: 14px; color: var(--secondary); font-size: 13px; white-space: nowrap; }
 .inbox-name-help, .inbox-name-options { margin-top: 24px; }
 .inbox-name-help h3 { font-size: 18px; margin: 0 0 8px; }
@@ -133,7 +134,7 @@ fieldset.wizard-surface { border: 0; margin: 0; min-width: 0; }
   .name-input-row { flex-wrap: wrap; }
   .name-input-row input { width: 100%; flex-basis: 100%; font-size: 16px; }
   .inbox-name-input { flex-basis: 100%; }
-  .name-input-row .inbox-name-input input { flex-basis: 0; padding-right: 4px; }
+  .inbox-name-input input { flex-basis: 0; padding-right: 4px; }
   .name-input-row .button { width: 100%; }
   .payment-name-manager .button-row { align-items: stretch; flex-direction: column; }
   .inbox-setup-progress { gap: 10px 14px; }

@@ -223,6 +223,8 @@ The client permits cancellation during preparation and before submission. A subm
 
 ## Recovery after reload or service outage
 
+History reconstruction uses explicit event filters and checks every accumulator count and root at the confirmed checkpoint. A provider can return a successful but incomplete log response; on `NULL_HISTORY_INCOMPLETE`, the client replays the complete scan against each remaining configured RPC URL once. It accepts a replacement only after the same root and canonical-block checks pass. This is a read-only retry, never a transaction retry. The reference app uses `VITE_RPC_URL` and optional comma-separated `VITE_RPC_FALLBACK_URLS`; the current defaults are `https://0xrpc.io/sep` and PublicNode. An incomplete response from every provider still blocks the balance.
+
 ```ts
 const saved = await recoveryStore.load();
 const treasury = await client.recoverTreasuryNotes(saved.checkpoints);

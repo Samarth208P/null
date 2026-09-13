@@ -129,6 +129,7 @@ function errorCopy(reason: unknown): string {
     NULL_BALANCE_INSUFFICIENT: 'Your wallet does not have enough test USDC for this amount.',
     NULL_NULLIFIER_SPENT: 'This payment has already been collected, or the selected funds have already been used. Refresh your balance before continuing.',
     NULL_ROOT_STALE: 'Your balance or payment history has changed. Refresh it and prepare the payment again.',
+    NULL_HISTORY_INCOMPLETE: 'The network returned incomplete payment history, so we could not verify your balance. Try the check again in a moment.',
     NULL_INTENT_EXPIRED: 'This payment’s approval period has ended. Prepare it again to continue.',
     NULL_DISTRIBUTION_UNCONFIRMED: 'This payment is not confirmed yet. Wait for confirmation, then check again.',
     NULL_TRANSACTION_REVERTED: 'The transaction failed on the network. No payment was completed.',
@@ -247,7 +248,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     workInFlight.current = true;
     setError(''); setBusy(true); controller.current = new AbortController();
     try { await action(); }
-    catch (reason) { if (!(reason instanceof DOMException && reason.name === 'AbortError')) setError(errorCopy(reason)); }
+    catch (reason) { setStage(undefined); if (!(reason instanceof DOMException && reason.name === 'AbortError')) setError(errorCopy(reason)); }
     finally { workInFlight.current = false; setBusy(false); }
   }
   async function refreshRecovery(store: SecretStore, live: NullLiveClient) {
@@ -264,7 +265,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     if (password.length < 12) throw new NullError('NULL_PASSWORD_INVALID', 'Use a funds backup password with at least 12 characters.');
     passwordRef.current = password;
     const store = createEncryptedCheckpointStore({ namespace: `null-${manifest.chainId}-${manifest.contracts.nullPool.slice(2).toLowerCase()}`, getPassword: async () => passwordRef.current });
-    const live = new NullLiveClient({ manifest, rpcUrls: [config.rpcUrl], graphUrl: config.graphUrl,
+    const live = new NullLiveClient({ manifest, rpcUrls: config.rpcUrls, graphUrl: config.graphUrl,
       artifactBaseUrl: (import.meta.env.VITE_ARTIFACT_BASE_URL || window.location.origin) as string,
       confirmations: config.confirmations, persistLocalSecret: store.persistLocalSecret });
     await live.verifyDeployment(proofOptions());
@@ -497,7 +498,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
         {operation.kind === 'shield' && <Notice tone="warning">Your wallet and the amount you add are public. Adding funds close to payment time may help others link them. Use test funds only.</Notice>}
         {operation.kind !== 'shield' && <Notice>Test USDC only. Your network provider can see when you connect.</Notice>}
         {!client ? <>
-          <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>Use the password for your encrypted funds backup. Your password is not saved; only encrypted backup data is stored in this browser.</small></label>
+          <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>First time? Choose a password with at least 12 characters. Returning? Use your existing funds backup password. Only your encrypted backup is saved in this browser.</small></label>
           <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
           {!prepared && <>

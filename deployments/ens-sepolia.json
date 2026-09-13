@@ -115,5 +115,24 @@
         "hash": "0x8901295da1ab7ecf12f1f6e978b79cfacfa171caa7b1c26de4b30971bda172f1"
       }
     ]
-  }
+  },
+  "recipientAssignments": [
+    {
+      "name": "demo.nullpay2026.eth",
+      "wallet": "0xA888d19eD7AC6AbCb59DA2122085767613bC2FCB",
+      "recordKey": "null.paymentProfile",
+      "recordAccess": "scoped to this name and key",
+      "profilePublished": false,
+      "transactions": [
+        {
+          "step": "assign-name",
+          "hash": "0x00c04c9ec5ea048a3fb9e19e52071684aa6f766960a0b0a72a6d76a3e02e1078"
+        },
+        {
+          "step": "grant-payment-record",
+          "hash": "0x08f69cce59676f6a836cde7aa3dadfbec7a1d9812244872d1461c65e22a61d3d"
+        }
+      ]
+    }
+  ]
 }

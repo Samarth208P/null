@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-09-13T07:31:11.775Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa650de81648ba3786c0b0c",
+  "servedEntryAssetReferencesMatch": true,
+  "matchedAssets": [
+    "config-DKh14Sk9.js",
+    "ens-name-input-My-c7LXf.js",
+    "index-BnxEesAv-CVc9LtBM.js",
+    "index-BOM080HK.css",
+    "index-DH5T0a-R.js",
+    "index-DKna0vBk-ByV-SOqc.js",
+    "index-Dq_xe9dz-CAu5QiZc.js",
+    "index-Qxc0UswG-DrrEVlV8.js",
+    "index-rkoxGjIC-BFgs9OHg.js",
+    "LiveOperation-qC1pYq_N.js",
+    "PaymentNameManager-7y6VkOZI.js",
+    "ReferenceApp-BMV-iFfc.js"
+  ],
+  "circuitsVerified": [
+    "shield",
+    "create_distribution",
+    "claim",
+    "withdraw"
+  ],
+  "organizationHealth": "configured",
+  "organizationAuthRequired": true,
+  "historyVerified": {
+    "chainId": 11155111,
+    "notes": 3,
+    "distributions": 1,
+    "policies": 1
+  },
+  "recipientName": "demo.nullpay2026.eth",
+  "recipient": "0xA888d19eD7AC6AbCb59DA2122085767613bC2FCB",
+  "organizationFundingWallet": "0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433",
+  "organizationWalletFunds": {
+    "testUSDC": "50",
+    "testETH": "0.1005"
+  },
+  "poolDepositPending": true,
+  "recipientProfilePending": true,
+  "privyOwnerPayoutPending": true,
+  "validation": {
+    "typecheck": "passed across workspace",
+    "regressionTests": 8,
+    "submissionTests": 39,
+    "payoutTests": 13,
+    "productionBuild": "passed",
+    "browserChecks": {
+      "session": "isolated local test session",
+      "chainReads": "live Sepolia",
+      "fundsUnlock": "opened organization setup",
+      "onboarding": "short ENS label persisted; organization accepted without ENS",
+      "mobileWidth": 390,
+      "horizontalOverflow": false,
+      "consoleErrors": 0
+    },
+    "creSimulation": {
+      "syntheticOnly": true,
+      "localSimulation": true,
+      "remoteExecutionVerified": false,
+      "attestationVerified": false,
+      "encryptedEnvelopes": 8,
+      "receipt": "cre-starter/.artifacts/synthetic-withdrawals-v2/simulation-receipt.json"
+    }
+  }
+}

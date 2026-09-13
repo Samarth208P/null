@@ -26,6 +26,7 @@ const tokenAbi = parseAbi([
   'function allowance(address owner,address spender) view returns (uint256)',
   'function approve(address spender,uint256 amount) returns (bool)',
 ]);
+const policyRegisteredEvent = parseAbi(['event PolicyRegistered(uint256 indexed policyCommitment, uint256 indexed policyIndex, uint256 postAuthRoot)'])[0];
 type RelayEnvelope = NonNullable<PublicOperation['envelopes']>[number];
 type EightEnvelopes = [RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope, RelayEnvelope];
 function requireHex(value: unknown, bytes: number): asserts value is Hex {
@@ -181,6 +182,24 @@ export class NullLiveClient {
   }
 
   async syncHistory(options: OperationOptions & { forceRpc?: boolean } = {}): Promise<PublicHistory> {
+    try { return await this.syncHistoryFromSource(options); }
+    catch (error) {
+      // Transport fallback cannot detect a successful but incomplete eth_getLogs
+      // response. Replay on each remaining provider and verify the entire snapshot.
+      checkAbort(options);
+      if (!(error instanceof NullError) || error.code !== 'NULL_HISTORY_INCOMPLETE') throw error;
+      let lastError: unknown = error;
+      for (const rpcUrl of [...new Set(this.options.rpcUrls)].slice(1)) {
+        checkAbort(options);
+        const alternate = new NullLiveClient({ ...this.options, rpcUrls: [rpcUrl], graphUrl: undefined });
+        try { return await alternate.syncHistoryFromSource({ ...options, forceRpc: true }); }
+        catch (reason) { checkAbort(options); lastError = reason; }
+      }
+      throw lastError;
+    }
+  }
+
+  private async syncHistoryFromSource(options: OperationOptions & { forceRpc?: boolean }): Promise<PublicHistory> {
     progress(options, 'history'); checkAbort(options);
     const page = await this.discovery.scan({ forceRpc: options.forceRpc });
     if (page.checkpoint.blockNumber > page.confirmedToBlock) throw new NullError('NULL_HISTORY_UNCONFIRMED', 'Wait for the deployment history to reach the configured confirmation threshold.');
@@ -191,7 +210,7 @@ export class NullLiveClient {
       for (let fromBlock = BigInt(this.manifest.deploymentBlock); fromBlock <= page.checkpoint.blockNumber; fromBlock += 2_000n) {
         checkAbort(options);
         const toBlock = fromBlock + 1_999n < page.checkpoint.blockNumber ? fromBlock + 1_999n : page.checkpoint.blockNumber;
-        const logs = await this.rpc.getLogs({ address: this.manifest.contracts.nullAuthRegistry, fromBlock, toBlock });
+        const logs = await this.rpc.getLogs({ address: this.manifest.contracts.nullAuthRegistry, event: policyRegisteredEvent, fromBlock, toBlock, strict: true });
         for (const log of logs) {
           if (log.removed) continue;
           let decoded: { eventName: string; args: Record<string, unknown> };
@@ -218,7 +237,7 @@ export class NullLiveClient {
       return { blockNumber, blockHash: page.checkpoint.blockHash, source: page.source, noteLeaves, distributionLeaves, policyLeaves, envelopes: page.envelopes, distributions: page.distributions };
     } catch (error) {
       if (options.signal?.aborted) throw error;
-      if (page.source === 'graph' && !options.forceRpc) return this.syncHistory({ ...options, forceRpc: true });
+      if (page.source === 'graph' && !options.forceRpc) return this.syncHistoryFromSource({ ...options, forceRpc: true });
       if (error instanceof NullError) throw error;
       throw new NullError('NULL_HISTORY_INCOMPLETE', 'Public history does not reconstruct the onchain accumulators. Change RPC provider and rescan.');
     }

@@ -114,7 +114,7 @@ export function LiveBalanceRecovery({ open, onClose, onRecovered, identityKeys }
   }
   function makeClient(store: RecoveryStore): NullLiveClient {
     if (!manifest) throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'Load a valid deployed environment first.');
-    return new NullLiveClient({ manifest, rpcUrls: [config.rpcUrl], graphUrl: forceRpc ? undefined : config.graphUrl,
+    return new NullLiveClient({ manifest, rpcUrls: config.rpcUrls, graphUrl: forceRpc ? undefined : config.graphUrl,
       artifactBaseUrl: (import.meta.env.VITE_ARTIFACT_BASE_URL || window.location.origin) as string,
       confirmations: config.confirmations, persistLocalSecret: store.persistLocalSecret,
     });
