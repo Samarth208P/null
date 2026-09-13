@@ -34,12 +34,12 @@ npm install @samarth208p/null-payouts@preview
 
 ## Core Features
 
-- ⚡ **ENS-First Identity & Delegation:** Send payouts to human-readable ENS names (`alice.eth`). Powered by ENSv2 **Permissioned Resolvers** (`authorizeTextRoles`) so recipients can delegate payment-profile management without surrendering domain ownership.
-- 🛡️ **Zero-Knowledge Privacy (Noir UltraHonk):** Claims prove membership in a global accumulator tree without disclosing the source distribution batch in public inputs.
-- 🔒 **Confidential Compute (Chainlink CRE):** A TypeScript `handlerInTee` fetches authenticated payroll records and deterministically compiles encrypted envelopes inside an enclave boundary.
-- 🏛️ **Institutional Governance (Privy):** Enforces organization owner quorum and server wallet policies with single-use, session-bound intent tickets that bind the chain, pool, and batch digest.
-- 💸 **Private Partial Withdrawals:** Recipients can withdraw a chosen amount to a fresh wallet while automatically rolling the remaining change into a newly generated private note.
-- 📦 **Embeddable TypeScript SDK:** Framework-independent core packages (`@null-protocol/payouts`) allow teams to drop private payroll directly into existing DAO tools or custom treasury apps.
+- **ENS-First Identity & Delegation:** Send payouts to human-readable ENS names (`alice.eth`). Powered by ENSv2 **Permissioned Resolvers** (`authorizeTextRoles`) so recipients can delegate payment-profile management without surrendering domain ownership.
+- **Zero-Knowledge Privacy (Noir UltraHonk):** Claims prove membership in a global accumulator tree without disclosing the source distribution batch in public inputs.
+- **Confidential Compute (Chainlink CRE):** A TypeScript `handlerInTee` fetches authenticated payroll records and deterministically compiles encrypted envelopes inside an enclave boundary.
+- **Institutional Governance (Privy):** Enforces organization owner quorum and server wallet policies with single-use, session-bound intent tickets that bind the chain, pool, and batch digest.
+- **Private Partial Withdrawals:** Recipients can withdraw a chosen amount to a fresh wallet while automatically rolling the remaining change into a newly generated private note.
+- **Embeddable TypeScript SDK:** Framework-independent core packages (`@null-protocol/payouts`) allow teams to drop private payroll directly into existing DAO tools or custom treasury apps.
 
 ---
 
