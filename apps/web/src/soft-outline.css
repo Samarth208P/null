@@ -578,10 +578,25 @@ tbody tr:hover { background: #e5eaf0; }
 .account-menu { position: relative; min-width: 0; }
 .account-menu-trigger { max-width: 100%; }
 .account-menu-trigger > svg:last-child { color: var(--primary-ink); flex-shrink: 0; }
-.account-menu-panel { position: absolute; z-index: 50; right: 0; top: calc(100% + 10px); width: min(290px, calc(100vw - 36px)); padding: 8px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; }
+.account-menu-panel { position: absolute; z-index: 50; right: 0; top: calc(100% + 10px); width: min(340px, calc(100vw - 36px)); padding: 8px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; white-space: normal; }
 .account-menu-identity { padding: 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .account-menu-identity small { display: block; color: var(--muted); margin-bottom: 5px; }
 .account-menu-identity strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+.account-wallet { padding: 6px 12px 16px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+.account-wallet-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-wallet-heading h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.account-wallet .icon-button { flex-shrink: 0; width: 36px; height: 36px; min-height: 36px; }
+.account-wallet-address { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; }
+.account-wallet-address code { min-width: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; user-select: all; }
+.account-wallet-balances { display: grid; gap: 10px; margin: 0; font-size: 13px; }
+.account-wallet-balances > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.account-wallet-balances dt { color: var(--secondary); }
+.account-wallet-balances dd { margin: 0; font-weight: 550; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.account-wallet-message, .account-wallet-error { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.account-wallet-error { color: var(--danger); }
+.account-wallet-selector { display: grid; gap: 6px; margin: 6px 0 10px; color: var(--secondary); font-size: 12px; }
+.account-wallet-selector select { width: 100%; }
+@media (max-width: 760px) { .account-wallet .icon-button { width: 44px; height: 44px; min-height: 44px; } }
 .account-menu-panel > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; text-align: left; border-radius: 8px; color: var(--ink); font-size: 13px; }
 .account-menu-panel > button:hover { background: var(--surface-hover); }
 .account-menu-panel > button:focus-visible { outline-offset: -2px; }

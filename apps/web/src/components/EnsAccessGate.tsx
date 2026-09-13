@@ -9,6 +9,7 @@ import { config } from '../lib/config';
 import { ensClient } from '../lib/ens';
 import { verifyWorkspaceAccess, requireOrganizationSigner, type LinkedWorkspace } from '../lib/workspace-access';
 import { loadOrganizationAddress } from '../lib/organization-endpoint';
+import { OrganizationAccountError } from '../lib/organization-error';
 import { editablePaymentName, paymentNameInput, paymentNameSuffix } from '../lib/ens-name-input';
 import { EntryLayout } from './EntryLayout';
 import { Button } from './ui';
@@ -39,7 +40,7 @@ export function EnsAccessGateBody({ children, loadOrganization }: { children: Re
   const loadApprovalWallet = organization ? loadOrganization : undefined;
   const [name, setName] = useState(() => editablePaymentName(profile.ensName ?? ''));
   const { completeName, showSuffix } = paymentNameInput(name);
-  const [state, setState] = useState<{ key: string; linked?: LinkedWorkspace; error?: string; checking?: boolean; retryOnly?: boolean }>({ key: '', checking: true });
+  const [state, setState] = useState<{ key: string; linked?: LinkedWorkspace; error?: string; accountErrorTitle?: string; checking?: boolean; retryOnly?: boolean }>({ key: '', checking: true });
   const [recovery, setRecovery] = useState<'export' | 'restore' | null>(null);
   const [revision, setRevision] = useState(0);
   const [operationOpen, setOperationOpen] = useState(false);
@@ -71,7 +72,7 @@ export function EnsAccessGateBody({ children, loadOrganization }: { children: Re
     }).catch(error => {
       if (request.current !== version) return;
       store.setReceivingName(undefined);
-      setState({ key, error: error instanceof Error ? error.message : 'Could not verify your ENS link.', retryOnly: !(error instanceof PaymentNameError) || error.code === 'network' });
+      setState({ key, error: error instanceof Error ? error.message : 'Could not verify your ENS link.', accountErrorTitle: error instanceof OrganizationAccountError ? error.title : undefined, retryOnly: !(error instanceof PaymentNameError) || error.code === 'network' });
     });
     return () => { request.current++; };
   }, [key, revision, verify]);
@@ -96,14 +97,14 @@ export function EnsAccessGateBody({ children, loadOrganization }: { children: Re
   }
   return <EntryLayout className="ens-entry" action={<Button variant="ghost" icon={LogOut} busy={session.signingOut} onClick={() => void session.signOut()}>Sign out</Button>}>
     {!profile.ensName && <ol className="setup-progress" aria-label="Account setup"><li className="complete"><Check size={14} />Signed in</li><li className="complete"><Check size={14} />Account chosen</li><li aria-current="step"><span>3</span>Link ENS</li></ol>}
-    <h1>{state.retryOnly ? 'Check your ENS connection.' : organization ? 'Link your organization.' : profile.ensName ? 'Open your inbox.' : 'Link your payment inbox.'}</h1>
-    <p className="entry-description">{state.retryOnly ? 'Your saved setup is still here. We need to verify the current ENS link before opening your workspace.' : organization ? 'Use a verified ENS name for your organization’s approval wallet. People can see who they are paying with.' : profile.ensName ? 'Use your existing Payment ID to open this inbox. If it is no longer available in this browser, restore your backup.' : 'Connect your name to the Payment ID you keep on this device. Your private workspace opens after the link is verified.'}</p>
+    <h1>{state.accountErrorTitle ? 'Check your organization account.' : state.retryOnly ? 'Check your ENS connection.' : organization ? 'Link your organization.' : profile.ensName ? 'Open your inbox.' : 'Link your payment inbox.'}</h1>
+    <p className="entry-description">{state.accountErrorTitle ? 'Your saved setup is still here. We need to verify access to the organization’s approval wallet before checking its ENS link.' : state.retryOnly ? 'Your saved setup is still here. We need to verify the current ENS link before opening your workspace.' : organization ? 'Use a verified ENS name for your organization’s approval wallet. People can see who they are paying with.' : profile.ensName ? 'Use your existing Payment ID to open this inbox. If it is no longer available in this browser, restore your backup.' : 'Connect your name to the Payment ID you keep on this device. Your private workspace opens after the link is verified.'}</p>
     {organization ? <form onSubmit={event => { event.preventDefault(); saveName(); }}>
       <label className="field">Organization ENS name<span className="inbox-name-input"><input value={name} onChange={event => setName(editablePaymentName(event.target.value))} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={512} placeholder="your-organization" />{showSuffix && <span className="inbox-name-suffix" aria-hidden="true">{paymentNameSuffix}</span>}</span><small>{completeName && <>Full name: <bdi>{completeName}</bdi>. </>}Use an existing name owned by, or resolving to, the dedicated organization approval wallet.</small></label>
       <Button variant="secondary" type="submit" icon={Link2} busy={state.checking}>Verify and link name</Button>
       <details className="progressive-details"><summary>Which wallet needs this name?</summary><p>The dedicated wallet that approves organization payments. Your personal wallet may pay gas, but its name does not identify the organization.</p>{serverAddress && <code>{serverAddress}</code>}<p><a href="https://app.ens.dev" target="_blank" rel="noreferrer">Manage your ENS name</a> on Ethereum Sepolia, then check the link again.</p></details>
     </form> : !linked && !state.retryOnly && <><PaymentNameManager onRecovery={setRecovery} onLinked={() => setRevision(value => value + 1)} /><div className="ens-entry-recovery"><p>Already received payments? Restore your original Payment ID before linking.</p><Button variant="secondary" onClick={() => setRecovery('restore')}>Restore Payment ID backup</Button></div></>}
-    <div className="ens-entry-status" role="status"><ShieldCheck size={20} /><div><strong>{state.retryOnly ? 'ENS check unavailable' : profile.ensName ? 'Verify your saved inbox' : 'ENS linking is required'}</strong><p>{state.error || 'Finish linking to continue.'}</p></div></div>
+    <div className="ens-entry-status" role="status"><ShieldCheck size={20} /><div><strong>{state.accountErrorTitle ?? (state.retryOnly ? 'ENS check unavailable' : profile.ensName ? 'Verify your saved inbox' : 'ENS linking is required')}</strong><p>{state.error || 'Finish linking to continue.'}</p></div></div>
     <div className="button-row"><Button variant="ghost" disabled={state.checking} onClick={() => setRevision(value => value + 1)}>Check link again</Button><Button variant="ghost" onClick={account.changeAccountType}>Change account type</Button></div>
     <p className="entry-hint">Your ENS name and linked public records are public. Private payment keys stay on your device. Linking a name does not grant organization approval.</p>
     <Recovery key={recovery ?? 'closed'} open={!!recovery} initialMode={recovery ?? 'restore'} continueSetup onClose={() => setRecovery(null)} />

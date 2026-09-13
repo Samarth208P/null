@@ -1,0 +1,25 @@
+{
+  "releasedAt": "2026-09-13T13:25:09.802Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa6a40de275bbd1d8c7c787",
+  "productionEntryMatches": true,
+  "walletMenuBundleMatches": true,
+  "organizationHealth": 200,
+  "webTypecheck": true,
+  "productionBuild": true,
+  "focusedTests": 6,
+  "visualReview": "ship",
+  "visualScope": "real menu components with simulated sign-in and live Sepolia RPC balances at 1440px and 390px",
+  "privacyMaskVerified": true,
+  "escapeDismissalVerified": true,
+  "copySuccessFeedbackVerified": true,
+  "assets": [
+    "Sepolia ETH",
+    "USDC"
+  ],
+  "observedWallet": "0x552eAf692390F3B53eC5be020788E5B046aBc465",
+  "observedBalances": {
+    "sepoliaETH": "0.2",
+    "USDC": "50.00"
+  }
+}

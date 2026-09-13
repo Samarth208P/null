@@ -1,0 +1,23 @@
+{
+  "releasedAt": "2026-09-13T13:15:52.002Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa6a190c5c59ad179dc1db7",
+  "organizationName": "org1.nullpay2026.eth",
+  "approvalWallet": "0x3703d90c1704486F00950748E3ad73651dccc8ea",
+  "fundingWallet": "0x552eAf692390F3B53eC5be020788E5B046aBc465",
+  "recipientName": "demo.nullpay2026.eth",
+  "recipientUnchanged": true,
+  "productionEntryMatchesBuild": true,
+  "organizationRecoveryMessageBrowserVerified": true,
+  "organizationHealth": 200,
+  "unauthenticatedOrganizationStatus": 401,
+  "ownerQuorumVerified": true,
+  "unsignedSigningRejected": true,
+  "typecheck": true,
+  "submissionTests": 79,
+  "organizationRecoveryTests": 2,
+  "productionBuild": true,
+  "newOwnerSignedInBrowserVerified": false,
+  "organizationActivationCompleted": false,
+  "paymentCompleted": false
+}

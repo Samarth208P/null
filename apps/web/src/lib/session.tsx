@@ -7,6 +7,8 @@ export type Session = {
   userId: string | null;
   label: string;
   walletAddresses?: string[];
+  privyWalletAddresses?: string[];
+  walletsReady?: boolean;
   error: string;
   signingOut: boolean;
   walletModalOpen?: boolean;
