@@ -130,6 +130,20 @@ The [canonical deployment manifest](apps/web/public/deployment.json) contains by
 
 ---
 
+## Live Sepolia Demo Transactions
+
+The following successful transactions record the current end-to-end demo on Ethereum Sepolia. They use test USDC only:
+
+| Step | Onchain evidence | What it demonstrates |
+| :--- | :--- | :--- |
+| **1. Fund the private treasury** | [`shield` transaction](https://sepolia.etherscan.io/tx/0xe6d5c7ca7b5232fd41f673d84a7967b291ce177b7bfc72635304be9a92e583d9#statechange) | A public test-USDC deposit into `NullPoolV3`, followed by `Shielded` and `NoteInserted` events for the private treasury note. The funding wallet, amount, and timing remain public. |
+| **2. Create the private payout** | [`createDistribution` event logs](https://sepolia.etherscan.io/tx/0x026d36599b1370672be6758b970e6b3acca1eab279fd9b34e8ed25ee892b6f1c#eventlog) | A confirmed distribution commitment plus exactly eight padded `EnvelopePublished` ciphertext events. The public transaction does not contain a plaintext recipient-and-amount roster. |
+| **3. Claim the allocation** | [`claim` transaction](https://sepolia.etherscan.io/tx/0xc2e672429c8277fe528a34953200d4e124feb3d1c244089b4d4f2a7256394af5) | The recipient consumes an allocation nullifier and creates a new private note through `AllocationConsumed` and `NoteInserted` events without publishing the source batch as an explicit public input. |
+
+These links prove that the three protocol transactions were confirmed on Sepolia. They do not reveal the private recovery material, establish independent auditing, or turn the separate local Chainlink CRE simulation into remote-enclave attestation.
+
+---
+
 ## Local Development & Testing
 
 Requires **Node.js >=22.16.0** and **pnpm 11.9.0**:
