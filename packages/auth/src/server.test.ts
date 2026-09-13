@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPrivyOrganizationAuthorizer, type PrivyOrganizationConfig } from './server';
-import { organizationIdentityRequest } from './index';
+import { identifyOrganizationSigner, organizationIdentityRequest } from './index';
 
 const config: PrivyOrganizationConfig = { appId: 'testapp', appSecret: 'synthetic-test-secret', walletId: 'wallet', walletAddress: '0x1111111111111111111111111111111111111111', ownerQuorumId: 'quorum', organizationEntityId: 'organization', requiredPolicyIds: [], controlMode: 'owner-quorum', expectedOwnerUserIds: ['did:privy:owner'], minimumApprovals: 1, chainId: 11155111n, poolAddress: '0x2222222222222222222222222222222222222222' };
 const wallet = { id: 'wallet', address: config.walletAddress, chain_type: 'ethereum', owner_id: 'quorum', entity: {type: 'organization', id: 'organization'}, policy_ids: [], additional_signers: [], archived_at: null };
 const quorum = { id: 'quorum', authorization_threshold: 1, user_ids: ['did:privy:owner'], authorization_keys: [], key_quorum_ids: [] };
+
+test('identity setup preserves operational errors without claiming a signature mismatch', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ code: 'NULL_ORGANIZATION_UNAVAILABLE' }, { status: 503 }));
+  await assert.rejects(identifyOrganizationSigner({ ...config, endpoint: 'https://example.test', getAccessToken: async () => 'synthetic-session', generateAuthorizationSignature: async () => { throw Error('Must not sign after failed preparation'); } }), /NULL_ORGANIZATION_UNAVAILABLE/);
+});
 
 test('empty policies require explicit, feasible owner-quorum configuration', () => {
   assert.doesNotThrow(() => createPrivyOrganizationAuthorizer(config));

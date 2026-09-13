@@ -46,23 +46,24 @@ export async function identifyOrganizationSigner(options: { endpoint: string; ap
   const post = async (route: string, body: unknown) => {
     const token = await options.getAccessToken(); if (!token) throw new Error('NULL_SESSION_REQUIRED');
     const response = await fetch(`${endpoint.href.replace(/\/$/, '')}/api/organization/${route}`, { method: 'POST', credentials: 'omit', redirect: 'error', headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
-    if (!response.ok) throw new Error('NULL_PRIVY_AUTH_FAILED');
-    return response.json();
+    const data = await response.json() as Record<string, unknown>;
+    if (!response.ok) throw new Error(typeof data.code === 'string' && /^NULL_[A-Z_]+$/.test(data.code) ? data.code : 'NULL_ORGANIZATION_UNAVAILABLE');
+    return data;
   };
   const prepared = await post('prepare-identity', {});
   const request = prepared.authorizationRequest as AuthorizationRequest;
   const walletId = request?.url?.match(/^https:\/\/api\.privy\.io\/v1\/wallets\/([a-zA-Z0-9_-]+)\/rpc$/)?.[1];
-  if (!walletId || prepared.walletAddress?.toLowerCase() !== options.walletAddress.toLowerCase() || prepared.minimumApprovals !== 1 || !/^[a-f0-9-]{36}$/.test(prepared.ticket)) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (!walletId || typeof prepared.walletAddress !== 'string' || prepared.walletAddress.toLowerCase() !== options.walletAddress.toLowerCase() || prepared.minimumApprovals !== 1 || typeof prepared.ticket !== 'string' || !/^[a-f0-9-]{36}$/.test(prepared.ticket)) throw new Error('NULL_CONTEXT_MISMATCH');
   const canonical = organizationIdentityRequest({ ...options, walletId, requestExpiryMs: Number(request.headers?.['privy-request-expiry']) });
   // Exact shape checks prevent approval of extra or substituted RPC parameters.
   const normalize = (value: unknown): string => value && typeof value === 'object' ? (Array.isArray(value) ? `[${value.map(normalize).join(',')}]` : `{${Object.keys(value).sort().map(key => `${key}:${normalize((value as Record<string, unknown>)[key])}`).join(',')}}`) : JSON.stringify(value);
   if (normalize(request) !== normalize(canonical)) throw new Error('NULL_CONTEXT_MISMATCH');
   const generated = await options.generateAuthorizationSignature(canonical);
   const result = await post('identify', { ticket: prepared.ticket, signatures: [typeof generated === 'string' ? generated : generated.signature] });
-  if (result.digest !== canonical.body.params.hash || result.signer?.toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
+  if (result.digest !== canonical.body.params.hash || typeof result.signer !== 'string' || result.signer.toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
   // The adapter already recovers the key from the raw signature; independently bind it here.
-  if (typeof result.publicKey !== 'string' || publicKeyToAddress(result.publicKey).toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
-  return result.publicKey;
+  if (typeof result.publicKey !== 'string' || !/^0x04[0-9a-fA-F]{128}$/.test(result.publicKey) || publicKeyToAddress(result.publicKey as Hex).toLowerCase() !== options.walletAddress.toLowerCase()) throw new Error('NULL_CONTEXT_MISMATCH');
+  return result.publicKey as Hex;
 }
 const FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const ORDER = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;

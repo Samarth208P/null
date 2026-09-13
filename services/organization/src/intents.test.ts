@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryIntents } from './intents';
-import { blobIntents } from './blob-intents';
+import { blobIntents, checkedBlobFetch } from './blob-intents';
 
 test('memory approval tickets expire and can be consumed once', async () => {
   const store = memoryIntents();
@@ -38,4 +38,17 @@ test('storage verifies the write instead of trusting an incorrect success respon
   const backend = {async set(){return {modified:true};},async get(){return null;}};
   const store = blobIntents(backend as unknown as Parameters<typeof blobIntents>[0]);
   await assert.rejects(store.put('a',{userId:'test',sessionId:'session',expiresAt:Date.now()+10000}));
+});
+
+test('conditional storage rejects HTTP failures but preserves missing reads and compare-and-set conflicts', async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response('', { status: 403 });
+    await assert.rejects(checkedBlobFetch('https://store.example.test', { method: 'put' }), /NULL_ORGANIZATION_UNAVAILABLE/);
+    globalThis.fetch = async () => new Response('', { status: 412 });
+    assert.equal((await checkedBlobFetch('https://store.example.test', { method: 'put' })).status, 412);
+    globalThis.fetch = async () => new Response('', { status: 404 });
+    assert.equal((await checkedBlobFetch('https://store.example.test')).status, 404);
+    await assert.rejects(checkedBlobFetch('https://store.example.test', { method: 'put' }), /NULL_ORGANIZATION_UNAVAILABLE/);
+  } finally { globalThis.fetch = original; }
 });

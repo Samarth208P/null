@@ -41,11 +41,11 @@ export async function proveLocally(request: ProofRequest, progress: (stage: Proo
     const noir = new Noir(circuit);
     const execution = await noir.execute(request.witness);
     witnessBytes = execution.witness;
+    progress('proving');
     api = await Barretenberg.new({ backend: BackendType.Wasm, threads: 1, logger: () => {} });
     const backend = new UltraHonkBackend(circuit.bytecode, api);
     const key = await backend.getVerificationKey(evm);
     if (await digest(key) !== artifact.verificationKeySha256.toLowerCase()) throw new Error('NULL_ARTIFACT_MISMATCH');
-    progress('proving');
     const generated = await backend.generateProof(witnessBytes, evm);
     const publicInputs = generated.publicInputs.map(canonical);
     if (publicInputs.length !== expected.length || publicInputs.some((input, index) => input !== expected[index]))

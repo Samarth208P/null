@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ConfirmedOperation, PreparedOperation } from '@null-protocol/client';
 import { publicOperationReceipt } from './operation-receipt';
+import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 
 const pool = `0x${'11'.repeat(20)}` as const;
 const hash = `0x${'22'.repeat(32)}` as const;
@@ -46,4 +47,18 @@ test('recipient claim receipts do not expose source distribution or private note
   const receipt = publicOperationReceipt(f.prepared, f.confirmed, { approval: 'not-required', protocolVersion: '0.2.0' });
   assert.ok(!('distributionCommitment' in receipt));
   assert.ok(!('compilation' in receipt.workflow));
+});
+
+test('wrapped receipts require a hash-bound public transaction with the exact intended inner call', () => {
+  const f = fixture(); f.prepared.publicOperation.method = 'claim';
+  const manager = '0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3';
+  const input = encodeFunctionData({ abi: parseAbi(['function redeemDelegations(bytes[],bytes32[],bytes[])']), functionName: 'redeemDelegations', args: [['0x'], [`0x${'00'.repeat(32)}` as Hex], [`${pool}${'00'.repeat(32)}1234` as Hex]] });
+  f.confirmed.receipt.to = manager;
+  assert.throws(() => publicOperationReceipt(f.prepared, f.confirmed, { approval: 'not-required', protocolVersion: '0.2.0' }));
+  f.confirmed.transaction = { hash, to: manager, input, value: 0n };
+  assert.equal(publicOperationReceipt(f.prepared, f.confirmed, { approval: 'not-required', protocolVersion: '0.2.0' }).transactionHash, hash);
+  f.confirmed.transaction.hash = commitment;
+  assert.throws(() => publicOperationReceipt(f.prepared, f.confirmed, { approval: 'not-required', protocolVersion: '0.2.0' }));
+  f.confirmed.transaction.hash = hash; f.confirmed.transaction.input = `${input}00`;
+  assert.throws(() => publicOperationReceipt(f.prepared, f.confirmed, { approval: 'not-required', protocolVersion: '0.2.0' }));
 });

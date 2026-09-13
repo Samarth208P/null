@@ -19,9 +19,9 @@
     "test:domains": "node --import tsx --test packages/crypto/src/domains.test.ts",
     "dev": "pnpm --filter @null-protocol/web dev",
     "dev:all": "node tools/dev.mjs",
-    "build": "pnpm --filter @null-protocol/web build",
+    "build": "pnpm build:organization && pnpm --filter @null-protocol/web build",
     "check": "pnpm -r --if-present typecheck",
-    "test:submission": "node --import tsx --test apps/web/src/lib/account.test.ts apps/web/src/lib/operation-receipt.test.ts apps/web/src/lib/cre.test.ts apps/web/src/lib/ens-pending.test.ts apps/web/src/lib/ens-wallet.test.ts apps/web/src/lib/ens-name-input.test.ts packages/ens/src/index.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts",
+    "test:submission": "node --import tsx --test packages/client/src/transaction-match.test.ts apps/web/src/lib/account.test.ts apps/web/src/lib/transaction-wallet.test.ts apps/web/src/lib/operation-receipt.test.ts apps/web/src/lib/operation-diagnostic.test.ts apps/web/src/lib/cre.test.ts apps/web/src/lib/ens-pending.test.ts apps/web/src/lib/ens-receipt.test.ts apps/web/src/lib/ens-wallet.test.ts apps/web/src/lib/ens-name-input.test.ts packages/ens/src/index.test.ts packages/auth/src/server.test.ts services/organization/src/intents.test.ts services/organization/src/http.test.ts services/organization/src/web-adapter.test.ts",
     "ens:status": "node --import tsx tools/ens-status.mts",
     "ens:plan": "node --import tsx tools/ens-sepolia.mts",
     "ens:verify": "node --import tsx tools/ens-sepolia.mts --broadcast",
@@ -51,13 +51,15 @@
     "treasury:register": "node --import tsx tools/treasury.mts register",
     "treasury:sign": "node --import tsx tools/treasury.mts sign",
     "test:flow": "node --import tsx tools/test-payment-flow.mts",
-    "test:withdrawal": "node --import tsx --test packages/sdk/src/withdrawal.test.ts"
+    "test:withdrawal": "node --import tsx --test packages/sdk/src/withdrawal.test.ts",
+    "build:organization": "node tools/build-organization-function.mjs"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@noir-lang/noir_wasm": "1.0.0-beta.22",
     "@types/node": "22.19.0",
-    "tsx": "4.20.5",
+    "esbuild": "0.25.12",
     "solc": "0.8.28",
-    "@noir-lang/noir_wasm": "1.0.0-beta.22"
+    "tsx": "4.20.5",
+    "typescript": "5.9.3"
   }
 }

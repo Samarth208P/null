@@ -55,6 +55,8 @@ export interface PreparedOperation {
   readonly createdAt: number;
 }
 export interface ConfirmedOperation {
+  /** Public transaction checked against the exact prepared call, including supported wallet wrappers. */
+  transaction?: { hash: Hex; to: Address | null; input: Hex; value: bigint };
   transactionHash: Hex; receipt: TransactionReceipt; note: OwnedTreasuryNote | OwnedPrivateNote;
   localRecoverySaved: boolean; distributionCommitment?: Hex;
   withdrawal?: { recipient: Address; amountAtomic: bigint; nullifier: Hex };

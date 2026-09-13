@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useLayoutEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useSession } from '../lib/session';
 import { ArrowUpRight, Check, ChevronRight, CircleHelp, Copy, LoaderCircle, ShieldCheck, X, type LucideIcon } from 'lucide-react';
 
 export function Button({ variant = 'primary', icon: Icon, children, className = '', busy, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; icon?: LucideIcon; busy?: boolean }) {
@@ -18,8 +19,11 @@ export function Notice({ children, tone = 'info', icon: Icon = ShieldCheck }: { 
 }
 export function Modal({ title, description, open, onClose, children, wide = false }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const { walletModalOpen = false } = useSession();
   const titleId = useId(); const descriptionId = useId();
-  useEffect(() => { if (open && !dialog.current?.open) dialog.current?.showModal(); else if (!open && dialog.current?.open) dialog.current?.close(); }, [open]);
+  // A native modal makes portals elsewhere in the document inert, regardless of
+  // z-index. Yield the top layer to Privy without unmounting the in-progress form.
+  useLayoutEffect(() => { if (open && !walletModalOpen && !dialog.current?.open) dialog.current?.showModal(); else if ((!open || walletModalOpen) && dialog.current?.open) dialog.current.close(); }, [open, walletModalOpen]);
   return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={`modal ${wide ? 'modal-wide' : ''}`} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); } }}><div className="modal-heading"><div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Close dialog"><X size={20} /></button></div>{children}</dialog>;
 }
 export function CopyButton({ value, onCopy }: { value: string; onCopy?: () => void }) {

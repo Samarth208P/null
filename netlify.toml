@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm --filter @null-protocol/web build"
+  command = "pnpm build"
   publish = "apps/web/dist"
 
 [build.environment]
@@ -7,7 +7,7 @@
   PNPM_VERSION = "11.9.0"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "dist/netlify/functions"
   node_bundler = "esbuild"
 
 [[redirects]]

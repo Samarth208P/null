@@ -19,6 +19,8 @@ import {
 } from './types';
 export * from './types';
 export * from './storage';
+export { matchesSubmittedCall } from './transaction-match';
+import { matchesSubmittedCall } from './transaction-match';
 
 const tokenAbi = parseAbi([
   'function decimals() view returns (uint8)',
@@ -286,7 +288,9 @@ export class NullLiveClient {
     progress(options, 'confirming');
     const receipt = await this.rpc.waitForTransactionReceipt({ hash, confirmations: this.options.confirmations, timeout: this.options.receiptTimeoutMs });
     if (receipt.status !== 'success') throw new NullError('NULL_POLICY_REGISTRATION_FAILED', 'Organization activation failed on the network.');
-    if (receipt.to?.toLowerCase() !== this.manifest.contracts.nullAuthRegistry.toLowerCase()) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The transaction is not an organization activation.');
+    const transaction = await this.rpc.getTransaction({ hash: receipt.transactionHash });
+    const expected = encodeFunctionData({ abi: nullAuthRegistryAbi, functionName: 'register', args: [fieldFromHex(policyCommitment)] });
+    if (!matchesSubmittedCall(transaction, this.manifest.contracts.nullAuthRegistry, expected)) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The transaction is not this organization activation.');
     for (const log of receipt.logs) {
       if (log.address.toLowerCase() !== this.manifest.contracts.nullAuthRegistry.toLowerCase()) continue;
       try {
@@ -517,8 +521,9 @@ export class NullLiveClient {
         throw new NullError('NULL_TRANSACTION_REVERTED', 'The transaction reverted. No successful protocol operation was confirmed.');
       }
       const transaction = await this.rpc.getTransaction({ hash: receipt.transactionHash });
-      if (transaction.to?.toLowerCase() !== operation.pool.toLowerCase() || transaction.input.toLowerCase() !== data.toLowerCase() || transaction.value !== 0n) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The submitted transaction does not match the authorized proof.');
+      if (!matchesSubmittedCall(transaction, operation.pool, data)) throw new NullError('NULL_TRANSACTION_MISMATCH', 'The submitted transaction does not match the authorized proof.');
       const result = await this.confirmEffects(operation, recovery, receipt);
+      result.transaction = { hash: transaction.hash, to: transaction.to, input: transaction.input, value: transaction.value };
       this.completed.add(prepared); progress(options, 'confirmed'); return result;
     } catch (error) {
       if (hash && !confirmedRevert && !(error instanceof SubmissionUncertainError)) {
@@ -564,11 +569,12 @@ export class NullLiveClient {
       throw new NullError('NULL_RPC_UNAVAILABLE', 'The transaction receipt could not be checked. Try another RPC provider.');
     }
     const transaction = await this.rpc.getTransaction({ hash: receipt.transactionHash });
-    if (transaction.to?.toLowerCase() !== stored.operation.pool.toLowerCase() || transaction.input.toLowerCase() !== encodePublicOperation(stored.operation).toLowerCase() || transaction.value !== 0n) throw new NullError('NULL_TRANSACTION_MISMATCH', 'This transaction does not match the prepared operation.');
+    if (!matchesSubmittedCall(transaction, stored.operation.pool, encodePublicOperation(stored.operation))) throw new NullError('NULL_TRANSACTION_MISMATCH', 'This transaction does not match the prepared operation.');
     const latest = await this.rpc.getBlockNumber();
     if (latest - receipt.blockNumber + 1n < BigInt(this.options.confirmations!) || (await this.rpc.getBlock({ blockNumber: receipt.blockNumber })).hash !== receipt.blockHash) return { status: 'pending', transactionHash: receipt.transactionHash };
     if (receipt.status === 'reverted') { this.uncertain.delete(prepared); return { status: 'reverted', transactionHash: receipt.transactionHash, receipt }; }
     const result = await this.confirmEffects(stored.operation, stored.recovery, receipt);
+    result.transaction = { hash: transaction.hash, to: transaction.to, input: transaction.input, value: transaction.value };
     this.completed.add(prepared); this.uncertain.delete(prepared); progress(options, 'confirmed');
     return { status: 'confirmed', result };
   }

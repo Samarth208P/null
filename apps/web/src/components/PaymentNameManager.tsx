@@ -10,6 +10,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { useAccount } from '../lib/account';
 import { clearPendingNameUpdate, readPendingNameUpdate, savePendingNameUpdate, type PendingNameUpdate } from '../lib/ens-pending';
+import { matchesNameUpdate } from '../lib/ens-receipt';
 import { Button, KeyValue, Notice } from './ui';
 import { download } from '../lib/format';
 import { findAssignedNames, findNameWallet, type NameWallet } from '../lib/ens-wallet';
@@ -146,8 +147,8 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     setPending(false);
     setHash(receipt.transactionHash);
     try { clearPendingNameUpdate(userKey); } catch { /* The receipt still settles this component's pending action. */ }
-    if (actual.to?.toLowerCase() !== update.resolver.toLowerCase() || actual.from.toLowerCase() !== update.account.toLowerCase() || actual.input.toLowerCase() !== update.data.toLowerCase()) throw new PaymentNameError('changed', 'Your wallet replaced or cancelled this update. Check the name again before trying to publish.');
     if (receipt.status !== 'success') throw new PaymentNameError('permission', 'The transaction failed on Sepolia. Nothing was updated. Check this name’s permissions before trying again.');
+    if (!matchesNameUpdate(update, actual, receipt)) throw new PaymentNameError('changed', 'This transaction did not confirm the expected name update. Check the name again before trying to publish.');
     if (update.kind === 'profile') {
       const snapshot = await resolvePaymentName(ensClient, update.name);
       if (snapshot.profile !== store.identity.profile.stealthMetaAddress || snapshot.fingerprint !== update.fingerprint) throw new PaymentNameError('changed', 'The transaction was confirmed, but this device has a different Payment ID. Restore your backup before sharing this name.');

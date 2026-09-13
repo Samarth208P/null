@@ -27,7 +27,7 @@ export function Treasury() {
       <section className="treasury-main-panel">
         <div className="balance-label"><span><ShieldCheck size={18} />Available balance</span><Badge tone="purple">{practice ? 'Practice mode' : 'Test network'}</Badge></div>
         <div className="balance-value">{!store.treasuryReady ? '—' : store.hideBalances ? '••••••' : money(store.treasury)}<span>USDC</span></div>
-        <p className="muted">{practice ? 'Sample money for trying payments. It resets when you reload.' : store.treasuryReady ? 'Restore to load your latest saved funds.' : 'Restore your funds backup to see your balance.'}</p>
+        <p className="muted">{practice ? 'Sample money for trying payments. It resets when you reload.' : store.treasuryReady ? 'Checked against confirmed payment history in this session.' : 'Restore your funds backup to see your balance.'}</p>
         <div className="treasury-rule" />
         <Button variant="secondary" onClick={() => store.editDistribution(null)}>New payment<ArrowRight size={15} /></Button>
       </section>
@@ -48,6 +48,6 @@ export function Treasury() {
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="modal-actions"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={!acknowledged} icon={Plus} onClick={addFunds}>{practice ? 'Add sample funds' : 'Continue'}</Button></div>
     </Modal>
-    <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={result => {if(result.withdrawal){store.recordWithdrawal(result.note.commitment,result.withdrawal.amountAtomic,true);store.toast('Withdrawal confirmed.');}else store.toast('Funds added on the test network.');}} />
+    <LiveOperationLoader operation={liveOperation} onClose={() => setLiveOperation(null)} onConfirmed={result => {store.toast(result.withdrawal ? 'Withdrawal confirmed.' : 'Funds added on the test network.');}} />
   </>;
 }

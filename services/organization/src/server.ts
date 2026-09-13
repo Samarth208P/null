@@ -71,6 +71,7 @@ const safeErrors: Record<string, number> = {
   NULL_CONTEXT_MISMATCH: 409, NULL_CRE_COMPILE_MISMATCH: 409, NULL_INTENT_EXPIRED: 409,
 };
 export async function organizationHandler(request: IncomingMessage, response: ServerResponse) {
+  let stage = 'session';
   response.setHeader('content-type', 'application/json'); response.setHeader('cache-control', 'no-store');
   response.setHeader('x-content-type-options', 'nosniff'); response.setHeader('referrer-policy', 'no-referrer');
   response.setHeader('x-request-id', randomUUID());
@@ -105,8 +106,10 @@ export async function organizationHandler(request: IncomingMessage, response: Se
     if (request.url === '/api/organization/prepare-identity') {
       exact(body, []);
       if (config.minimumApprovals !== 1) throw new OrganizationError('NULL_PRIVY_APPROVALS_REQUIRED', 409);
+      stage = 'prepare-identity';
       const authorizationRequest = await authorizer.prepareIdentity();
       const ticket = randomUUID();
+      stage = 'save-identity-intent';
       await intents.put(`identity/${ticket}`, { userId: session.user_id, sessionId: session.session_id, expiresAt: Number(authorizationRequest.headers['privy-request-expiry']) });
       reply(200, { ticket, authorizationRequest, walletAddress: config.walletAddress, minimumApprovals: config.minimumApprovals }); return;
     }
@@ -118,6 +121,7 @@ export async function organizationHandler(request: IncomingMessage, response: Se
       if (!prepared || prepared.expiresAt <= Date.now()) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
       if (prepared.userId !== session.user_id || prepared.sessionId !== session.session_id) throw new OrganizationError('NULL_ORGANIZATION_FORBIDDEN', 403);
       if (!await intents.consume(`identity/${body.ticket}`)) throw new OrganizationError('NULL_INTENT_EXPIRED', 409);
+      stage = 'sign-identity';
       const result = await authorizer.identify(prepared.expiresAt, body.signatures as string[]);
       reply(200, { digest: result.digest, signer: result.signer, publicKey: result.publicKey }); return;
     }
@@ -139,6 +143,10 @@ export async function organizationHandler(request: IncomingMessage, response: Se
     const result = await authorizer.authorize({ publicInputs: prepared.publicInputs, expected: prepared.expected, requestExpiryMs: prepared.expiresAt, signatures: body.signatures as string[] });
     reply(200, result);
   } catch (error) {
+    // Operational diagnostics contain no tokens, signatures, IDs, or request bodies.
+    const diagnosticCode = error instanceof OrganizationError ? error.code : error instanceof Error && /^NULL_[A-Z_]+$/.test(error.message) ? error.message : 'NULL_ORGANIZATION_UNAVAILABLE';
+    const errorType = error instanceof Error && /^[a-zA-Z]{1,64}$/.test(error.name) ? error.name : 'Error';
+    console.warn(JSON.stringify({ event: 'null_organization_request_failed', stage, code: diagnosticCode, errorType }));
     if (error instanceof OrganizationError) { if (error.status === 429) response.setHeader('retry-after', '60'); reply(error.status, { code: error.code }); }
     else if (error instanceof Error && safeErrors[error.message]) reply(safeErrors[error.message], { code: error.message });
     else reply(503, { code: 'NULL_ORGANIZATION_UNAVAILABLE' });

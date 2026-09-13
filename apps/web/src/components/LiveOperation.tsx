@@ -22,6 +22,8 @@ import { PaymentNameError, recheckRequiredPaymentNames, type PaymentNameSnapshot
 import { ensClient } from '../lib/ens';
 import { download, money, short, amount as displayAmount } from '../lib/format';
 import { publicOperationReceipt, type ApprovalSource, type PublicOperationReceipt } from '../lib/operation-receipt';
+import { selectTransactionWallet } from '../lib/transaction-wallet';
+import { operationDiagnostic } from '../lib/operation-diagnostic';
 import { Badge, Button, CopyButton, ExternalLink, KeyValue, Modal, Notice } from './ui';
 
 export type LiveOperationRequest = { kind: 'withdraw'; treasury: boolean } | { kind: 'shield'; amountAtomic: bigint } |
@@ -37,7 +39,8 @@ export interface LiveOperationProps {
 type Intent = Parameters<DistributionOptions['authorize']>[0] | Parameters<NonNullable<WithdrawalOptions['authorize']>>[0];
 type SecretStore = ReturnType<typeof createEncryptedCheckpointStore>;
 type WalletBridge = {
-  connect: (chainId: number) => Promise<WalletClient>;
+  connect: (chainId: number, address?: string) => Promise<WalletClient>;
+  walletChoices?: readonly { address: string; label: string }[];
   authorize?: (intent: Intent, policy: AuthPolicyOpening) => Promise<Hex>;
   organizationKey?: () => Promise<Hex>;
 };
@@ -71,11 +74,10 @@ function PrivyOperation(props: LiveOperationProps) {
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { generateAuthorizationSignature } = useAuthorizationSignature();
-  const connect = useCallback(async (chainId: number): Promise<WalletClient> => {
+  const connect = useCallback(async (chainId: number, address?: string): Promise<WalletClient> => {
     if (!ready) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Your secure wallet is still opening.');
     if (!authenticated) { login(); throw new NullError('NULL_SESSION_REQUIRED', 'Finish signing in, then select Connect wallet again.'); }
-    const wallet = wallets.find(value => value.walletClientType === 'privy') ?? wallets[0];
-    if (!wallet) throw new NullError('NULL_WALLET_UNAVAILABLE', 'Finish setting up your account’s wallet to continue.');
+    const wallet = selectTransactionWallet(wallets, address);
     await wallet.switchChain(chainId);
     const provider = await wallet.getEthereumProvider();
     return createWalletClient({ account: wallet.address as Hex, chain: chainDefinition(chainId), transport: custom(provider) });
@@ -105,7 +107,7 @@ function PrivyOperation(props: LiveOperationProps) {
     if (publicKeyToAddress(toHex(point.toRawBytes(false))).toLowerCase() !== data.walletAddress?.toLowerCase()) throw new NullError('NULL_CONTEXT_MISMATCH', 'The organization signer could not be verified.');
     return toHex(point.toRawBytes(true));
   }, [authenticated, getAccessToken, generateAuthorizationSignature]);
-  return <LiveOperationBody {...props} bridge={{ connect, ...(organizationUrl ? { authorize, organizationKey } : {}) }} />;
+  return <LiveOperationBody {...props} bridge={{ connect, walletChoices: wallets.map(wallet => ({ address: wallet.address, label: wallet.walletClientType === 'privy' ? 'Privy' : 'Connected' })), ...(organizationUrl ? { authorize, organizationKey } : {}) }} />;
 }
 
 export function LiveOperation(props: LiveOperationProps) {
@@ -115,6 +117,7 @@ export function LiveOperation(props: LiveOperationProps) {
 
 function errorCopy(reason: unknown): string {
   if (reason instanceof PaymentNameError) return reason.message;
+  if (operationDiagnostic(reason).some(error => error.code === 4001)) return 'The wallet request was declined. Open the request again and approve it in your wallet to continue.';
   const codes: Record<string, string> = {
     NULL_PRIVY_APPROVALS_REQUIRED: 'More people in your organization need to approve this payment. Complete approval with your organization, then import it using Advanced approval.',
     NULL_SESSION_REQUIRED: 'Sign in to your organization account before requesting approval.',
@@ -157,6 +160,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   const withdrawalSteps = useRef<WithdrawalStep[]>([]);
   const activeNames = useRef<PaymentNameSnapshot[]>(operation.kind === 'create_distribution' ? operation.paymentNames : []);
   const [recipient, setRecipient] = useState('');
+  const [selectedWallet, setSelectedWallet] = useState('');
   const [manifest, setManifest] = useState<DeploymentManifest>();
   const [manifestError, setManifestError] = useState('');
   const [password, setPassword] = useState('');
@@ -243,12 +247,12 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     setManualIntent(undefined); setPassword(''); passwordRef.current = '';
     onClose();
   }
-  async function work(action: () => Promise<void>) {
+  async function work(action: () => Promise<unknown>) {
     if (workInFlight.current) return;
     workInFlight.current = true;
     setError(''); setBusy(true); controller.current = new AbortController();
     try { await action(); }
-    catch (reason) { setStage(undefined); if (!(reason instanceof DOMException && reason.name === 'AbortError')) setError(errorCopy(reason)); }
+    catch (reason) { setStage(undefined); if (!(reason instanceof DOMException && reason.name === 'AbortError')) { console.warn(JSON.stringify({ event: 'null_operation_failed', operation: operation.kind, causes: operationDiagnostic(reason) })); setError(errorCopy(reason)); } }
     finally { workInFlight.current = false; setBusy(false); }
   }
   async function refreshRecovery(store: SecretStore, live: NullLiveClient) {
@@ -258,6 +262,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     if (treasuryOperation) {
       const recovered = await live.recoverTreasuryNotes(saved.checkpoints, proofOptions());
       setNotes(recovered.filter(item => !item.spent && item.note.amountAtomic > 0n).map(item => item.note));
+      workspaceStore.setLiveTreasuryBalance(recovered.filter(item => !item.spent).reduce((sum, item) => sum + item.note.amountAtomic, 0n));
     }
   }
   async function unlock() {
@@ -273,8 +278,9 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     setVault(store); setClient(live); setStage(undefined);
   }
   async function connect() {
-    if (!manifest) return;
-    const value = await bridge.connect(manifest.chainId); setWallet(value);
+    if (!manifest) throw new NullError('NULL_DEPLOYMENT_UNAVAILABLE', 'Wait for the network setup to load.');
+    const value = await bridge.connect(manifest.chainId, selectedWallet || wallet?.account?.address);
+    setWallet(value); setSelectedWallet(value.account?.address ?? ''); return value;
   }
   async function importPolicy(file?: File) {
     if (!file || !vault) return;
@@ -328,7 +334,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
         throw reason;
       }
     }
-    const connected = wallet ?? await bridge.connect(manifest!.chainId); setWallet(connected);
+    const connected = await connect();
     const activated = await client.registerPolicy({ opening: policy, wallet: connected, persistLocalPolicy: vault.persistLocalPolicy, ...proofOptions() });
     setActivatedPolicy(activated.policyCommitment);
     if (activated.transactionHash) setPolicyTransaction(activated.transactionHash);
@@ -347,6 +353,18 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
       setPublicReceipts(values => values.some(value => value.transactionHash === receipt.transactionHash) ? values : [...values, receipt]);
       setReceiptError('');
     } catch { setReceiptError('The transaction is confirmed, but its shareable receipt could not be prepared. Keep the explorer link.'); }
+  }
+  async function refreshConfirmedFunds(result: ConfirmedOperation) {
+    const label = operation.kind === 'shield' ? 'Funds added' : operation.kind === 'create_distribution' ? 'Payment sent' : operation.kind === 'claim' ? 'Payment collected' : 'Withdrawal confirmed';
+    workspaceStore.recordLiveActivity(result.transactionHash, label, operation.kind === 'shield' || operation.kind === 'withdraw' && operation.treasury ? 'shield' : operation.kind === 'create_distribution' ? 'distribution' : 'claim');
+    if (!treasuryOperation || !vault || !client) return;
+    // A confirmed transaction stays successful even if a later balance read fails.
+    workspaceStore.setLiveTreasuryBalance(null);
+    if (!result.localRecoverySaved) return;
+    try {
+      const recovered = await client.recoverTreasuryNotes((await vault.load()).checkpoints);
+      workspaceStore.setLiveTreasuryBalance(recovered.filter(item => !item.spent).reduce((sum, item) => sum + item.note.amountAtomic, 0n));
+    } catch { /* Keep the balance unknown; Restore balance can check it again. */ }
   }
   async function prepare() {
     if (!client) return;
@@ -412,11 +430,12 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     if (operation.kind === 'create_distribution') await recheckRequiredPaymentNames(ensClient, activeNames.current, activeNames.current.length);
     setTransactionHash(undefined); setReconciliation('');
     try {
-      const connected = transport === 'wallet' ? (wallet ?? await bridge.connect(manifest!.chainId)) : undefined;
+      const connected = transport === 'wallet' ? await connect() : undefined;
       if (connected) setWallet(connected);
       const sender = operation.kind === 'create_distribution' ? payouts! : client;
       let result = batchReceipts.current.find(receipt => operation.kind === 'create_distribution' ? receipt.distributionCommitment === prepared.publicOperation.publicInputs[7] : operation.kind === 'withdraw' && receipt.withdrawal?.nullifier === prepared.publicOperation.publicInputs[5]) ?? await sender.submit(prepared, connected ? { mode: 'wallet', wallet: connected } : { mode: 'relay', url: config.relayerUrl! }, proofOptions());
       recordPublicReceipt(result);
+      await refreshConfirmedFunds(result);
       if (balanceWithdrawal && withdrawalSteps.current.length > 1) {
         recordBatch(result);
         if (!result.localRecoverySaved) throw new Error('Withdrawal confirmed, but local recovery was not saved. Restore recovery before continuing.');
@@ -459,6 +478,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     const state = await sender.reconcile(prepared, transactionHash, proofOptions());
     if (state.status === 'confirmed') {
       recordPublicReceipt(state.result);
+      await refreshConfirmedFunds(state.result);
       if (balanceWithdrawal && withdrawalSteps.current.length > 1) {
         recordBatch(state.result);
         if (batchReceipts.current.length < withdrawalSteps.current.length) {
@@ -501,8 +521,12 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
           <label className="field">Funds backup password<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" placeholder="At least 12 characters" disabled={busy} /><small>First time? Choose a password with at least 12 characters. Returning? Use your existing funds backup password. Only your encrypted backup is saved in this browser.</small></label>
           <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
+          {!confirmed && <>
+            {!!bridge.walletChoices && bridge.walletChoices.length > 1 && <label className="field">Sending wallet<select value={selectedWallet} disabled={busy || uncertain} onChange={event => { setSelectedWallet(event.target.value); setWallet(undefined); setError(''); }}><option value="">Choose your funded wallet</option>{bridge.walletChoices.map(choice => <option key={choice.address} value={choice.address}>{choice.label} · {choice.address}</option>)}</select><small>{operation.kind === 'shield' ? 'Choose the wallet holding your test USDC and Sepolia ETH. Organization approval uses its separate signer.' : 'This wallet pays the Sepolia gas fee. Its address will be public.'}</small></label>}
+            <div className="button-row"><Button variant="secondary" disabled={busy || uncertain} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? short(wallet.account.address, 5) : 'Connect wallet'}</Button>{!prepared && <Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button>}</div>
+            {wallet?.account && <KeyValue label="Connected sending wallet"><code className="withdraw-address">{wallet.account.address}</code></KeyValue>}
+          </>}
           {!prepared && <>
-            <div className="button-row"><Button variant="secondary" disabled={busy} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? short(wallet.account.address, 5) : 'Connect wallet'}</Button><Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button></div>
             <input ref={recoveryFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importRecovery(file)); }} />
             {treasuryOperation && <>
               {(!policy || operation.kind === 'create_distribution' && selectedNotes.length === 0) && <p className="field-hint">Complete Organization setup to {policy ? 'choose which available funds to use.' : 'add your organization’s setup file before continuing.'}</p>}

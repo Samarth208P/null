@@ -40,14 +40,14 @@ For this pnpm workspace, select the app explicitly to avoid an interactive monor
 ```powershell
 pnpm build
 $projectRoot = (Get-Location).Path
-netlify deploy --prod --filter @null-protocol/web --no-build --dir "$projectRoot/apps/web/dist" --functions "$projectRoot/netlify/functions" --skip-functions-cache --json
+netlify deploy --prod --filter @null-protocol/web --no-build --dir "$projectRoot/apps/web/dist" --functions "$projectRoot/dist/netlify/functions" --json
 ```
 
 Run this from the repository root. Use absolute paths: with `--filter`, the CLI may resolve a relative Functions path from `apps/web` and silently omit the function. A successful asset upload is not enough; verify `/api/organization/config` returns JSON `401` and the direct function health route returns JSON. Do not pass `--context` with `--no-build`; this CLI accepts it only when building.
 
 The root `.npmrc` pins isolated dependency linking without a global virtual store. On Windows, stop local test servers before reinstalling packages that contain loaded native modules. Use the pinned lockfile; do not upgrade dependencies to repair a file lock. The September 11 managed-build attempt was canceled after its automatic install stalled; it was not published. See [current readiness](SUBMISSION_READINESS.md) for the verified replacement release.
 
-The root `netlify.toml` builds the web app and the organization function. Local CLI deployment includes the current working tree; no Git commit is required. Do not deploy a drag-and-drop frontend folder alone: that omits the approval API.
+The root `netlify.toml` runs `pnpm build`, which builds the web app and a self-contained organization function in `dist/netlify/functions`. The function build rejects external package imports and checks that the artifact loads outside the repository. This avoids shipping Windows pnpm links through Netlify's module tracer. Deploy the generated function directory, not the TypeScript source directory. Local CLI deployment includes the current working tree; no Git commit is required. Do not deploy a drag-and-drop frontend folder alone: that omits the approval API.
 
 1. Run `netlify login` yourself, then link the existing **null-protocol** site. Select the existing site rather than creating a duplicate.
 2. In that site's Netlify environment settings, configure the server variables below for the Functions scope. Copy them privately from your own configuration. Do not paste values in chat, place them in a public file, or prefix them with `VITE_`.
@@ -83,4 +83,4 @@ Verify after deployment:
 - Back up the local policy opening before registering it. Registration is a separate Sepolia transaction. The prior local signer policy does not authorize the new Privy wallet.
 - Complete a real owner-approved payment and save its transaction hashes. Neither the unsigned-request rejection test nor successful function bundling counts as a completed Privy workflow.
 
-The Netlify CLI is authenticated and linked to the existing site, which tracks `Samarth208P/null` on `main`. Function bundling passed locally. An authenticated owner approval still needs to exercise deployed storage and the actual Privy signature flow.
+The Netlify CLI is authenticated and linked to the existing site, which tracks `Samarth208P/null` on `main`. On September 13, the actual signed-in owner completed the identity-only Privy signature on deploy `6aa65969e275bb2abac7c7a6`, and the browser saved the resulting organization setup in its encrypted backup. This exercised deployed intent storage and signature verification. The financial payout remains unverified. The modern function runtime preserves the uncached Blobs endpoint needed for strong consistency; the legacy `connectLambda` adapter dropped that setting and failed before signing.

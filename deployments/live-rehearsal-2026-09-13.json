@@ -1,0 +1,102 @@
+{
+  "checkedAt": "2026-09-13T09:44:40.7882610Z",
+  "site": "https://null-protocol.netlify.app",
+  "deployId": "6aa669cdd51fa8281746eca1",
+  "organization": {
+    "fundingWallet": "0x7fD5B5B80E9F7a811b1d27Ec20879185fB987433",
+    "approvalWallet": "0x6567226D425c423b1A5765384Ae343aE5FDeB1d1",
+    "identitySignatureVerified": true,
+    "encryptedSetupSaved": true,
+    "fundingWalletSelectionVerified": true,
+    "activationConfirmed": true,
+    "depositConfirmed": true,
+    "payoutConfirmed": false,
+    "activationTransaction": "0xdddb70bd6d5fc53f614a95a0b3d095d2cefaacef56c8d443dc1e4b2c76ee2ff0",
+    "depositTransaction": "0x253e013dcb3e8afb020ed043f5962eee935c12f0fb3185ed2d550afad2d398d7",
+    "depositAmountAtomic": "10000000",
+    "draftRecipientResolved": true,
+    "draftAmountAtomic": "1000000",
+    "creSimulation": {
+      "verified": true,
+      "status": "passed",
+      "startedAt": "2026-09-13T09:36:31.399Z",
+      "finishedAt": "2026-09-13T09:36:46.032Z",
+      "syntheticOnly": false,
+      "localSimulation": true,
+      "remoteExecutionVerified": false,
+      "attestationVerified": false,
+      "chainId": "11155111",
+      "poolAddress": "0x734da58C285D211e7C0ad904f522c221c982447E",
+      "batchId": "e34d4be8-5bb9-4afd-a8a5-7ead125ba6fc",
+      "commitment": "0x14339cc19797143d0e46efebfbc363d75d6ea02cbf097f689536588cda255521",
+      "envelopeRoot": "0x5c4509f63a63928553358cc0424f3ee1fd33af1bb2f5440e58844608dadd68c4",
+      "encryptedEnvelopes": 8,
+      "authenticatedFixtureFetches": 1
+    },
+    "creResultAcceptedByApp": true,
+    "payoutBlockedByRecipientChange": true
+  },
+  "recipient": {
+    "name": "demo.nullpay2026.eth",
+    "wallet": "0xA888d19eD7AC6AbCb59DA2122085767613bC2FCB",
+    "publicationTransaction": "0xf8c584f2c49fd741fc51fa2359e08b845bd42085d2fabb3dd05f3b73ae3d4801",
+    "publicationConfirmed": true,
+    "fixedReceiptCheckPassedAgainstRealTransaction": true,
+    "userConfirmedInboxReady": true,
+    "claimConfirmed": false,
+    "withdrawalConfirmed": false,
+    "latestPublicationTransaction": "0xf9d94400154557cc2691f2fcde9c2efc94c3486006eac493acdb44803f86a046",
+    "currentInboxConfirmationPending": true
+  },
+  "validation": {
+    "submissionTestsPassed": 57,
+    "workspaceTypecheck": "passed",
+    "productionBuild": "passed",
+    "isolatedFunctionImport": "passed",
+    "hostedAssetsMatch": true,
+    "fourCircuitHashesVerified": true,
+    "organizationHealth": "configured",
+    "unauthenticatedRequestRejected": true,
+    "modalBrowserTest": {
+      "nativeDialogYieldsToWallet": true,
+      "walletButtonWorks": true,
+      "formRestored": true,
+      "inputPreserved": true,
+      "consoleErrors": 0,
+      "realWalletApprovalAfterFix": "passed: Privy activation approved, form restored, registry transaction confirmed"
+    },
+    "afterDepositHistory": {
+      "block": "11694846",
+      "blockHash": "0x3aa78eba198ac693e6167fa523618737a2a4859b53da1d1ad59c68e5135e5baf",
+      "source": "graph",
+      "notes": 4,
+      "distributions": 1,
+      "policies": 2
+    },
+    "balanceRefreshUI": "deployed; typecheck and regression tests passed; live unlock verification pending",
+    "crePasteBrowserTest": {
+      "matchingBatchAccepted": true,
+      "wrongBatchRejected": true,
+      "data": "synthetic",
+      "manualInputSelection": true
+    },
+    "exactHistoricalWalletWrapperCheck": true
+  },
+  "fixes": [
+    "Explicit funded-wallet selection",
+    "Preserve organization service error codes",
+    "Modern Netlify runtime preserves strongly consistent intent storage",
+    "Self-contained function packaging avoids Windows pnpm links",
+    "Confirm ENS wallet-wrapped profile updates against resolver events and the live Payment ID",
+    "Native app dialogs yield focus to Privy without unmounting forms",
+    "Refresh confirmed treasury balances and show real session activity",
+    "CRE private input copy and verified pasted-result fallback"
+  ],
+  "remaining": [
+    "Confirm recipient owns backup for its newly linked Payment ID",
+    "Prepare and compile a fresh draft for the current receiving keys",
+    "Approve and confirm the real 1 USDC payout",
+    "Collect and withdraw the same recipient payment",
+    "Verify actual transaction privacy evidence"
+  ]
+}

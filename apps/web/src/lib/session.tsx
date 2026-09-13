@@ -6,6 +6,7 @@ export type Session = {
   authenticated: boolean;
   userId: string | null;
   label: string;
+  walletModalOpen?: boolean;
   error: string;
   signingOut: boolean;
   signIn: () => void;

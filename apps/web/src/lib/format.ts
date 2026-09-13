@@ -10,8 +10,10 @@ export function short(value: string, size = 7): string { return value.length > s
 export function date(value: string): string { return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 export function download(name: string, data: string, type = 'application/json') {
   const url = URL.createObjectURL(new Blob([data], { type }));
-  const link = document.createElement('a'); link.href = url; link.download = name; link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const link = document.createElement('a'); link.href = url; link.download = name;
+  link.hidden = true; document.body.appendChild(link); link.click(); link.remove();
+  // Give browsers time to hand the Blob to their download manager.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 export function stringify(value: unknown): string { return JSON.stringify(value, (_, item) => typeof item === 'bigint' ? item.toString() : item, 2); }
 

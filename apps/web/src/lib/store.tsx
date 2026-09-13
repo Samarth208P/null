@@ -27,6 +27,8 @@ type Store = {
   distributions: Distribution[]; saveDistribution: (distribution: Distribution) => void; removeDraft: (id: string) => void;
   treasury: bigint; shield: (amount: bigint) => void; publish: (distribution: Distribution) => void;
   treasuryReady: boolean; recoverLiveBalances: () => void;
+  setLiveTreasuryBalance: (balance: bigint | null) => void;
+  recordLiveActivity: (transactionHash: string, title: string, type: Activity['type']) => void;
   notes: PrivateNote[]; addNote: (note: PrivateNote) => void;
   activities: Activity[]; addActivity: (title: string, detail: string, type: Activity['type']) => void;
   recordWithdrawal: (commitment: string, amount: bigint, treasury: boolean) => void;
@@ -61,7 +63,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addActivity = (title: string, detail: string, type: Activity['type']) => setActivities(items => [{ id: crypto.randomUUID(), title, detail, type, createdAt: new Date().toISOString() }, ...items]);
   const saveDistribution = (distribution: Distribution) => (mode === 'sandbox' ? setDistributions : setTestnetDistributions)(items => items.some(item => item.id === distribution.id) ? items.map(item => item.id === distribution.id ? distribution : item) : [distribution, ...items]);
   const value: Store = {
-    recordWithdrawal: (commitment, amount, treasury) => { if (treasury) setLiveTreasury(value => value === null ? null : value >= amount ? value - amount : null); else setLiveNotes(items => items.filter(note => note.commitment !== commitment)); addActivity('Withdrawal confirmed', 'Tokens sent to your reviewed receiving address.', 'claim'); },
+    recordWithdrawal: (commitment, amount, treasury) => { if (treasury) setLiveTreasury(value => value === null ? null : value >= amount ? value - amount : null); else setLiveNotes(items => items.filter(note => note.commitment !== commitment)); },
     receivingName, setReceivingName,
     paymentPins, rememberPaymentName: snapshot => setPaymentPins(pins => ({ ...pins, [snapshot.name]: snapshot })),
     identityBackedUp, markIdentityBackedUp: () => setIdentityBackedUp(true),
@@ -70,6 +72,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     treasury: mode === 'sandbox' ? treasury : liveTreasury ?? 0n,
     treasuryReady: mode === 'sandbox' || liveTreasury !== null,
     recoverLiveBalances: () => setLiveRecoveryOpen(true),
+    setLiveTreasuryBalance: setLiveTreasury,
+    recordLiveActivity: (transactionHash, title, type) => setActivities(items => items.some(item => item.id === transactionHash) ? items : [{ id: transactionHash, title, detail: 'Confirmed on Sepolia.', type, createdAt: new Date().toISOString() }, ...items]),
     shield: value => { if (mode !== 'sandbox') throw new Error('Use Add funds to prepare a test-network deposit.'); setTreasury(balance => balance + value); addActivity('Practice funds added', 'Your practice balance is ready to use.', 'shield'); },
     publish: distribution => {
       if (mode !== 'sandbox') throw new Error('Use the payment review to prepare and approve a test-network payment.');
@@ -81,7 +85,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity('Practice payment sent', 'The payment can now be collected in this practice session.', 'distribution');
     },
     notes: mode === 'sandbox' ? allNotes : liveNotes, addNote: note => { (mode === 'sandbox' ? setNotes : setLiveNotes)(items => items.some(item => item.allocationId === note.allocationId) ? items : [...items, note]); if (mode === 'sandbox') addActivity('Practice payment collected', 'The payment was added to your practice balance.', 'claim'); },
-    activities: mode === 'sandbox' ? activities : [], addActivity, hideBalances, setHideBalances, toast, toastMessage, navigate, editingId,
+    activities, addActivity, hideBalances, setHideBalances, toast, toastMessage, navigate, editingId,
     editDistribution: id => { setEditingId(id); navigate('new'); },
   };
   return <StoreContext.Provider value={value}>{children}<Toast message={toastMessage} onDismiss={() => setToastMessage('')} /><LiveBalanceRecoveryLoader open={liveRecoveryOpen} onClose={() => setLiveRecoveryOpen(false)} identityKeys={identity.keys} onRecovered={recovered => { if (recovered.treasuryBalance !== null) setLiveTreasury(recovered.treasuryBalance); setLiveNotes(recovered.notes); toast('Your balances have been checked and updated.'); }} /></StoreContext.Provider>;
