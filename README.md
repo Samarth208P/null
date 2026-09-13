@@ -7,14 +7,14 @@
     <a href="https://null-protocol.netlify.app/"><img src="https://img.shields.io/badge/Live_App-Sepolia-blue?style=for-the-badge&logo=ethereum" alt="Sepolia App" /></a>
     <a href="https://www.npmjs.com/package/@samarth208p/null-payouts"><img src="https://img.shields.io/npm/v/@samarth208p/null-payouts/preview?style=for-the-badge&color=cb3837&logo=npm" alt="npm package" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT" /></a>
-    <a href="docs/SPONSOR_EVIDENCE.md"><img src="https://img.shields.io/badge/Sponsor_Evidence-Verified-purple?style=for-the-badge" alt="Sponsor Evidence" /></a>
+    <a href="https://github.com/Samarth208P/null"><img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github" alt="GitHub Repository" /></a>
   </p>
 
   <p>
     <a href="https://null-protocol.netlify.app/">Open Web App</a> •
     <a href="docs/SDK_INTEGRATION.md">SDK Integration Guide</a> •
-    <a href="docs/SUBMISSION_DEMO.md">Demo Walkthrough</a> •
-    <a href="docs/PAYOUT_V3_VERIFICATION.md">Verification Evidence</a>
+    <a href="docs/PRIVACY_GUARANTEES.md">Privacy Guarantees</a> •
+    <a href="docs/DEPLOYMENT.md">Deployment Guide</a>
   </p>
 </div>
 
@@ -102,17 +102,15 @@ Check the [integration guide](docs/SDK_INTEGRATION.md) and [framework-independen
 
 ---
 
-## Partner Integrations & Evidence
+## Architecture & Integrations
 
-| Partner | Role in NULL | Implementation & Evidence |
+| Technology | Role in NULL | Implementation |
 | :--- | :--- | :--- |
-| **[ENSv2](docs/ENS_INTEGRATION.md)** | Required receiving names, subnames, aliases, and scoped resolver delegation | [`packages/ens/src/index.ts`](packages/ens/src/index.ts) • [Sepolia transactions](deployments/ens-sepolia.json) • [ENS Status](deployments/ens-status-2026-09-12.json) |
+| **[ENSv2](docs/ENS_INTEGRATION.md)** | Required receiving names, subnames, aliases, and scoped resolver delegation | [`packages/ens/src/index.ts`](packages/ens/src/index.ts) |
 | **[Privy](services/organization/)** | Server wallets, B2B owner quorum, and session-bound intent tickets | [`packages/auth/src/server.ts`](packages/auth/src/server.ts) • [`services/organization/src/intents.ts`](services/organization/src/intents.ts) |
-| **[Chainlink CRE](services/cre-workflow/)** | `handlerInTee` confidential payroll compiler and CLI simulator | [`cre-starter/payroll/workflow.ts`](cre-starter/payroll/workflow.ts) • [Simulation Receipt](deployments/cre-simulation-2026-09-12.json) |
-| **[Noir & Aztec](circuits/)** | 5 UltraHonk ZK circuits: shield, distribution, claim, exit, and partial exit | [`circuits/`](circuits/) • [Local Rehearsal](deployments/payment-flow-sepolia-v3.json) • [v0.3 Verifier Specs](docs/PAYOUT_V3_VERIFICATION.md) |
-| **[The Graph](subgraph/)** | Event indexing for public ciphertext scanning with RPC fallback | [`subgraph/subgraph.yaml`](subgraph/subgraph.yaml) • [Sepolia Subgraph Endpoint](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.3.0) |
-
-For sponsor judges, the **[Sponsor Evidence Walkthrough](docs/SPONSOR_EVIDENCE.md)** maps exact requirements to code, recorded runs, and verification limits.
+| **[Chainlink CRE](services/cre-workflow/)** | `handlerInTee` confidential payroll compiler and simulator | [`cre-starter/payroll/workflow.ts`](cre-starter/payroll/workflow.ts) • [`services/cre-workflow/src/compiler.ts`](services/cre-workflow/src/compiler.ts) |
+| **[Noir & Aztec](circuits/)** | 5 UltraHonk ZK circuits: shield, distribution, claim, exit, and partial exit | [`circuits/`](circuits/) • [v0.3 Verifier Specs](docs/PAYOUT_V3_VERIFICATION.md) |
+| **[The Graph](subgraph/)** | Event indexing for public ciphertext scanning with RPC fallback | [`subgraph/subgraph.yaml`](subgraph/subgraph.yaml) • [Sepolia Subgraph](https://api.studio.thegraph.com/query/1758859/null-protocol/v0.3.0) |
 
 ---
 
@@ -144,13 +142,13 @@ pnpm install --frozen-lockfile
 pnpm dev             # Web frontend at http://127.0.0.1:5173
 pnpm dev:all         # Frontend + background API services
 
-# 3. Run full verification suite
+# 3. Run test suite
 pnpm check           # Workspace TypeScript checks
 pnpm test:submission # ENS, CRE imports, Privy controls, and storage tests
 pnpm test:payouts    # SDK boundaries and multi-batch reconciliation
 pnpm test:flow-v3    # Full ZK lifecycle test on isolated local chain
 pnpm ens:status      # Read-only live ENS resolution verification
-pnpm cre:simulate    # Real CRE CLI confidential handler simulation
+pnpm cre:simulate    # CRE CLI confidential handler simulation
 ```
 
 ---
@@ -184,15 +182,14 @@ pnpm cre:simulate    # Real CRE CLI confidential handler simulation
 ## Privacy Boundaries & Security Scope
 
 > [!NOTE]
-> **Unaudited Testnet Prototype:** NULL is built for testnet demonstration on Sepolia.
+> **Prototype Status:** NULL is deployed on Sepolia for demonstration and development.
 > - **Public Boundaries:** Initial deposits, final exit transfers, and ENS registrations are public onchain events.
 > - **Cryptographic Guarantees:** Recipient batch membership, individual allocations, and claim sources are completely hidden within the zero-knowledge distribution accumulator.
-> - **Confidential Compute:** Demonstrated Chainlink CRE integration runs via the authentic CRE CLI simulator.
 
-See [Privacy Guarantees](docs/PRIVACY_GUARANTEES.md), [Security Scope](SECURITY.md), and [Build Provenance](docs/BUILD_PROVENANCE.md) for detailed technical specifications.
+See [Privacy Guarantees](docs/PRIVACY_GUARANTEES.md) and [Security Scope](SECURITY.md) for detailed technical specifications.
 
 ---
 
 <div align="center">
-  <sub>Built for ETHOnline 2026. Licensed under the <a href="LICENSE">MIT License</a>.</sub>
+  <sub>Licensed under the <a href="LICENSE">MIT License</a>.</sub>
 </div>
