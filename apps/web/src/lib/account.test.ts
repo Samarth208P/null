@@ -15,6 +15,13 @@ test('recognized profiles restore the selected experience', () => {
   });
 });
 
+test('organization preferences retain normalized ENS identity without importing permissions', () => {
+  const profile = parseProfile(JSON.stringify({ type: 'organization', organizationName: 'Acme', ensName: ' ACME.ETH ', organizationAddress: '0x1111111111111111111111111111111111111111', verified: true, permissions: ['sign'] }));
+  assert.deepEqual(profile, { type: 'organization', organizationName: 'Acme', ensName: 'acme.eth', organizationAddress: '0x1111111111111111111111111111111111111111' });
+  assert.deepEqual(parseProfile(JSON.stringify({ ...profile, organizationName: 'Renamed' })), { ...profile, organizationName: 'Renamed' });
+  assert.equal(parseProfile(JSON.stringify({ ...profile, organizationAddress: 'not-an-address' }))?.organizationAddress, undefined);
+});
+
 test('organization profiles need a usable name and normalize surrounding whitespace', () => {
   for (const organizationName of [undefined, null, 42, '', '   ', 'a'.repeat(51)]) {
     assert.equal(parseProfile(JSON.stringify({ type: 'organization', organizationName })), null);

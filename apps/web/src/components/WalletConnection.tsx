@@ -6,6 +6,7 @@ import { Recovery } from './Recovery';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
 import { EntryLayout } from './EntryLayout';
+import { useWorkspaceIdentity } from '../lib/use-ens-identity';
 
 const PrivyRuntime = lazy(() => import('./PrivyRuntime').then(module => ({ default: module.PrivyRuntime })));
 
@@ -15,6 +16,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 }
 export function WalletConnection() {
   const session = useSession();
+  const identity = useWorkspaceIdentity();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [recovery, setRecovery] = useState(false);
@@ -30,9 +32,9 @@ export function WalletConnection() {
   }, [open]);
   return <>
     <div className="account-menu" ref={root} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <Button className="account-menu-trigger" variant="secondary" icon={UserRound} aria-label={`Account options for ${session.label}`} aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}><span className="account-button-label">{session.label}</span><ChevronDown size={14} /></Button>
+      <Button className="account-menu-trigger" variant="secondary" icon={UserRound} aria-label={`Account options for ${identity.label}`} aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}><bdi className="account-button-label">{identity.label}</bdi><ChevronDown size={14} /></Button>
       {open && <div className="account-menu-panel" id={id}>
-        <div className="account-menu-identity"><small>Signed in as</small><strong>{session.label}</strong></div>
+        <div className="account-menu-identity"><small>ENS identity · Sepolia</small><strong><bdi>{identity.label}</bdi></strong></div>
         <button onClick={() => { setOpen(false); window.location.hash = '/settings'; }}><Settings2 size={16} />Account settings</button>
         <button onClick={() => { setOpen(false); setRecovery(true); }}><Download size={16} />Save Payment ID backup</button>
         <button className="account-sign-out" onClick={() => { setOpen(false); setLeaving(true); }}><LogOut size={16} />Sign out</button>

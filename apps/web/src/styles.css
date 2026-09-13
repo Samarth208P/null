@@ -242,3 +242,12 @@ th { font-size: 12px; }td { font-size: 13px; }.table-title strong, .recipient-co
   .balance-label { flex-wrap: wrap; }.environment-label { font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *:before, *:after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important; }.button:active:not(:disabled):not(:focus-visible), .entry-continue:hover:not(:disabled) > svg { transform: none; } }
+:root .ens-identity { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; max-width: 100%; text-align: start; }
+.ens-identity-name { overflow-wrap: anywhere; max-width: 100%; font-family: inherit; }
+.ens-identity > small { color: var(--muted); font-weight: 400; }
+.ens-identity-details { max-width: 100%; font-size: 12px; font-weight: 400; }
+.ens-identity-details summary { cursor: pointer; color: var(--secondary); }
+.ens-identity-details .code-with-copy { margin-block-start: 8px; max-width: 100%; }
+.ens-identity-details code, .progressive-details > .code-with-copy code { overflow-wrap: anywhere; word-break: break-all; }
+.ens-address-input { min-width: 0; }
+.account-menu-identity bdi, .page-header h1 { overflow-wrap: anywhere; }

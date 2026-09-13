@@ -16,6 +16,10 @@ import { download } from '../lib/format';
 import { findAssignedNames, findNameWallet, type NameWallet } from '../lib/ens-wallet';
 import ensDeployment from '../../../../deployments/ens-sepolia.json';
 import { editablePaymentName, paymentNameInput, paymentNameSuffix as inboxNameSuffix } from '../lib/ens-name-input';
+import { EnsIdentity } from './EnsIdentity';
+import { EnsAddressInput } from './EnsAddressInput';
+import { useEnsIdentities } from '../lib/use-ens-identity';
+import { ensIdentityLabel, recheckEnsAddress, type EnsAddress } from '../lib/ens-identity';
 
 type Connection = (address?: Address) => Promise<WalletClient>;
 type SetupProps = { onRecovery: (mode: 'export' | 'restore') => void; onLinked?: () => void; initialName?: string; onNameChange?: (name: string) => void };
@@ -56,6 +60,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false);
   const [error, setError] = useState(''), [status, setStatus] = useState('');
   const [editor, setEditor] = useState(savedUpdate?.editor ?? '');
+  const [editorName, setEditorName] = useState<EnsAddress>();
   const [hash, setHash] = useState<Hex | undefined>(savedUpdate?.hash);
   const [pending, setPending] = useState(!!savedUpdate);
   const [walletAddress, setWalletAddress] = useState<Address>();
@@ -65,10 +70,14 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   const [unassignedName, setUnassignedName] = useState('');
   const [assignedNames, setAssignedNames] = useState<string[]>();
   const [permissionWallet, setPermissionWallet] = useState('');
+  const [replaceExisting, setReplaceExisting] = useState(false);
+  const discoveryKey = useRef('');
+  const connectedWalletKey = (wallets ?? []).map(wallet => wallet.address.toLowerCase()).sort().join(',');
   const revision = useRef(0), inFlight = useRef(false);
   const previousIdentity = useRef(store.identity);
   const walletAvailable = chosenWallet && (!wallets || wallets.some(wallet => wallet.address.toLowerCase() === chosenWallet.address.toLowerCase()));
   const ownerConnected = checked && wallets?.some(wallet => wallet.address.toLowerCase() === checked.owner.toLowerCase());
+  const permissionIdentities = useEnsIdentities([...new Set([...(wallets ?? []).map(wallet => wallet.address), ...(checked ? [checked.owner] : [])])].map(address => ({ address, hints: checked ? [checked.name] : [] })));
   const setupStep = !checked || !walletAvailable ? 0 : !store.identityBackedUp ? 1 : 2;
   useEffect(() => () => { revision.current++; }, []);
   useEffect(() => {
@@ -78,7 +87,26 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     setUnassignedName(''); setAssignedNames(undefined);
     setConsent(false); setStatus(''); setError(''); setBusy(false);
   }, [store.identity]);
-  async function run(work: (version: number) => Promise<void>) {
+  // Discover only names whose current ownership and resolver access are verified.
+  // This is read-only: a refresh must never publish a new receiving identity.
+  useEffect(() => {
+    if (!walletsReady || !connectedWalletKey || pending) return;
+    const key = connectedWalletKey + ':' + store.identity.profile.stealthMetaAddress;
+    if (discoveryKey.current === key) return;
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (cancelled || inFlight.current) return;
+      discoveryKey.current = key;
+      void run(async version => {
+        const names = await findAssigned(version);
+        if (version !== revision.current || !names?.length) return;
+        const preferred = names.includes(completeName) ? completeName : names.length === 1 ? names[0] : undefined;
+        if (preferred) await lookup(version, preferred);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [walletsReady, connectedWalletKey, store.identity, pending, busy]);
+  async function run(work: (version: number) => Promise<unknown>) {
     if (inFlight.current) return;
     inFlight.current = true; const version = revision.current; setBusy(true); setError(''); setStatus(''); setScope(undefined);
     try { await work(version); }
@@ -95,14 +123,15 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       candidates = [{ address: wallet.account.address, label: 'Connected wallet' }];
     }
     setStatus('Checking names assigned to your connected wallets…');
-    const hints = [...ensDeployment.recipientAssignments.map(item => item.name), ensDeployment.recipientSetup.name, account.profile?.ensName, store.receivingName?.name].filter((value): value is string => !!value);
+    const hints = [completeName, ...ensDeployment.recipientAssignments.map(item => item.name), ensDeployment.recipientSetup.name, account.profile?.ensName, store.receivingName?.name].filter((value): value is string => !!value);
     const names = await findAssignedNames(hints, candidates, name => inspectPaymentName(ensClient, name), async (name, address) => (await paymentEditorAccess(ensClient, name, address)).allowed)
       .catch(() => { throw new PaymentNameError('network', 'Could not check assigned names. Check your connection and try again.'); });
     if (version !== revision.current) return;
     setAssignedNames(names); setStatus('');
+    return names;
   }
   async function lookup(version: number, input = completeName) {
-    setChecked(undefined); setChosenWallet(undefined); setWalletsChecked(false); setConsent(false); setLinked(undefined);
+    setChecked(undefined); setChosenWallet(undefined); setWalletsChecked(false); setConsent(false); setLinked(undefined); setReplaceExisting(false);
     setUnassignedName(''); setAssignedNames(undefined);
     setStatus('Checking your name…');
     const result = await inspectPaymentName(ensClient, input);
@@ -119,7 +148,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     setChecked(result);
     if (result.value === store.identity.profile.stealthMetaAddress) {
       const snapshot = await resolvePaymentName(ensClient, result.name);
-      if (version === revision.current) { setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); setStatus(''); }
+      if (version === revision.current) { setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); if (account.profile?.type === 'individual') account.updateProfile({ ...account.profile, ensName: snapshot.name }); setStatus(''); }
       return;
     }
     if (!walletsReady) throw new PaymentNameError('permission', 'Your wallets are still loading. Try again in a moment.');
@@ -153,7 +182,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       const snapshot = await resolvePaymentName(ensClient, update.name);
       if (snapshot.profile !== store.identity.profile.stealthMetaAddress || snapshot.fingerprint !== update.fingerprint) throw new PaymentNameError('changed', 'The transaction was confirmed, but this device has a different Payment ID. Restore your backup before sharing this name.');
       if (version !== revision.current) return;
-      setChecked({ ...snapshot, value: snapshot.profile }); setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); setStatus('Your payment name is live on Sepolia.');
+      setChecked({ ...snapshot, value: snapshot.profile }); setLinked(snapshot); onLinked?.(); store.setReceivingName(snapshot); if (account.profile?.type === 'individual') account.updateProfile({ ...account.profile, ensName: snapshot.name }); setStatus('Your payment name is live on Sepolia.');
     } else {
       const access = await paymentEditorAccess(ensClient, update.name, update.editor!);
       if (version !== revision.current) return;
@@ -163,6 +192,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
   }
   async function write(kind: 'profile' | 'grant' | 'revoke', version: number) {
     if (!checked || pending || (kind === 'profile' && !consent)) return;
+    if (kind === 'profile' && checked.value && checked.value !== store.identity.profile.stealthMetaAddress && !replaceExisting) throw new PaymentNameError('changed', 'Restore this inbox’s backup, or explicitly choose a new Payment ID before replacing it.');
     if (kind === 'profile' && !store.identityBackedUp) throw new PaymentNameError('permission', 'Save your Payment ID backup from the inbox before linking this name.');
     if (kind === 'profile' && !walletAvailable) throw new PaymentNameError('permission', 'Check the name again to find an authorized wallet.');
     const wallet = await connect(kind === 'profile' ? chosenWallet?.address : (permissionWallet || checked.owner) as Address);
@@ -171,12 +201,17 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     if (!account || await wallet.getChainId() !== ENS_CHAIN_ID) throw new PaymentNameError('network', 'Connect the name’s wallet on Sepolia.');
     if (kind === 'profile' && account.toLowerCase() !== chosenWallet?.address.toLowerCase()) throw new PaymentNameError('changed', 'The wallet changed. Check your name again before linking.');
     setWalletAddress(account);
+    if (kind === 'grant' || kind === 'revoke' && editorName) {
+      if (!editorName || editorName.address.toLowerCase() !== editor.toLowerCase()) throw new PaymentNameError('missing', 'Check and confirm the editor’s ENS name first.');
+      await recheckEnsAddress(ensClient, editorName);
+    }
     const simulation = kind === 'profile'
       ? await prepareProfileWrite(ensClient, checked.name, store.identity.profile.stealthMetaAddress, account, checked.resolver)
       : await preparePaymentDelegate(ensClient, checked.name, getAddress(editor.trim()), kind === 'grant', account, checked.resolver);
     if (version !== revision.current) return;
     // Recheck the selected account after wallet dialogs and asynchronous preflight.
     if (!(await wallet.getAddresses()).some(value => value.toLowerCase() === account.toLowerCase()) || await wallet.getChainId() !== ENS_CHAIN_ID) throw new PaymentNameError('changed', 'The connected wallet changed. Check the name again.');
+    if (kind !== 'profile' && editorName) await recheckEnsAddress(ensClient, editorName);
     setStatus('Confirm the record update in your wallet…');
     const request = simulation.request;
     // Narrow the request union so viem preserves each function's ABI/argument types.
@@ -190,6 +225,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
     await confirmed(transaction, version);
   }
   function changeName() {
+    setReplaceExisting(false);
     revision.current++; setChecked(undefined); setLinked(undefined); setChosenWallet(undefined);
     setUnassignedName(''); setAssignedNames(undefined);
     setWalletsChecked(false); setConsent(false); setStatus(''); setError(''); setHash(undefined);
@@ -230,11 +266,16 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
       })}>Copy ENS name</Button></> : busy && !chosenWallet ? null : !walletAvailable ? <div className="inbox-setup-action">
         <h3>{walletsChecked ? ownerConnected ? 'Payment permission needed' : 'Connect a wallet for this name' : 'Check your connected wallets'}</h3>
         <p>{walletsChecked ? ownerConnected ? 'Your wallet owns this name, but cannot update its Payment ID yet. Ask the resolver administrator to allow this wallet to update the NULL payment record, then check again.' : 'None of your connected wallets can update this name. Connect its owner or an authorized wallet, then check again.' : 'We need to confirm which wallet can update your name before continuing.'}</p>
-        <p className="field-hint">Name owner: <code>{checked.owner}</code></p>
+        <KeyValue label="Name owner"><EnsIdentity address={checked.owner} hints={[checked.name]} fallback="Name owner" /></KeyValue>
         <div className="button-row">{onConnectWallet && <Button onClick={onConnectWallet} disabled={busy}>Connect another wallet</Button>}<Button variant={onConnectWallet ? 'secondary' : 'primary'} busy={busy} onClick={() => void run(lookup)}>Check wallets again</Button></div>
       </div> : <>
         <p className="name-wallet-ready"><Check size={14} />Wallet found. We’ll use it when you confirm.</p>
-        {!store.identityBackedUp ? <div className="inbox-setup-action">
+        {checked.value && checked.value !== store.identity.profile.stealthMetaAddress && !replaceExisting ? <div className="inbox-setup-action">
+          <h3>Your name is already linked</h3>
+          <p>We found your existing inbox on Sepolia. Restore its encrypted backup to access the same payments after a refresh. No new transaction is needed.</p>
+          <Button onClick={() => onRecovery('restore')}>Restore existing inbox</Button>
+          <p className="setup-restore"><button type="button" className="text-link" disabled={busy} onClick={() => setReplaceExisting(true)}>Use a new Payment ID instead</button></p>
+        </div> : !store.identityBackedUp ? <div className="inbox-setup-action">
           <h3>Save your inbox backup</h3>
           <p>This file keeps access to your payments if you change devices. Choose a password and save it once.</p>
           <Button icon={Download} onClick={() => onRecovery('export')}>Save backup and continue</Button>
@@ -247,12 +288,12 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
           <Button disabled={!consent || !walletsReady} busy={busy} onClick={() => void run(version => write('profile', version))}>Link name</Button>
           <p className="field-hint">Confirm one Sepolia transaction in your wallet. You’ll need Sepolia ETH for the network fee.</p>
         </div>}
-        <details className="name-wallet-details"><summary>Wallet details</summary><p>{chosenWallet!.label}: <code>{chosenWallet!.address}</code></p><p>Permission checked on Sepolia. We’ll check again before sending.</p></details>
+        <KeyValue label="Wallet for name updates"><EnsIdentity address={chosenWallet!.address} hints={[checked.name]} fallback={chosenWallet!.label} /></KeyValue>
       </>}
       {linked && <details className="name-permissions"><summary>Advanced: payment record access</summary><p>Allow another wallet to update only this name’s Payment ID.</p><p className="field-hint">Only trust an editor who may redirect future payments. Name ownership and other records are unchanged.</p>
-        {wallets && <label className="field">Wallet for permission changes<select value={permissionWallet || checked.owner} disabled={busy} onChange={event => setPermissionWallet(event.target.value)}><option value={checked.owner}>Name owner · {checked.owner.slice(0, 8)}…{checked.owner.slice(-6)}</option>{wallets.filter(wallet => wallet.address.toLowerCase() !== checked.owner.toLowerCase()).map(wallet => <option key={wallet.address} value={wallet.address}>{wallet.label} · {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}</option>)}</select></label>}
-        <label className="field">Editor wallet address<input value={editor} maxLength={42} disabled={busy || pending} onChange={event => { setEditor(event.target.value); setScope(undefined); setStatus(''); setError(''); }} placeholder="0x…" spellCheck={false} autoComplete="off" /></label>
-        <div className="button-row"><Button variant="secondary" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim())} busy={busy} onClick={() => void run(version => write('grant', version))}>Grant record access</Button><Button variant="ghost" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(version => write('revoke', version))}>Remove record access</Button><Button variant="ghost" disabled={!/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(async version => { const result = await inspectPaymentEditorScope(ensClient, checked.name, getAddress(editor.trim())); if (version === revision.current) setScope(result); })}>Check access</Button></div>
+        {wallets && <label className="field">Wallet for permission changes<select value={permissionWallet || checked.owner} disabled={busy} onChange={event => setPermissionWallet(event.target.value)}><option value={checked.owner}>{ensIdentityLabel(permissionIdentities.get(checked.owner), 'Name owner')} · Owner</option>{wallets.filter(wallet => wallet.address.toLowerCase() !== checked.owner.toLowerCase()).map((wallet, index) => <option key={wallet.address} value={wallet.address}>{ensIdentityLabel(permissionIdentities.get(wallet.address), `${wallet.label} ${index + 1}`)}</option>)}</select></label>}
+        <EnsAddressInput label="Editor wallet" allowAddress addressHelp="You can check or remove existing access by address if the editor’s name expires. Granting new access requires a confirmed ENS name." disabled={busy || pending} onChange={(address, name) => { setEditor(address); setEditorName(name); setScope(undefined); setStatus(''); setError(''); }} />
+        <div className="button-row"><Button variant="secondary" disabled={pending || !editorName || !/^0x[\da-fA-F]{40}$/.test(editor.trim())} busy={busy} onClick={() => void run(version => write('grant', version))}>Grant record access</Button><Button variant="ghost" disabled={pending || !/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(version => write('revoke', version))}>Remove record access</Button><Button variant="ghost" disabled={!/^0x[\da-fA-F]{40}$/.test(editor.trim()) || busy} onClick={() => void run(async version => { const result = await inspectPaymentEditorScope(ensClient, checked.name, getAddress(editor.trim())); if (version === revision.current) setScope(result); })}>Check access</Button></div>
         {scope && scope.name === checked.name && scope.editor.toLowerCase() === editor.trim().toLowerCase() && <div className="section-block" role="status">
           <h3>Current editor permissions</h3>
           <KeyValue label="NULL payment record">{scope.paymentRecord ? 'Can update' : 'Cannot update'}</KeyValue>
@@ -263,7 +304,7 @@ export function NameManager({ connect, wallets, walletsReady = true, onConnectWa
         </div>}
       </details>}
     </div>}
-    {walletAddress && <p className="field-hint">Signing wallet: <code>{walletAddress}</code></p>}
+    {walletAddress && <KeyValue label="Signing wallet"><EnsIdentity address={walletAddress} hints={checked ? [checked.name] : []} fallback="Signing wallet" /></KeyValue>}
     {hash && <p className="field-hint"><a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer">View transaction on Sepolia <ExternalLink size={12} /></a></p>}
     {pending && !busy && <><Notice>Confirmation is still pending. Check this transaction before sending another update.</Notice><Button variant="secondary" onClick={() => void run(version => confirmed(hash!, version))}>Check confirmation</Button></>}
     {status && <p className="name-status" role="status">{status}</p>}{error && <p className="form-error" role="alert">{error}</p>}

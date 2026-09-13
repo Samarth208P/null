@@ -25,6 +25,11 @@ import { publicOperationReceipt, type ApprovalSource, type PublicOperationReceip
 import { selectTransactionWallet } from '../lib/transaction-wallet';
 import { operationDiagnostic } from '../lib/operation-diagnostic';
 import { Badge, Button, CopyButton, ExternalLink, KeyValue, Modal, Notice } from './ui';
+import { useAccount } from '../lib/account';
+import { useEnsIdentities } from '../lib/use-ens-identity';
+import { ensIdentityLabel, ensIdentityOption, recheckEnsAddress, type EnsAddress } from '../lib/ens-identity';
+import { EnsIdentity } from './EnsIdentity';
+import { EnsAddressInput } from './EnsAddressInput';
 
 export type LiveOperationRequest = { kind: 'withdraw'; treasury: boolean } | { kind: 'shield'; amountAtomic: bigint } |
   { kind: 'claim'; allocation: DiscoveredAllocation } |
@@ -152,6 +157,7 @@ function errorCopy(reason: unknown): string {
 
 function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfirmed, bridge }: LiveOperationProps & { bridge: WalletBridge }) {
   const workspaceStore = useStore();
+  const account = useAccount();
   const [privateNotes, setPrivateNotes] = useState<OwnedPrivateNote[]>([]);
   const [withdrawalNoteId, setWithdrawalNoteId] = useState('');
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
@@ -160,6 +166,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   const withdrawalSteps = useRef<WithdrawalStep[]>([]);
   const activeNames = useRef<PaymentNameSnapshot[]>(operation.kind === 'create_distribution' ? operation.paymentNames : []);
   const [recipient, setRecipient] = useState('');
+  const [recipientName, setRecipientName] = useState<EnsAddress>();
   const [selectedWallet, setSelectedWallet] = useState('');
   const [manifest, setManifest] = useState<DeploymentManifest>();
   const [manifestError, setManifestError] = useState('');
@@ -200,6 +207,14 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
   const policyFile = useRef<HTMLInputElement>(null);
   const recoveryFile = useRef<HTMLInputElement>(null);
   const policy = policies.find(item => authPolicyCommitment(item) === selectedPolicy);
+  const policyAddresses = policies.map(item => publicKeyToAddress(toHex(secp256k1.ProjectivePoint.fromHex(fromHex(item.signerPublicKey)).toRawBytes(false))));
+  const policyAddress = policy ? policyAddresses[policies.indexOf(policy)] : undefined;
+  const identityHints = account.profile?.ensName ? [account.profile.ensName] : [];
+  const walletIdentities = useEnsIdentities((bridge.walletChoices ?? []).map(choice => ({ address: choice.address, hints: identityHints })));
+  const organizationIdentities = useEnsIdentities(policyAddresses.map(address => ({ address, hints: identityHints })));
+  useEffect(() => {
+    if (policyAddress && account.profile?.type === 'organization' && account.profile.organizationAddress?.toLowerCase() !== policyAddress.toLowerCase()) account.updateProfile({ ...account.profile, organizationAddress: policyAddress });
+  }, [policyAddress, account.profile, account.updateProfile]);
   const treasuryOperation = operation.kind === 'shield' || operation.kind === 'create_distribution' || operation.kind === 'withdraw' && operation.treasury;
   const withdrawalNotes = treasuryOperation ? notes : privateNotes;
   const balanceWithdrawal = operation.kind === 'withdraw' && !operation.treasury && !!manifest?.security.partialWithdrawalsImplemented;
@@ -376,6 +391,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
       result = await client.prepareShield({ amountAtomic: operation.amountAtomic, policyCommitment: authPolicyCommitment(policy), acknowledgePublicDeposit: true, ...proofOptions() });
     } else if (operation.kind === 'withdraw') {
       if (!withdrawalNote || !acknowledged) throw new NullError('NULL_PRIVACY_BOUNDARY', 'Select a note and acknowledge the public withdrawal.');
+      if (recipientName) await recheckEnsAddress(ensClient, recipientName);
       if (balanceWithdrawal && !withdrawalSteps.current.length) withdrawalSteps.current = planWithdrawal(privateNotes, withdrawalAmount ? parseAmount(withdrawalAmount) : amountAtomic);
       const step = withdrawalSteps.current[batchReceipts.current.length];
       result = await client.prepareWithdrawal({note:step?.note ?? withdrawalNote,recipient:getAddress(recipient.trim()),...(step ? {amountAtomic:step.amountAtomic} : withdrawalAmount ? {amountAtomic:parseAmount(withdrawalAmount)} : {}),acknowledgePublicWithdrawal:true,...proofOptions(),...(operation.treasury ? {authPolicy:policy,authorize:async (intent: Parameters<NonNullable<WithdrawalOptions['authorize']>>[0]) => {setManualIntent(intent);return new Promise<Hex>((resolve,reject)=>{pendingApproval.current={resolve,reject};});}} : {})});
@@ -432,6 +448,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
     try {
       const connected = transport === 'wallet' ? await connect() : undefined;
       if (connected) setWallet(connected);
+      if (operation.kind === 'withdraw' && recipientName) await recheckEnsAddress(ensClient, recipientName);
       const sender = operation.kind === 'create_distribution' ? payouts! : client;
       let result = batchReceipts.current.find(receipt => operation.kind === 'create_distribution' ? receipt.distributionCommitment === prepared.publicOperation.publicInputs[7] : operation.kind === 'withdraw' && receipt.withdrawal?.nullifier === prepared.publicOperation.publicInputs[5]) ?? await sender.submit(prepared, connected ? { mode: 'wallet', wallet: connected } : { mode: 'relay', url: config.relayerUrl! }, proofOptions());
       recordPublicReceipt(result);
@@ -522,9 +539,10 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
           <Button icon={KeyRound} busy={busy} onClick={() => void work(unlock)}>Unlock funds</Button>
         </> : <>
           {!confirmed && <>
-            {!!bridge.walletChoices && bridge.walletChoices.length > 1 && <label className="field">Sending wallet<select value={selectedWallet} disabled={busy || uncertain} onChange={event => { setSelectedWallet(event.target.value); setWallet(undefined); setError(''); }}><option value="">Choose your funded wallet</option>{bridge.walletChoices.map(choice => <option key={choice.address} value={choice.address}>{choice.label} · {choice.address}</option>)}</select><small>{operation.kind === 'shield' ? 'Choose the wallet holding your test USDC and Sepolia ETH. Organization approval uses its separate signer.' : 'This wallet pays the Sepolia gas fee. Its address will be public.'}</small></label>}
-            <div className="button-row"><Button variant="secondary" disabled={busy || uncertain} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? short(wallet.account.address, 5) : 'Connect wallet'}</Button>{!prepared && <Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button>}</div>
-            {wallet?.account && <KeyValue label="Connected sending wallet"><code className="withdraw-address">{wallet.account.address}</code></KeyValue>}
+            {!!bridge.walletChoices && bridge.walletChoices.length > 1 && <label className="field">Sending wallet<select value={selectedWallet} disabled={busy || uncertain} onChange={event => { setSelectedWallet(event.target.value); setWallet(undefined); setError(''); }}><option value="">Choose your funded wallet</option>{bridge.walletChoices.map((choice, index) => <option key={choice.address} value={choice.address}>{ensIdentityOption(walletIdentities.get(choice.address), `${choice.label} wallet ${index + 1}`)}</option>)}</select><small>{operation.kind === 'shield' ? 'Choose the wallet holding your test USDC and Sepolia ETH. Organization approval uses its separate signer.' : 'This wallet pays the Sepolia gas fee. Its address will be public.'}</small></label>}
+            <div className="button-row"><Button variant="secondary" disabled={busy || uncertain} icon={Wallet} onClick={() => void work(connect)}>{wallet?.account ? 'Change sending wallet' : 'Connect wallet'}</Button>{!prepared && <Button variant="ghost" disabled={busy} icon={FileUp} onClick={() => recoveryFile.current?.click()}>Restore funds backup</Button>}</div>
+            {wallet?.account && <KeyValue label="Connected sending wallet"><EnsIdentity address={wallet.account.address} hints={identityHints} fallback="Sending wallet" /></KeyValue>}
+            {selectedWallet && !wallet?.account && <KeyValue label="Selected sending wallet"><EnsIdentity address={selectedWallet} hints={identityHints} fallback="Sending wallet" /></KeyValue>}
           </>}
           {!prepared && <>
             <input ref={recoveryFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importRecovery(file)); }} />
@@ -533,7 +551,8 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
               <section className="section-block" aria-label="Organization setup">
               <h3>Organization setup</h3>
               <p className="field-hint">Connect your Privy organization, save its encrypted backup, then activate it on Sepolia. If this organization already exists, restore its funds backup first.</p>
-              {policies.length > 0 && <label className="field">Organization setup<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); setActivatedPolicy(''); setPolicyTransaction(undefined); }}>{policies.map((item, index) => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>Setup {index + 1} · {short(commitment, 5)}</option>; })}</select></label>}
+              {policies.length > 0 && <label className="field">Organization identity<select value={selectedPolicy} disabled={busy} onChange={event => { setSelectedPolicy(event.target.value); setSelectedNotes([]); setActivatedPolicy(''); setPolicyTransaction(undefined); }}>{policies.map((item, index) => { const commitment = authPolicyCommitment(item); return <option key={commitment} value={commitment}>{ensIdentityLabel(organizationIdentities.get(policyAddresses[index]), 'Organization')} · Setup {index + 1}</option>; })}</select></label>}
+              {policyAddress && <><KeyValue label="Organization signer"><EnsIdentity address={policyAddress} hints={identityHints} fallback="Organization" /></KeyValue><p className="field-hint"><a href="#/settings" onClick={event => { if (busy || uncertain) event.preventDefault(); else close(); }}>Manage organization ENS name</a></p><details className="progressive-details"><summary>Setup details</summary><span className="code-with-copy"><code>{selectedPolicy}</code><CopyButton value={selectedPolicy} /></span></details></>}
               {bridge.organizationKey && <p className="field-hint">Privy asks your organization owner to approve an identity-only signature. This identifies the signer and moves no funds.</p>}<div className="button-row">{bridge.organizationKey && <Button variant="secondary" disabled={busy} icon={ShieldCheck} onClick={() => void work(useOrganization)}>Use Privy organization</Button>}<Button variant="secondary" disabled={busy} icon={FileUp} onClick={() => policyFile.current?.click()}>Import setup file</Button><Button variant="secondary" disabled={busy || !policy} icon={Download} onClick={() => void work(exportRecovery)}>Save organization backup</Button><Button variant="ghost" disabled={busy || !policy || policyBackup !== selectedPolicy || activatedPolicy === selectedPolicy} onClick={() => void work(registerPolicy)}>{policyTransaction ? 'Check activation' : 'Activate organization setup'}</Button></div>
               <input ref={policyFile} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void work(() => importPolicy(file)); }} />
               {operation.kind === 'create_distribution' && <>
@@ -549,9 +568,9 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
               {balanceWithdrawal && <label className="field">Amount to withdraw<input value={withdrawalAmount} disabled={busy || !!prepared || batchProgress > 0} inputMode="decimal" placeholder="Leave empty to withdraw the available balance" onChange={event => { withdrawalSteps.current = []; setWithdrawalAmount(event.target.value); }} /><small>The remainder stays private. Several received notes may need several public transfers. Save an updated funds backup for the remainder.</small></label>}
               {balanceWithdrawal && withdrawalSteps.current.length > 1 && <Notice>{batchProgress} of {withdrawalSteps.current.length} transfers confirmed. Your wallet may ask for each transfer. This withdrawal is not atomic.</Notice>}
               {!withdrawalNotes.length && <Notice>No available notes. Restore your Payment ID or funds backup first.</Notice>}
-              <label className="field">Receiving wallet address<input value={recipient} maxLength={42} disabled={busy || !!prepared || batchProgress > 0} onChange={event=>setRecipient(event.target.value)} placeholder="0x…" autoComplete="off" spellCheck={false} /></label>
+              <EnsAddressInput label="Receiving wallet" allowAddress disabled={busy || !!prepared || batchProgress > 0} onChange={(address, name) => { setRecipient(address); setRecipientName(name); setAcknowledged(false); }} />
               <Notice tone="warning">The receiving address and amount become public. A known address, timing or wallet used to pay gas can link your activity. A relayer hides your gas-paying wallet, not this public exit.</Notice>
-              <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy} onChange={event=>setAcknowledged(event.target.checked)} /><span>I checked this address and understand the withdrawal is public.</span></label>
+              <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy || !recipient} onChange={event=>setAcknowledged(event.target.checked)} /><span>I checked the receiving wallet and understand the withdrawal is public.</span></label>
             </div>}
             {operation.kind === 'shield' && <label className="checkbox-field"><input type="checkbox" checked={acknowledged} disabled={busy} onChange={event => setAcknowledged(event.target.checked)} /><span>I understand that my wallet and deposit amount will be public. These are test funds.</span></label>}
           </>}
@@ -562,7 +581,7 @@ function LiveOperationBody({ open, onClose, operation, onConfirmed, onBatchConfi
             <details><summary>Advanced approval</summary><p className="field-hint">Use an approval from your organization’s signing tool for this payment only.</p><KeyValue label="Approval reference"><span className="code-with-copy"><code>{short(manualIntent.digest)}</code><CopyButton value={manualIntent.digest} /></span></KeyValue><label className="field">Approval code<input value={signature} disabled={approvalBusy} onChange={event => setSignature(event.target.value)} spellCheck={false} autoComplete="off" placeholder="Paste the full approval code, starting with 0x" /><small>The signing tool must return a 64-byte compact signature for the raw approval digest.</small></label><div className="button-row"><Button variant="secondary" icon={Download} onClick={() => download('null-public-approval-intent.json', JSON.stringify({ digest: manualIntent.digest, publicInputs: manualIntent.publicInputs }, null, 2))}>Download approval request</Button><Button disabled={approvalBusy} onClick={importSignature}>Use this approval</Button></div></details>
           </div>}
           {prepared && !confirmed && <div className="section-block">
-            <h3>Save funds backup before confirming</h3>{operation.kind === 'withdraw' && prepared && <KeyValue label="Receiving address"><code className="withdraw-address">{`0x${BigInt(prepared.publicOperation.publicInputs[6]!).toString(16).padStart(40,'0')}`}</code></KeyValue>}<div className="detail-list"><KeyValue label="Action">{title}</KeyValue><KeyValue label="Funds backup"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
+            <h3>Save funds backup before confirming</h3>{operation.kind === 'withdraw' && prepared && <KeyValue label="Receiving wallet"><EnsIdentity address={`0x${BigInt(prepared.publicOperation.publicInputs[6]!).toString(16).padStart(40,'0')}`} hints={recipientName ? [recipientName.name] : []} fallback="Receiving wallet" /></KeyValue>}<div className="detail-list"><KeyValue label="Action">{title}</KeyValue><KeyValue label="Funds backup"><Badge tone="success">Encrypted on this device</Badge></KeyValue></div>
             <Button variant="secondary" icon={Download} disabled={busy} onClick={() => void work(exportRecovery)}>Download funds backup</Button><p className="field-hint">This file is encrypted. Keep it and your password in separate safe places. You need them to recover your funds on another device.</p>
             <label className="field">Send through<select value={transport} disabled={busy || uncertain} onChange={event => setTransport(event.target.value as 'relay' | 'wallet')}><option value="wallet">My connected wallet</option>{config.relayerUrl && operation.kind !== 'shield' && <option value="relay">Payment sending service</option>}</select><small>{transport === 'wallet' ? 'Your sending wallet and the time you send are public.' : 'The service can see this request and when you send it. It cannot change who receives the payment.'}</small></label>
           </div>}

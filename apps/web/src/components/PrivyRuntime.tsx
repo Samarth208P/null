@@ -1,8 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { PrivyProvider, usePrivy, useLogin, useModalStatus } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useLogin, useModalStatus, useWallets } from '@privy-io/react-auth';
 import { sepolia } from 'viem/chains';
 import { config } from '../lib/config';
-import { short } from '../lib/format';
 import { SessionContext } from '../lib/session';
 
 export function PrivyRuntime({ children }: { children: ReactNode }) {
@@ -10,6 +9,7 @@ export function PrivyRuntime({ children }: { children: ReactNode }) {
 }
 function SessionBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, logout } = usePrivy();
+  const { wallets } = useWallets();
   const { isOpen: walletModalOpen } = useModalStatus();
   const [error, setError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
@@ -20,5 +20,5 @@ function SessionBridge({ children }: { children: ReactNode }) {
     catch { setError('We could not sign you out. Please try again.'); }
     finally { setSigningOut(false); }
   }
-  return <SessionContext.Provider value={{ configured: true, ready, authenticated, walletModalOpen, userId: user?.id || null, label: user?.email?.address || (user?.wallet?.address ? short(user.wallet.address, 5) : 'Your account'), error, signingOut, signIn: () => { setError(''); login(); }, signOut }}>{children}</SessionContext.Provider>;
+  return <SessionContext.Provider value={{ configured: true, ready, authenticated, walletModalOpen, userId: user?.id || null, walletAddresses: authenticated ? [...new Set([...wallets.map(wallet => wallet.address), ...(user?.wallet?.address ? [user.wallet.address] : [])])] : [], label: user?.email?.address || 'Wallet sign-in', error, signingOut, signIn: () => { setError(''); login(); }, signOut }}>{children}</SessionContext.Provider>;
 }

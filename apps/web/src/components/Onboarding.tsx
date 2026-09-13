@@ -29,6 +29,11 @@ export function ChooseAccount() {
   const [type, setType] = useState<AccountType | null>(account.profile?.type || null);
   const [organizationName, setOrganizationName] = useState(account.profile?.organizationName || '');
   const [ensName, setEnsName] = useState(() => editablePaymentName(account.profile?.ensName || ''));
+  const nameDrafts = useRef<Partial<Record<AccountType, string>>>(account.profile ? { [account.profile.type]: editablePaymentName(account.profile.ensName || '') } : {});
+  function chooseType(next: AccountType) {
+    if (type) nameDrafts.current[type] = ensName;
+    setEnsName(nameDrafts.current[next] ?? ''); setType(next); setError('');
+  }
   const { showSuffix, completeName } = paymentNameInput(ensName);
   const [error, setError] = useState(''); const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { document.title = 'Choose your account type · NULL'; heading.current?.focus(); }, []);
@@ -37,10 +42,8 @@ export function ChooseAccount() {
     if (!type) { setError('Choose how you will use NULL.'); return; }
     if (type === 'organization' && !organizationName.trim()) { setError('Enter an organization name.'); return; }
     let normalizedName = account.profile?.ensName;
-    if (type === 'individual') {
-      try { normalizedName = normalizePaymentName(completeName); } catch { setError('Enter your assigned name, or paste a full ENS name you own.'); return; }
-    }
-    account.updateProfile(type === 'organization' ? { type, organizationName: organizationName.trim(), ...(normalizedName ? { ensName: normalizedName } : {}) } : { type, ensName: normalizedName });
+    try { normalizedName = normalizePaymentName(completeName); } catch { setError('Enter your assigned name, or paste a full ENS name you own.'); return; }
+    account.updateProfile(type === 'organization' ? { type, organizationName: organizationName.trim(), ensName: normalizedName, ...(account.profile?.type === 'organization' ? { organizationAddress: account.profile.organizationAddress } : {}) } : { type, ensName: normalizedName });
     if (type === 'organization') store.setOrganization(organizationName.trim());
     store.navigate(type === 'organization' ? 'overview' : 'inbox');
   }
@@ -50,13 +53,13 @@ export function ChooseAccount() {
 
       <form onSubmit={complete}>
         <fieldset className="account-options"><legend className="sr-only">Account type</legend>
-          <label className={`account-option ${type === 'individual' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="individual" checked={type === 'individual'} onChange={() => { setType('individual'); setError(''); }} /><UserRound size={22} strokeWidth={1.6} /><span><strong>Individual</strong><small>Receive payments</small></span></label>
-          <label className={`account-option ${type === 'organization' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="organization" checked={type === 'organization'} onChange={() => { setType('organization'); setError(''); }} /><Building2 size={22} strokeWidth={1.6} /><span><strong>Organization</strong><small>Pay people and manage funds</small></span></label>
+          <label className={`account-option ${type === 'individual' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="individual" checked={type === 'individual'} onChange={() => chooseType('individual')} /><UserRound size={22} strokeWidth={1.6} /><span><strong>Individual</strong><small>Receive payments</small></span></label>
+          <label className={`account-option ${type === 'organization' ? 'is-selected' : ''}`}><input type="radio" name="accountType" value="organization" checked={type === 'organization'} onChange={() => chooseType('organization')} /><Building2 size={22} strokeWidth={1.6} /><span><strong>Organization</strong><small>Pay people and manage funds</small></span></label>
         </fieldset>
         <div className={`organization-reveal ${type === 'organization' ? 'is-open' : ''}`} inert={type !== 'organization' || undefined} aria-hidden={type !== 'organization'}><div><div className="organization-setup-fields"><label className="field" htmlFor="onboarding-organization">Organization name<input id="onboarding-organization" name="organization" autoComplete="organization" value={organizationName} maxLength={50} required={type === 'organization'} disabled={type !== 'organization'} onChange={event => { setOrganizationName(event.target.value); setError(''); }} placeholder="e.g. Acme Studio" aria-describedby="organization-hint" /></label><p id="organization-hint" className="field-hint">Display name only. Sending requires organization approval.</p></div></div></div>
-        {type === 'individual' && <label className="field" htmlFor="onboarding-ens">Your ENS payment name
-          <span className="inbox-name-input"><input id="onboarding-ens" aria-label="Your ENS payment name" maxLength={512} value={ensName} onChange={event => { setEnsName(editablePaymentName(event.target.value)); setError(''); }} required autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="your-name" aria-describedby="onboarding-ens-hint" />{showSuffix && <span className="inbox-name-suffix" aria-hidden="true">{paymentNameSuffix}</span>}</span>
-          <small id="onboarding-ens-hint">Use an assigned name, or paste a full ENS name you own. {completeName && <>Your payment name: <strong>{completeName}</strong>. </>}Next, we’ll check your wallet, save your backup and link the name. It is ready to receive only after that link is confirmed.</small>
+        {type && <label className="field" htmlFor="onboarding-ens">{type === 'organization' ? 'Organization ENS name' : 'Your ENS payment name'}
+          <span className="inbox-name-input"><input id="onboarding-ens" aria-label={type === 'organization' ? 'Organization ENS name' : 'Your ENS payment name'} maxLength={512} value={ensName} onChange={event => { setEnsName(editablePaymentName(event.target.value)); setError(''); }} required autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={type === 'organization' ? 'organization' : 'your-name'} aria-describedby="onboarding-ens-hint" />{showSuffix && <span className="inbox-name-suffix" aria-hidden="true">{paymentNameSuffix}</span>}</span>
+          <small id="onboarding-ens-hint">Use an assigned name, or paste a full ENS name you own. {completeName && <>Full name: <bdi>{completeName}</bdi>. </>}{type === 'organization' ? 'We’ll verify this name against your organization’s signer when you connect its setup. Saving a name does not register it or grant organization access.' : 'Next, we’ll check your wallet, save your backup and link the name. It is ready to receive only after that link is confirmed.'}</small>
         </label>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <Button className="entry-continue" type="submit" disabled={!type}><span>Continue</span><ArrowRight size={17} /></Button>

@@ -1,8 +1,9 @@
 import type { Route } from './store';
 import { normalizePaymentName } from '@null-protocol/ens';
+import { getAddress, isAddress, zeroAddress } from 'viem';
 
 export type AccountType = 'individual' | 'organization';
-export type WorkspaceProfile = { type: AccountType; organizationName?: string; ensName?: string };
+export type WorkspaceProfile = { type: AccountType; organizationName?: string; ensName?: string; organizationAddress?: string };
 
 // This is a local UI preference, never proof of organization membership.
 export function profileStorageKey(userId: string) { return `null:workspace:v1:${encodeURIComponent(userId)}`; }
@@ -14,7 +15,8 @@ export function parseProfile(raw: string | null): WorkspaceProfile | null {
     if (value.type === 'individual') return { type: 'individual', ...(ensName ? { ensName } : {}) };
     if (value.type !== 'organization' || !('organizationName' in value) || typeof value.organizationName !== 'string') return null;
     const name = value.organizationName.trim();
-    return name && name.length <= 50 ? { type: 'organization', organizationName: name, ...(ensName ? { ensName } : {}) } : null;
+    const organizationAddress = 'organizationAddress' in value && typeof value.organizationAddress === 'string' && isAddress(value.organizationAddress) && value.organizationAddress !== zeroAddress ? getAddress(value.organizationAddress) : undefined;
+    return name && name.length <= 50 ? { type: 'organization', organizationName: name, ...(ensName ? { ensName } : {}), ...(organizationAddress ? { organizationAddress } : {}) } : null;
   } catch { return null; }
 }
 
